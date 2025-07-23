@@ -18,7 +18,6 @@ import 'package:openvine/services/direct_upload_service.dart';
 import 'package:openvine/services/explore_video_manager.dart';
 import 'package:openvine/services/fake_shared_preferences.dart';
 import 'package:openvine/services/hashtag_service.dart';
-import 'package:openvine/services/key_storage_service.dart';
 import 'package:openvine/services/nip05_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
@@ -83,12 +82,6 @@ SecureKeyStorageService secureKeyStorageService(Ref ref) {
   return SecureKeyStorageService();
 }
 
-/// Legacy key storage service (for migration only)
-@riverpod
-@Deprecated('Use SecureKeyStorageService for secure key storage')
-KeyStorageService keyStorageService(Ref ref) {
-  return KeyStorageService();
-}
 
 /// Web authentication service (for web platform only)
 @riverpod

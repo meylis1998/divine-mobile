@@ -6,7 +6,6 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/key_migration_service.dart';
 import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:openvine/services/user_profile_service.dart' as ups;
 import 'package:openvine/utils/nostr_encoding.dart';
@@ -80,16 +79,13 @@ class UserProfile {
 /// Main authentication service for the OpenVine app
 class AuthService extends ChangeNotifier {
   AuthService({SecureKeyStorageService? keyStorage})
-      : _keyStorage = keyStorage ?? SecureKeyStorageService(),
-        _migrationService = KeyMigrationService();
+      : _keyStorage = keyStorage ?? SecureKeyStorageService();
   final SecureKeyStorageService _keyStorage;
-  final KeyMigrationService _migrationService;
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
   UserProfile? _currentProfile;
   String? _lastError;
-  bool _migrationRequired = false;
 
   // Streaming controllers for reactive auth state
   final StreamController<AuthState> _authStateController =
@@ -115,8 +111,6 @@ class AuthService extends ChangeNotifier {
   /// Current public key (hex format)
   String? get currentPublicKeyHex => _currentKeyContainer?.publicKeyHex;
 
-  /// Check if migration is required
-  bool get migrationRequired => _migrationRequired;
 
   /// Check if user is authenticated
   bool get isAuthenticated => _authState == AuthState.authenticated;
@@ -124,40 +118,6 @@ class AuthService extends ChangeNotifier {
   /// Last authentication error
   String? get lastError => _lastError;
 
-  /// Perform migration from legacy storage if needed
-  Future<bool> performMigrationIfNeeded({String? biometricPrompt}) async {
-    if (!_migrationRequired) return true;
-
-    Log.debug('Performing key migration to secure storage',
-        name: 'AuthService', category: LogCategory.auth);
-
-    try {
-      final result = await _migrationService.performMigration(
-        biometricPrompt: biometricPrompt,
-        deleteAfterMigration: true,
-      );
-
-      if (result.isSuccess) {
-        _migrationRequired = false;
-        Log.info('Migration completed successfully',
-            name: 'AuthService', category: LogCategory.auth);
-
-        // Re-check auth after migration
-        await _checkExistingAuth();
-        return true;
-      } else {
-        Log.error('Migration failed: ${result.error}',
-            name: 'AuthService', category: LogCategory.auth);
-        _lastError = 'Migration failed: ${result.error}';
-        return false;
-      }
-    } catch (e) {
-      Log.error('Migration error: $e',
-          name: 'AuthService', category: LogCategory.auth);
-      _lastError = 'Migration error: $e';
-      return false;
-    }
-  }
 
   /// Initialize the authentication service
   Future<void> initialize() async {
@@ -173,8 +133,6 @@ class AuthService extends ChangeNotifier {
       // Initialize secure key storage
       await _keyStorage.initialize();
 
-      // Check if migration is needed
-      await _checkMigrationStatus();
 
       // Check for existing keys
       await _checkExistingAuth();
@@ -656,26 +614,6 @@ class AuthService extends ChangeNotifier {
         name: 'AuthService', category: LogCategory.auth);
   }
 
-  /// Check if migration from legacy storage is needed
-  Future<void> _checkMigrationStatus() async {
-    try {
-      final migrationStatus = await _migrationService.checkMigrationStatus();
-
-      _migrationRequired = migrationStatus.status == MigrationStatus.pending;
-
-      if (_migrationRequired) {
-        Log.warning('Legacy keys found - migration required for security',
-            name: 'AuthService', category: LogCategory.auth);
-      } else if (migrationStatus.status == MigrationStatus.failed) {
-        Log.error('Migration check failed: ${migrationStatus.error}',
-            name: 'AuthService', category: LogCategory.auth);
-      }
-    } catch (e) {
-      Log.error('Migration status check failed: $e',
-          name: 'AuthService', category: LogCategory.auth);
-      _migrationRequired = false;
-    }
-  }
 
   /// Web authentication is not supported with secure storage
   /// Use mobile platforms for secure key management
