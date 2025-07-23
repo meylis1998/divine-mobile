@@ -1,8 +1,6 @@
 // ABOUTME: Comprehensive error handling tests for VideoManagerService
 // ABOUTME: Tests circuit breaker, retry logic, permanent failure, and error recovery scenarios
 
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/models/video_state.dart';

@@ -2,7 +2,6 @@
 // ABOUTME: Verifies Kind 0 profile events use 5-minute backdate
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
 
 void main() {

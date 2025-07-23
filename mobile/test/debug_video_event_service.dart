@@ -14,7 +14,7 @@ import 'package:openvine/utils/unified_logger.dart';
 // Simple mock NostrService that we can control
 class TestableNostrService extends NostrService {
   StreamController<Event>? _testStreamController;
-  bool _mockInitialized = true; // Mark as initialized for testing
+  final bool _mockInitialized = true; // Mark as initialized for testing
   
   TestableNostrService(super.keyManager);
   

@@ -114,8 +114,8 @@ class MockVideoManager implements IVideoManager {
   Duration _preloadDelay = const Duration(milliseconds: 50);
   int _memoryPressureThreshold = 10;
   bool _throwOnInvalidOperations = true;
-  Map<String, int> _preloadAttempts = {};
-  Set<String> _permanentlyFailedVideos = {};
+  final Map<String, int> _preloadAttempts = {};
+  final Set<String> _permanentlyFailedVideos = {};
   
   // Debug info for test control
   Map<String, dynamic> _debugInfo = {};
@@ -126,17 +126,17 @@ class MockVideoManager implements IVideoManager {
   bool _shouldThrowOnOperation = false;
   
   // Call tracking for test verification
-  List<VideoEvent> _addVideoEventCalls = [];
-  List<String> _preloadVideoCalls = [];
-  List<String> _disposeVideoCalls = [];
-  List<List<dynamic>> _preloadAroundIndexCalls = [];
+  final List<VideoEvent> _addVideoEventCalls = [];
+  final List<String> _preloadVideoCalls = [];
+  final List<String> _disposeVideoCalls = [];
+  final List<List<dynamic>> _preloadAroundIndexCalls = [];
   
   // Statistics for test verification
   int _preloadCallCount = 0;
   int _disposeCallCount = 0;
   int _memoryPressureCallCount = 0;
   int _getDebugInfoCallCount = 0;
-  List<String> _operationLog = [];
+  final List<String> _operationLog = [];
   
   /// Creates a MockVideoManager with optional configuration (for compatibility)
   MockVideoManager({VideoManagerConfig? config}) : _config = config;

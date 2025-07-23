@@ -2,8 +2,6 @@
 // ABOUTME: Verifies the fix for vine.hol.is relay compatibility
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
 
 void main() {
   group('AuthService Expiration Tag Tests', () {

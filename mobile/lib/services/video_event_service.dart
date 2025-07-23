@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../models/video_event.dart';
 import 'nostr_service_interface.dart';

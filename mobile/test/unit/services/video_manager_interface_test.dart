@@ -2,7 +2,6 @@
 // ABOUTME: Tests interface contracts, error conditions, and edge cases
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:video_player/video_player.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/models/video_state.dart';
 import 'package:openvine/services/video_manager_interface.dart';
@@ -178,7 +177,7 @@ void main() {
       });
     });
 
-    group('Video Disposal Contract', () => {
+    group('Video Disposal Contract', () {
       test('should dispose video controller and update state', () async {
         // ARRANGE
         await videoManager.addVideoEvent(testVideo1);
@@ -193,12 +192,12 @@ void main() {
         final disposedState = videoManager.getVideoState(testVideo1.id);
         expect(disposedState!.isDisposed, isTrue);
         expect(videoManager.getController(testVideo1.id), isNull);
-      }),
+      });
 
       test('should handle disposal of non-existent video gracefully', () {
         // ACT & ASSERT - Should not throw
         expect(() => videoManager.disposeVideo('non-existent'), returnsNormally);
-      }),
+      });
     });
 
     group('Memory Management Contract', () {

@@ -1,10 +1,8 @@
 // ABOUTME: TDD Widget tests for video state transitions in UI components
 // ABOUTME: Defines expected UI behavior when videos transition between states
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/models/video_state.dart';
 import '../../helpers/test_helpers.dart';
 
 void main() {

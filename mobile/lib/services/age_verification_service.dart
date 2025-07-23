@@ -1,7 +1,6 @@
 // ABOUTME: Service for managing age verification status across app sessions
 // ABOUTME: Stores verification status using SharedPreferences for persistence
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/age_verification_dialog.dart';

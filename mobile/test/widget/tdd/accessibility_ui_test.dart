@@ -1,9 +1,7 @@
 // ABOUTME: TDD Widget tests for accessibility and user interaction flows
 // ABOUTME: Defines expected accessibility behavior and user interaction patterns
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
 import 'package:openvine/models/video_event.dart';
 import '../../helpers/test_helpers.dart';
 

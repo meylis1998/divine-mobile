@@ -449,8 +449,4 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

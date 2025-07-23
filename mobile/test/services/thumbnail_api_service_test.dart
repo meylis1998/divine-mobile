@@ -1,7 +1,6 @@
 // ABOUTME: Unit tests for ThumbnailApiService URL generation and logic
 // ABOUTME: Tests URL construction, parameter handling, and validation logic
 
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/thumbnail_api_service.dart';
 

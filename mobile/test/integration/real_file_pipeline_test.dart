@@ -1,7 +1,6 @@
 // ABOUTME: Real file processing pipeline tests using actual files and HTTP requests
 // ABOUTME: Tests the pipeline with real constraints - file I/O, network calls, state persistence
 
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';

@@ -2,7 +2,6 @@
 // ABOUTME: Run with: dart test_video_event_service_debug.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'lib/services/nostr_service.dart';
 import 'lib/services/nostr_key_manager.dart';

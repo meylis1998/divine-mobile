@@ -2,6 +2,8 @@
 // ABOUTME: Provides consistent setup for VideoEventService, SocialService, and UserProfileService
 
 import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'package:matcher/matcher.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -12,6 +14,7 @@ import 'package:openvine/services/seen_videos_service.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 
+
 /// Creates a VideoEventService with mocked dependencies for testing
 VideoEventService createTestVideoEventService({
   required INostrService mockNostrService,
@@ -21,7 +24,8 @@ VideoEventService createTestVideoEventService({
   // Set up default mock behaviors
   when(mockNostrService.isInitialized).thenReturn(true);
   when(mockNostrService.connectedRelayCount).thenReturn(1);
-  when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
+  // Mock subscribeToEvents to accept any list of filters
+  when(mockNostrService.subscribeToEvents(filters: argThat(isA<List<Filter>>())))
       .thenAnswer((_) => const Stream<Event>.empty());
       
   return VideoEventService(
@@ -38,7 +42,8 @@ SocialService createTestSocialService({
   required SubscriptionManager mockSubscriptionManager,
 }) {
   // Set up default mock behaviors
-  when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
+  // Mock subscribeToEvents to accept any list of filters
+  when(mockNostrService.subscribeToEvents(filters: argThat(isA<List<Filter>>())))
       .thenAnswer((_) => const Stream<Event>.empty());
   when(mockAuthService.isAuthenticated).thenReturn(false);
   
@@ -56,7 +61,8 @@ UserProfileService createTestUserProfileService({
 }) {
   // Set up default mock behaviors
   when(mockNostrService.isInitialized).thenReturn(true);
-  when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
+  // Mock subscribeToEvents to accept any list of filters
+  when(mockNostrService.subscribeToEvents(filters: argThat(isA<List<Filter>>())))
       .thenAnswer((_) => const Stream<Event>.empty());
       
   return UserProfileService(
@@ -67,19 +73,11 @@ UserProfileService createTestUserProfileService({
 
 /// Sets up common mock behaviors for SubscriptionManager
 void setupMockSubscriptionManager(SubscriptionManager mockSubscriptionManager) {
-  when(mockSubscriptionManager.createSubscription(
-    name: anyNamed('name'),
-    filters: anyNamed('filters'),
-    onEvent: anyNamed('onEvent'),
-    onError: anyNamed('onError'),
-    onComplete: anyNamed('onComplete'),
-    timeout: anyNamed('timeout'),
-    priority: anyNamed('priority'),
-  )).thenAnswer((invocation) async {
-    final name = invocation.namedArguments[#name] as String;
-    return 'mock_sub_$name';
-  });
+  _ensureFallbacksRegistered();
   
-  when(mockSubscriptionManager.cancelSubscription(any()))
-      .thenAnswer((_) async {});
+  // Note: Mockito doesn't handle optional named parameters well in null-safe mode
+  // You'll need to mock specific calls with exact parameters in your tests
+  
+  when(mockSubscriptionManager.cancelSubscription(argThat(isA<String>())))
+      .thenAnswer((_) async => Future.value());
 }

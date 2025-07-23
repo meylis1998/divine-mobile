@@ -5,14 +5,13 @@ import 'dart:async';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/subscription_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
 
 class MockSubscriptionManager extends SubscriptionManager {
   final Map<String, StreamController<Event>> _subscriptions = {};
   final Map<String, Filter> _filters = {};
   int _subscriptionCounter = 0;
   
-  MockSubscriptionManager(INostrService nostrService) : super(nostrService);
+  MockSubscriptionManager(super.nostrService);
   
   @override
   Future<String> createSubscription({

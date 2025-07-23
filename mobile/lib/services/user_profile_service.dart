@@ -315,7 +315,7 @@ class UserProfileService extends ChangeNotifier {
     
     final skippedCount = filteredPubkeys.length - pubkeysToFetch.length;
     if (skippedCount > 0) {
-      Log.debug('Skipping ${skippedCount} known missing profiles to avoid relay spam', 
+      Log.debug('Skipping $skippedCount known missing profiles to avoid relay spam', 
           name: 'UserProfileService', category: LogCategory.system);
     }
     

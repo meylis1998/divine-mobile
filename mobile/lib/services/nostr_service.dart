@@ -81,7 +81,9 @@ class NostrService extends ChangeNotifier implements INostrService {
   @override
   int get connectedRelayCount => _connectedRelays.length;
   
+  @override
   List<String> get relays => List.unmodifiable(_relays);
+  @override
   Map<String, dynamic> get relayStatuses {
     final statuses = <String, dynamic>{};
     for (final url in _relays) {
@@ -301,7 +303,7 @@ class NostrService extends ChangeNotifier implements INostrService {
     Log.info('   Raw JSON: $eventJson', name: 'NostrService', category: LogCategory.relay);
     
     // DEBUG: Verify event JSON structure
-    print("🔍 DEBUG: Event toJson() type: ${eventJson.runtimeType}");
+    Log.debug('🔍 DEBUG: Event toJson() type: ${eventJson.runtimeType}', name: 'NostrService', category: LogCategory.relay);
     
     // Verify event data types
     try {
@@ -323,16 +325,16 @@ class NostrService extends ChangeNotifier implements INostrService {
         }
       }
       
-      print("✅ Event data types are correct");
+      Log.debug('✅ Event data types are correct', name: 'NostrService', category: LogCategory.relay);
     } catch (e) {
-      print("❌ ERROR: Event data type validation failed: $e");
+      Log.error('❌ ERROR: Event data type validation failed: $e', name: 'NostrService', category: LogCategory.relay);
     }
     
     try {
       final testJson = jsonEncode(eventJson);
-      print("🔍 DEBUG: Event JSON-encodes successfully to: ${testJson.substring(0, math.min(200, testJson.length))}...");
+      Log.debug('🔍 DEBUG: Event JSON-encodes successfully to: ${testJson.substring(0, math.min(200, testJson.length))}...', name: 'NostrService', category: LogCategory.relay);
     } catch (e) {
-      print("❌ ERROR: Event cannot be JSON-encoded: $e");
+      Log.error('❌ ERROR: Event cannot be JSON-encoded: $e', name: 'NostrService', category: LogCategory.relay);
     }
     
     // Also log as EVENT message format that goes over WebSocket
@@ -341,26 +343,26 @@ class NostrService extends ChangeNotifier implements INostrService {
     Log.info('   WebSocket Message: $eventMessage', name: 'NostrService', category: LogCategory.relay);
     
     // CRITICAL: Check if signature is getting corrupted
-    print('🔍 SIGNATURE CORRUPTION CHECK:');
-    print('   Original event.sig: ${event.sig}');
-    print('   EventJson["sig"]: ${eventJson["sig"]}');
+    Log.debug('🔍 SIGNATURE CORRUPTION CHECK:', name: 'NostrService', category: LogCategory.relay);
+    Log.debug('   Original event.sig: ${event.sig}', name: 'NostrService', category: LogCategory.relay);
+    Log.debug('   EventJson["sig"]: ${eventJson["sig"]}', name: 'NostrService', category: LogCategory.relay);
     final eventMessageData = eventMessage[1] as Map<String, dynamic>;
-    print('   In eventMessage[1]["sig"]: ${eventMessageData["sig"]}');
+    Log.debug('   In eventMessage[1]["sig"]: ${eventMessageData["sig"]}', name: 'NostrService', category: LogCategory.relay);
     if (event.sig != eventJson["sig"]) {
-      print('❌ SIGNATURE MISMATCH: event.sig != eventJson["sig"]');
+      Log.error('❌ SIGNATURE MISMATCH: event.sig != eventJson["sig"]', name: 'NostrService', category: LogCategory.relay);
     } else {
-      print('✅ Signatures match between event and eventJson');
+      Log.debug('✅ Signatures match between event and eventJson', name: 'NostrService', category: LogCategory.relay);
     }
     
     // DEBUG: Verify complete message can be JSON encoded
-    print("🔍 DEBUG: Complete message structure: $eventMessage");
-    print("🔍 DEBUG: Message[0] type: ${eventMessage[0].runtimeType}");
-    print("🔍 DEBUG: Message[1] type: ${eventMessage[1].runtimeType}");
+    Log.debug('🔍 DEBUG: Complete message structure: $eventMessage', name: 'NostrService', category: LogCategory.relay);
+    Log.debug('🔍 DEBUG: Message[0] type: ${eventMessage[0].runtimeType}', name: 'NostrService', category: LogCategory.relay);
+    Log.debug('🔍 DEBUG: Message[1] type: ${eventMessage[1].runtimeType}', name: 'NostrService', category: LogCategory.relay);
     try {
       final testJson = jsonEncode(eventMessage);
-      print("🔍 DEBUG: Complete message JSON-encodes successfully");
+      Log.debug('🔍 DEBUG: Complete message JSON-encodes successfully', name: 'NostrService', category: LogCategory.relay);
     } catch (e) {
-      print("❌ ERROR: Complete message cannot be JSON-encoded: $e");
+      Log.error('❌ ERROR: Complete message cannot be JSON-encoded: $e', name: 'NostrService', category: LogCategory.relay);
     }
     
     try {
@@ -370,8 +372,8 @@ class NostrService extends ChangeNotifier implements INostrService {
       // DEBUG: Check which relay type is being used
       final relays = _nostrClient!.activeRelays();
       for (final relay in relays) {
-        print("🔍 DEBUG: Relay type: ${relay.runtimeType}");
-        print("🔍 DEBUG: Relay URL: ${relay.url}");
+        Log.debug('🔍 DEBUG: Relay type: ${relay.runtimeType}', name: 'NostrService', category: LogCategory.relay);
+        Log.debug('🔍 DEBUG: Relay URL: ${relay.url}', name: 'NostrService', category: LogCategory.relay);
       }
       
       final sentEvent = await _nostrClient!.sendEvent(event);
@@ -509,6 +511,7 @@ class NostrService extends ChangeNotifier implements INostrService {
   }
   
   /// Add a new relay
+  @override
   Future<bool> addRelay(String relayUrl) async {
     if (_relays.contains(relayUrl)) {
       return true; // Already in list
@@ -547,6 +550,7 @@ class NostrService extends ChangeNotifier implements INostrService {
   }
   
   /// Remove a relay
+  @override
   Future<void> removeRelay(String relayUrl) async {
     try {
       // Remove from SDK
@@ -572,6 +576,7 @@ class NostrService extends ChangeNotifier implements INostrService {
   }
   
   /// Get connection status for all relays
+  @override
   Map<String, bool> getRelayStatus() {
     final status = <String, bool>{};
     for (final relayUrl in _relays) {
@@ -581,6 +586,7 @@ class NostrService extends ChangeNotifier implements INostrService {
   }
   
   /// Reconnect to all configured relays
+  @override
   Future<void> reconnectAll() async {
     Log.debug('Reconnecting to all relays...', name: 'NostrService', category: LogCategory.relay);
     

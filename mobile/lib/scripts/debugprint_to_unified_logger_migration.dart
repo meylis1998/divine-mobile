@@ -134,7 +134,7 @@ Future<bool> migrateFile(String filePath) async {
   
   if (hasDebugPrint) {
     await file.writeAsString(newLines.join('\n'));
-    print('✅ Migrated $filePath: ${serviceName} → ${category}');
+    print('✅ Migrated $filePath: $serviceName → $category');
     return true;
   }
   

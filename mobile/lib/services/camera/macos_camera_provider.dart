@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'camera_provider.dart';
 import 'native_macos_camera.dart';
-import '../utils/unified_logger.dart';
+import '../../utils/unified_logger.dart';
 // import '../video_frame_extractor.dart'; // Temporarily disabled due to dependency conflict
 
 /// Camera provider for macOS using fallback implementation

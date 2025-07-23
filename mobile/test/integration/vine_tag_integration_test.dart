@@ -4,9 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/user_profile_service.dart';
-import 'package:openvine/services/social_service.dart';
 
 void main() {
   group('Vine Tag Integration Tests', () {

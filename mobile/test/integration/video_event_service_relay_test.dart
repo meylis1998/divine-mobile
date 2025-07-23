@@ -1,7 +1,6 @@
 // ABOUTME: Integration test for VideoEventService to verify it can receive events from live relay
 // ABOUTME: Tests the complete chain from relay connection to event handling in VideoEventService
 
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/nostr_service.dart';
@@ -94,7 +93,7 @@ void main() {
         waitAttempts++;
         
         if (waitAttempts % 6 == 0) { // Log every 3 seconds
-          Log.info('⏳ Still waiting for events... attempt ${waitAttempts}/${maxWaitAttempts} (${videoEventService.eventCount} events so far)');
+          Log.info('⏳ Still waiting for events... attempt $waitAttempts/$maxWaitAttempts (${videoEventService.eventCount} events so far)');
           
           // Log detailed relay status
           final relayStatus = nostrService.getDetailedRelayStatus();
@@ -113,7 +112,7 @@ void main() {
       if (videoEventService.hasEvents) {
         Log.info('📝 Received events:');
         for (final event in videoEventService.videoEvents.take(5)) {
-          Log.info('  - Event ${event.id.substring(0, 8)}: author=${event.pubkey.substring(0, 8)}..., content="${event.content.length > 50 ? event.content.substring(0, 50) + "..." : event.content}", hasVideo=${event.hasVideo}');
+          Log.info('  - Event ${event.id.substring(0, 8)}: author=${event.pubkey.substring(0, 8)}..., content="${event.content.length > 50 ? "${event.content.substring(0, 50)}..." : event.content}", hasVideo=${event.hasVideo}');
         }
       }
       

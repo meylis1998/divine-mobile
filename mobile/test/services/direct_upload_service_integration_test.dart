@@ -40,7 +40,7 @@ void main() {
         testVideoFile = File(path.join(tempDir.path, 'test_video.mp4'));
         await existingVideo.copy(testVideoFile.path);
         final fileSize = await testVideoFile.length();
-        Log.debug('📁 Using existing video file: ${testVideoFile.path} (${fileSize} bytes)');
+        Log.debug('📁 Using existing video file: ${testVideoFile.path} ($fileSize bytes)');
       } else {
         // Fallback: create a minimal test MP4 file
         testVideoFile = File(path.join(tempDir.path, 'test_video.mp4'));

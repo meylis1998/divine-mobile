@@ -14,7 +14,7 @@ void main() async {
     final wsUrl = Uri.parse('wss://vine.hol.is');
     final channel = IOWebSocketChannel.connect(wsUrl);
     
-    Log.debug('1. Connecting to ${wsUrl}...');
+    Log.debug('1. Connecting to $wsUrl...');
     
     // Listen for messages
     channel.stream.listen(

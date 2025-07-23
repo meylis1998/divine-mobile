@@ -4,8 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/video_event_processor.dart';
-import 'package:openvine/models/video_event.dart';
-import '../../helpers/test_helpers.dart';
 
 /// Tests for VideoEventProcessor that handles Nostr video event processing
 /// with robust validation and error handling
@@ -401,7 +399,7 @@ void main() {
       
       test('should handle extremely long URLs', () {
         // ARRANGE
-        final longUrl = 'https://example.com/' + 'very-long-path/' * 100 + 'video.mp4';
+        final longUrl = 'https://example.com/${'very-long-path/' * 100}video.mp4';
         final longUrlEvent = Event(
           '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef', // pubkey (hex)
           22,

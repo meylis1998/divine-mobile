@@ -4,7 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:http/http.dart' as http;
 import 'package:openvine/services/curation_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/social_service.dart';

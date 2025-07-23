@@ -27,8 +27,9 @@ void main() {
         await keyManager.generateKeys();
       }
       
-      nostrService = NostrServiceV2(keyManager);
-      videoService = VideoEventService(nostrService);
+      final subscriptionManager = SubscriptionManager();
+      nostrService = NostrService(subscriptionManager);
+      videoService = VideoEventService(nostrService, subscriptionManager);
     });
 
     tearDown(() async {

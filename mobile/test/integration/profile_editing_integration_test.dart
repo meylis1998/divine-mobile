@@ -12,7 +12,6 @@ import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/models/user_profile.dart' as model;
-import '../helpers/test_helpers.dart';
 
 // Generate mocks
 @GenerateMocks([
@@ -21,6 +20,9 @@ import '../helpers/test_helpers.dart';
   NostrService,
 ])
 import 'profile_editing_integration_test.mocks.dart';
+
+import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
 
 // Simple test environment replacement
 class TestEnvironment {
@@ -55,20 +57,6 @@ class TestEnvironment {
   }
 }
 
-// Simple result class for test mocking
-class TestEventBroadcastResult {
-  final bool isSuccessful;
-  final int successCount;
-  final int totalRelays;
-  final List<String> errors;
-
-  TestEventBroadcastResult({
-    required this.isSuccessful,
-    required this.successCount,
-    required this.totalRelays,
-    required this.errors,
-  });
-}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -154,12 +142,16 @@ void main() {
       
       // Mock successful broadcast
       when(testEnv.nostrService.broadcastEvent(any))
-          .thenAnswer((_) async => TestEventBroadcastResult(
-            isSuccessful: true,
-            successCount: 1,
-            totalRelays: 1,
-            errors: [],
-          ));
+          .thenAnswer((invocation) async {
+            final event = invocation.positionalArguments[0] as Event;
+            return NostrBroadcastResult(
+              event: event,
+              successCount: 1,
+              totalRelays: 1,
+              results: {'relay1': true},
+              errors: {},
+            );
+          });
       
       // Tap save button
       await tester.tap(saveButton);
@@ -216,12 +208,16 @@ void main() {
           }));
       
       when(testEnv.nostrService.broadcastEvent(any))
-          .thenAnswer((_) async => TestEventBroadcastResult(
-            isSuccessful: true,
-            successCount: 1,
-            totalRelays: 1,
-            errors: [],
-          ));
+          .thenAnswer((invocation) async {
+            final event = invocation.positionalArguments[0] as Event;
+            return NostrBroadcastResult(
+              event: event,
+              successCount: 1,
+              totalRelays: 1,
+              results: {'relay1': true},
+              errors: {},
+            );
+          });
       
       // Save profile
       await tester.tap(find.byKey(const Key('save_profile_button')));
@@ -271,12 +267,16 @@ void main() {
           .thenAnswer((_) async => staleProfile);
       
       when(testEnv.nostrService.broadcastEvent(any))
-          .thenAnswer((_) async => TestEventBroadcastResult(
-            isSuccessful: true,
-            successCount: 1,
-            totalRelays: 1,
-            errors: [],
-          ));
+          .thenAnswer((invocation) async {
+            final event = invocation.positionalArguments[0] as Event;
+            return NostrBroadcastResult(
+              event: event,
+              successCount: 1,
+              totalRelays: 1,
+              results: {'relay1': true},
+              errors: {},
+            );
+          });
       
       // Save profile
       await tester.tap(find.byKey(const Key('save_profile_button')));
@@ -296,17 +296,3 @@ void main() {
   });
 }
 
-// Helper class for test event broadcast results
-class TestEventBroadcastResult {
-  final bool isSuccessful;
-  final int successCount;
-  final int totalRelays;
-  final List<String> errors;
-  
-  TestEventBroadcastResult({
-    required this.isSuccessful,
-    required this.successCount,
-    required this.totalRelays,
-    required this.errors,
-  });
-}

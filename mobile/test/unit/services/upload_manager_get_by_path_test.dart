@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/direct_upload_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';

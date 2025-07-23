@@ -119,6 +119,7 @@ class VideoManagerService implements IVideoManager {
   int get _totalVideoCount => _primaryVideos.length + _discoveryVideos.length;
   
   /// Check if the given index is at the boundary between primary and discovery feeds
+  @override
   bool isAtFeedBoundary(int index) {
     // Boundary is after the last primary video, before the first discovery video
     return _primaryVideos.isNotEmpty && 
@@ -127,9 +128,11 @@ class VideoManagerService implements IVideoManager {
   }
   
   /// Get the number of primary (following) videos
+  @override
   int get primaryVideoCount => _primaryVideos.length;
   
   /// Get the number of discovery videos  
+  @override
   int get discoveryVideoCount => _discoveryVideos.length;
   
   @override
@@ -267,7 +270,7 @@ class VideoManagerService implements IVideoManager {
     final start = (currentIndex - _config.preloadBehind).clamp(0, _totalVideoCount - 1);
     final end = (currentIndex + range).clamp(0, _totalVideoCount - 1);
     
-    Log.info('🚀 Preloading around index $currentIndex (range: $start-$end), total videos: ${_totalVideoCount}', name: 'VideoManager', category: LogCategory.video);
+    Log.info('🚀 Preloading around index $currentIndex (range: $start-$end), total videos: $_totalVideoCount', name: 'VideoManager', category: LogCategory.video);
     
     // Dispose controllers for videos outside the viewing window
     _disposeUnusedControllers(currentIndex);
@@ -514,7 +517,7 @@ class VideoManagerService implements IVideoManager {
       }
     }
     
-    Log.info('🚫 Filtered ${blockedVideos.length} blocked videos from feed (${initialCount} -> ${_totalVideoCount})', name: 'VideoManager');
+    Log.info('🚫 Filtered ${blockedVideos.length} blocked videos from feed ($initialCount -> $_totalVideoCount)', name: 'VideoManager');
     
     // Notify listeners of change
     _notifyStateChange();

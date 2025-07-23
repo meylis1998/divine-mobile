@@ -2,7 +2,6 @@
 // ABOUTME: Reusable controller for consistent video behavior across different UI contexts
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart';
 import '../models/video_event.dart';

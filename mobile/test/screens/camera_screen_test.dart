@@ -4,24 +4,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/screens/camera_screen.dart';
+import 'package:openvine/screens/universal_camera_screen.dart';
 import 'package:openvine/services/camera_service.dart';
 
 // Mock classes for testing
 class MockCameraService extends Mock implements CameraService {}
 
 void main() {
-  group('CameraScreen Integration', () {
+  group('UniversalCameraScreen Integration', () {
     testWidgets('should display camera screen with publishing integration', (WidgetTester tester) async {
       // Build the widget
       await tester.pumpWidget(
         const MaterialApp(
-          home: CameraScreen(),
+          home: UniversalCameraScreen(),
         ),
       );
 
       // Verify the camera screen loads
-      expect(find.byType(CameraScreen), findsOneWidget);
+      expect(find.byType(UniversalCameraScreen), findsOneWidget);
       
       // Should show loading state initially
       expect(find.text('Initializing camera...'), findsOneWidget);
@@ -36,7 +36,7 @@ void main() {
     testWidgets('should show publish button when GIF is ready', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: CameraScreen(),
+          home: UniversalCameraScreen(),
         ),
       );
 
@@ -53,7 +53,7 @@ void main() {
     testWidgets('should have gallery and record buttons', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: CameraScreen(),
+          home: UniversalCameraScreen(),
         ),
       );
 
@@ -68,7 +68,7 @@ void main() {
     testWidgets('should show effect buttons', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: CameraScreen(),
+          home: UniversalCameraScreen(),
         ),
       );
 

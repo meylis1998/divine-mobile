@@ -160,7 +160,7 @@ class CloudinaryUploadService extends ChangeNotifier {
         );
       } else {
         final errorMsg = 'Cloudinary upload failed: Invalid response';
-        Log.error('$errorMsg', name: 'CloudinaryUploadService', category: LogCategory.system);
+        Log.error(errorMsg, name: 'CloudinaryUploadService', category: LogCategory.system);
         return UploadResult.failure(errorMsg);
       }
     } catch (e, stackTrace) {

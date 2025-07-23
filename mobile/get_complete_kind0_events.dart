@@ -1,6 +1,5 @@
 // Fetch COMPLETE kind 0 events from vine.hol.is relay - ALL DATA
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/event.dart';

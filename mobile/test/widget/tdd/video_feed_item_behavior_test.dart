@@ -1,10 +1,8 @@
 // ABOUTME: TDD Widget tests for VideoFeedItem behavior requirements
 // ABOUTME: Defines expected UI behavior for different video states in the new system
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/models/video_state.dart';
 import '../../helpers/test_helpers.dart';
 
 void main() {

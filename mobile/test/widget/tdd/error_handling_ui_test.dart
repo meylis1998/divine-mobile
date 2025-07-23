@@ -1,10 +1,8 @@
 // ABOUTME: TDD Widget tests for error handling and retry functionality in UI
 // ABOUTME: Defines expected UI behavior for error boundaries and recovery flows
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/models/video_state.dart';
 import '../../helpers/test_helpers.dart';
 
 void main() {

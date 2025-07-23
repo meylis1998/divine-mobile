@@ -15,7 +15,6 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/profile_videos_provider.dart';
 import 'package:openvine/models/user_profile.dart' as models;
-import 'package:openvine/providers/profile_videos_provider.dart' show ProfileVideosLoadingState;
 
 @GenerateMocks([
   AuthService,

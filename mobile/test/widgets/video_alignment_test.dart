@@ -1,7 +1,6 @@
 // ABOUTME: Test for video alignment behavior with square videos
 // ABOUTME: Verifies that square videos are top-aligned instead of centered
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

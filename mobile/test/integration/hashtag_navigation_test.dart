@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:flutter/material.dart';
-import 'package:openvine/widgets/clickable_hashtag_text.dart';
 import 'package:openvine/screens/explore_screen.dart';
 
 void main() {

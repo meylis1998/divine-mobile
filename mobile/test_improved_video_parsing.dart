@@ -1,7 +1,6 @@
 // ABOUTME: Test the improved video URL parsing with various edge cases
 // ABOUTME: Run with: dart test_improved_video_parsing.dart
 
-import 'dart:convert';
 import 'package:nostr_sdk/event.dart';
 import 'lib/models/video_event.dart';
 import 'package:openvine/utils/unified_logger.dart';

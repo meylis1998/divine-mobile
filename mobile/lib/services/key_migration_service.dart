@@ -76,7 +76,7 @@ class KeyMigrationService {
       ]);
       
       // Check if secure storage is available
-      final secureStorageAvailable = !_secureStorage.securityInfo.isEmpty;
+      final secureStorageAvailable = _secureStorage.securityInfo.isNotEmpty;
       
       // Check if legacy keys exist
       final legacyKeysExist = await _legacyStorage.hasKeys();

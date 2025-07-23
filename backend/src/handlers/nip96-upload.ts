@@ -150,8 +150,12 @@ export async function handleNIP96Upload(
         );
       }
     } catch (safetyError) {
-      console.warn('Content safety scanning failed, proceeding with upload:', safetyError);
-      // Continue with upload despite safety scan failure
+      console.error('Content safety scanning failed:', safetyError);
+      return createErrorResponse(
+        NIP96ErrorCode.PROCESSING_ERROR,
+        'Content safety verification failed. Please try again later.',
+        500
+      );
     }
 
     // Additional file validation
@@ -163,7 +167,12 @@ export async function handleNIP96Upload(
         );
       }
     } catch (validationError) {
-      console.warn('File validation failed, proceeding anyway:', validationError);
+      console.error('File validation error:', validationError);
+      return createErrorResponse(
+        NIP96ErrorCode.INVALID_FILE_TYPE,
+        'File validation failed',
+        400
+      );
     }
 
     // For now, send all files through direct upload to R2 storage

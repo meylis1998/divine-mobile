@@ -2,8 +2,6 @@
 // ABOUTME: Verifies AuthService automatically adds vine.hol.is relay requirement
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/utils/nostr_timestamp.dart';
 
 void main() {
   group('vine.hol.is Relay Tag Requirement', () {

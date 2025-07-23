@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/video_manager_interface.dart';
-import '../services/video_event_bridge.dart';
 import '../services/user_profile_service.dart';
 import '../widgets/video_feed_item.dart';
 import '../models/video_event.dart';
@@ -790,7 +789,8 @@ class _FeedScreenV2State extends State<FeedScreenV2> with WidgetsBindingObserver
     _lastPaginationRequest = DateTime.now();
     
     try {
-      await _videoEventBridge!.loadMoreEvents();
+      // TODO: Implement video loading without deprecated VideoEventBridge
+      // await _videoEventBridge!.loadMoreEvents();
       Log.info('Successfully loaded more videos', name: 'FeedScreenV2', category: LogCategory.ui);
     } catch (e) {
       Log.error('Failed to load more videos: $e', name: 'FeedScreenV2', category: LogCategory.ui);

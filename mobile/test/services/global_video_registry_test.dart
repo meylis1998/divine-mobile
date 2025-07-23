@@ -2,7 +2,6 @@
 // ABOUTME: Ensures centralized control of video playback across the entire app
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:video_player/video_player.dart';
 import 'package:openvine/services/global_video_registry.dart';
 
 // Simple test double for VideoPlayerController

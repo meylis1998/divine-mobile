@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/relay/event_filter.dart';

@@ -7,7 +7,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_sdk/event.dart';
 import '../models/curation_set.dart';
 import '../models/video_event.dart';
 import '../services/nostr_service_interface.dart';
@@ -255,7 +254,7 @@ class CurationService extends ChangeNotifier {
             final viewCount = vineData['views'] ?? 0;
             
             if (eventId != null) {
-              Log.verbose('  Looking for eventId: $eventId (${viewCount} views)', name: 'CurationService', category: LogCategory.system);
+              Log.verbose('  Looking for eventId: $eventId ($viewCount views)', name: 'CurationService', category: LogCategory.system);
               
               // Find the video in our local cache
               final localVideo = allVideos.firstWhere(
@@ -271,7 +270,7 @@ class CurationService extends ChangeNotifier {
               
               if (localVideo.id.isNotEmpty) {
                 trending.add(localVideo);
-                Log.info('✅ Found trending video: ${localVideo.title ?? localVideo.id.substring(0, 8)} (${viewCount} views)', name: 'CurationService', category: LogCategory.system);
+                Log.info('✅ Found trending video: ${localVideo.title ?? localVideo.id.substring(0, 8)} ($viewCount views)', name: 'CurationService', category: LogCategory.system);
               } else {
                 Log.warning('❌ Trending video not found locally: $eventId - will fetch from relays', name: 'CurationService', category: LogCategory.system);
                 missingEventIds.add(eventId);

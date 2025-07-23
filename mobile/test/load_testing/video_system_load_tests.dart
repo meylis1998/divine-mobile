@@ -1,7 +1,6 @@
 // ABOUTME: Load testing scenarios for video system under realistic usage patterns
 // ABOUTME: Tests memory limits, concurrent operations, and stress conditions
 
-import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';

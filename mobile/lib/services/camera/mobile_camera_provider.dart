@@ -6,7 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'camera_provider.dart';
-import '../utils/unified_logger.dart';
+import '../../utils/unified_logger.dart';
 
 /// Camera provider for iOS and Android using the camera plugin
 class MobileCameraProvider implements CameraProvider {

@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_sdk/event.dart';
 
 import 'package:openvine/providers/video_feed_provider.dart';
 import 'package:openvine/providers/feed_mode_providers.dart';
@@ -17,7 +16,6 @@ import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/state/video_feed_state.dart';
-import 'package:openvine/state/social_state.dart';
 import 'package:openvine/state/curation_state.dart';
 import 'package:openvine/state/user_profile_state.dart';
 import 'package:openvine/constants/app_constants.dart';

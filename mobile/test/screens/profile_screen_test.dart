@@ -16,7 +16,7 @@ import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/profile_videos_provider.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/models/user_profile.dart';
+import 'package:openvine/models/user_profile.dart' as models;
 
 @GenerateMocks([
   AuthService,
@@ -52,7 +52,9 @@ void main() {
     when(mockAuthService.currentPublicKeyHex).thenReturn('79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798');
     when(mockAuthService.currentProfile).thenReturn(null);
     when(mockUserProfileService.getCachedProfile(any)).thenReturn(null);
-    when(mockUserProfileService.fetchProfile(any)).thenAnswer((_) async {});
+    when(mockUserProfileService.fetchProfile(any)).thenAnswer((_) async {
+      return null;
+    });
     when(mockProfileStatsProvider.isLoading).thenReturn(false);
     when(mockProfileStatsProvider.stats).thenReturn(null);
     when(mockProfileStatsProvider.hasError).thenReturn(false);

@@ -270,7 +270,7 @@ class _RelaySettingsScreenState extends State<RelaySettingsScreen> {
                     },
                     isDarkMode: isDarkMode,
                   );
-                }).toList(),
+                }),
                 
                 const SizedBox(height: 24),
                 

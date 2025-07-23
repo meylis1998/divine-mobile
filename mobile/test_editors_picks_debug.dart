@@ -18,15 +18,15 @@ void main() async {
   Log.info('Classic Vines Pubkey: ${AppConstants.classicVinesPubkey}', name: 'Debug', category: LogCategory.system);
   
   // Initialize services
-  final nostrService = NostrService();
-  final subscriptionManager = SubscriptionManager(nostrService: nostrService);
+  final subscriptionManager = SubscriptionManager();
+  final nostrService = NostrService(subscriptionManager);
   final videoEventService = VideoEventService(
     nostrService,
-    subscriptionManager: subscriptionManager,
+    subscriptionManager,
   );
   final socialService = SocialService(
     nostrService,
-    subscriptionManager: subscriptionManager,
+    subscriptionManager,
   );
   final curationService = CurationService(
     nostrService: nostrService,
@@ -107,7 +107,7 @@ void main() async {
   } finally {
     // Cleanup
     await videoEventService.unsubscribeFromVideoFeed();
-    await nostrService.close();
+    await nostrService.dispose();
     Log.info('Test completed', name: 'Debug', category: LogCategory.system);
   }
 }

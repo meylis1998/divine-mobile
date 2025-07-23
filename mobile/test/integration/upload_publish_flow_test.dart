@@ -48,7 +48,7 @@ void main() {
     when(() => mockVideoFile.exists()).thenAnswer((_) async => true);
     when(() => mockVideoFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList(List.filled(1000, 0)));
     
-    when(() => mockNostrService.userPublicKey).thenReturn('test-pubkey-123');
+    // Remove NostrService dependency - public key is handled by AuthService in real app
     when(() => mockProfileVideosProvider.refreshVideos()).thenAnswer((_) async {});
   });
 
@@ -112,7 +112,8 @@ void main() {
       // Assert
       // Verify no new upload was started (should use existing)
       verifyNever(() => mockUploadManager.startUpload(
-        videoPath: any(named: 'videoPath'),
+        videoFile: any(named: 'videoFile'),
+        nostrPubkey: any(named: 'nostrPubkey'),
         title: any(named: 'title'),
         description: any(named: 'description'),
         hashtags: any(named: 'hashtags'),
@@ -138,12 +139,18 @@ void main() {
       when(() => mockUploadManager.getUploadByFilePath('/path/to/test/video.mp4'))
           .thenReturn(null); // No existing upload
 
+      final newUpload = PendingUpload.create(
+        localVideoPath: '/path/to/test/video.mp4',
+        nostrPubkey: 'test-pubkey-123',
+      );
+      
       when(() => mockUploadManager.startUpload(
-        videoPath: any(named: 'videoPath'),
+        videoFile: any(named: 'videoFile'),
+        nostrPubkey: any(named: 'nostrPubkey'),
         title: any(named: 'title'),
         description: any(named: 'description'),
         hashtags: any(named: 'hashtags'),
-      )).thenAnswer((_) async => 'new-upload-123');
+      )).thenAnswer((_) async => newUpload);
 
       // Build the widget
       await tester.pumpWidget(

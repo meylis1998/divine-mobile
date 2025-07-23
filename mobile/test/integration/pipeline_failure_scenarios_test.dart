@@ -1,7 +1,6 @@
 // ABOUTME: Tests for pipeline failure scenarios and recovery mechanisms  
 // ABOUTME: Validates error handling, retry logic, and graceful degradation under various failure conditions
 
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';

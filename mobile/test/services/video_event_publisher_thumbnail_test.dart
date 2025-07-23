@@ -191,7 +191,7 @@ void main() {
       verification.called(1);
 
       final capturedTags = verification.captured[0] as List<List<String>>;
-      expect(capturedTags.any((tag) => tag.length >= 1 && tag[0] == 'thumb'), isFalse);
+      expect(capturedTags.any((tag) => tag.isNotEmpty && tag[0] == 'thumb'), isFalse);
       expect(capturedTags.any((tag) => tag.length >= 2 && tag[0] == 'url' && tag[1] == 'https://cdn.example.com/video456.mp4'), isTrue);
     });
 

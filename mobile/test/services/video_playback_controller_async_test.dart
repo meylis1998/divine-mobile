@@ -1,7 +1,6 @@
 // ABOUTME: Tests for video playback controller async pattern refactoring  
 // ABOUTME: Verifies that fixed retry delays are replaced with exponential backoff
 
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_playback_controller.dart';
 import 'package:openvine/models/video_event.dart';
@@ -165,20 +164,20 @@ void main() {
   group('Performance Comparison', () {
     test('should demonstrate improved retry timing vs fixed delays', () async {
       // Simulate old fixed delay pattern
-      final oldRetryPattern = () async {
+      oldRetryPattern() async {
         const fixedDelay = Duration(milliseconds: 100);
         for (int i = 0; i < 3; i++) {
           await Future.delayed(fixedDelay);
         }
-      };
+      }
       
       // Simulate new exponential backoff pattern (without actual failures)
-      final newRetryPattern = () async {
+      newRetryPattern() async {
         final delays = [100, 200, 400]; // Exponential backoff simulation
         for (final delay in delays) {
           await Future.delayed(Duration(milliseconds: delay));
         }
-      };
+      }
       
       // Test old pattern timing
       final oldStopwatch = Stopwatch()..start();

@@ -162,23 +162,23 @@ void main() {
   group('Performance Tests', () {
     test('should not use blocking delays in async operations', () async {
       // Create a mock implementation that simulates the old polling behavior
-      final oldStyleCompletion = () async {
+      oldStyleCompletion() async {
         int attempts = 0;
         while (attempts < 10) {
           await Future.delayed(const Duration(milliseconds: 100));
           attempts++;
         }
         return 'completed';
-      };
+      }
       
       // Create new async pattern implementation
-      final newStyleCompletion = () async {
+      newStyleCompletion() async {
         final completer = Completer<String>();
         Timer(const Duration(milliseconds: 200), () {
           completer.complete('completed');
         });
         return completer.future;
-      };
+      }
       
       // Compare performance
       final oldStopwatch = Stopwatch()..start();

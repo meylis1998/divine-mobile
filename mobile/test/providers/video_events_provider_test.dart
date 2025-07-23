@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 
@@ -15,7 +16,6 @@ import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/constants/app_constants.dart';
 
 // Mock classes
@@ -65,8 +65,10 @@ void main() {
         (previous, next) {},
       );
       
-      // Give it time to set up
-      await Future.delayed(Duration(milliseconds: 10));
+      // Use pumpEventQueue to allow provider to initialize
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       
       // Verify subscription was created with correct filter
       verify(() => mockNostrService.subscribeToEvents(
@@ -101,7 +103,10 @@ void main() {
       // Start provider
       final _ = container.read(videoEventsProvider);
       
-      await Future.delayed(Duration(milliseconds: 10));
+      // Use pumpEventQueue to allow provider to initialize
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       await streamController.close();
     });
 
@@ -127,7 +132,10 @@ void main() {
       // Start provider
       final _ = container.read(videoEventsProvider);
       
-      await Future.delayed(Duration(milliseconds: 10));
+      // Use pumpEventQueue to allow provider to initialize
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       await streamController.close();
     });
 
@@ -160,7 +168,14 @@ void main() {
       
       // Add event to stream
       streamController.add(mockEvent);
-      await Future.delayed(Duration(milliseconds: 50));
+      
+      // Wait for state to update
+      await TestAsyncUtils.guard(() async {
+        // Wait for the stream to process the event
+        while (states.isEmpty || states.last.value?.isEmpty ?? true) {
+          await Future.microtask(() {});
+        }
+      });
       
       // Check we got the video event
       final lastState = states.last;
@@ -193,7 +208,10 @@ void main() {
       // Start provider
       final _ = container.read(videoEventsProvider);
       
-      await Future.delayed(Duration(milliseconds: 10));
+      // Use pumpEventQueue to allow provider to initialize
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       await streamController.close();
     });
 
@@ -218,7 +236,10 @@ void main() {
       // Start provider
       final _ = container.read(videoEventsProvider);
       
-      await Future.delayed(Duration(milliseconds: 10));
+      // Use pumpEventQueue to allow provider to initialize
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       await streamController.close();
     });
 
@@ -283,13 +304,15 @@ void main() {
       // Wait for all events to be accumulated or timeout
       try {
         await completer.future.timeout(Duration(seconds: 10));
-        print('Successfully accumulated all events');
+        // Successfully accumulated all events
       } on TimeoutException {
-        print('Timeout waiting for event accumulation');
+        // Timeout waiting for event accumulation - acceptable for this test
       }
       
-      // Give a bit more time for final processing
-      await Future.delayed(Duration(milliseconds: 100));
+      // Ensure all microtasks are processed
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       
       // Debug: print final states
       print('Final states count: ${states.length}');
@@ -337,7 +360,11 @@ void main() {
       
       // Add error to stream
       streamController.addError(Exception('Network error'));
-      await Future.delayed(Duration(milliseconds: 10));
+      
+      // Wait for error to be processed
+      await TestAsyncUtils.guard(() async {
+        await Future.microtask(() {});
+      });
       
       // Should handle error
       final lastState = states.last;

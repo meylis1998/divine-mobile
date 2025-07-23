@@ -221,7 +221,7 @@ Examples:
     Map<String, dynamic> options
   ) async {
     final isDryRun = options['dryRun'] == true;
-    final batchSizeToUse = options['batchSize'] ?? batchSize;
+    final batchSizeToUse = (options['batchSize'] ?? batchSize) as int;
     final timeOffset = options['timeOffset'] ?? 2.5;
     
     if (isDryRun) {

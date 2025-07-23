@@ -344,9 +344,7 @@ class MacOSCameraInterface extends CameraPlatformInterface with AsyncInitializat
   Future<String> waitForRecordingCompletion({
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    if (_recordingCompletionCompleter == null) {
-      _recordingCompletionCompleter = Completer<String>();
-    }
+    _recordingCompletionCompleter ??= Completer<String>();
     
     try {
       return await _recordingCompletionCompleter!.future.timeout(timeout);

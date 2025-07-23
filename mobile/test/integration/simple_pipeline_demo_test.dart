@@ -1,7 +1,6 @@
 // ABOUTME: Simple demonstration of pipeline testing framework 
 // ABOUTME: Shows how integration tests can catch real pipeline issues
 
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

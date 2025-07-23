@@ -15,7 +15,6 @@ import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/screens/profile_screen.dart';
 import 'package:openvine/models/video_state.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/user_profile.dart';
 
 @GenerateMocks([

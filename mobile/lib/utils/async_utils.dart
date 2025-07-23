@@ -308,8 +308,7 @@ class AsyncUtils {
 
 /// Exception thrown when an async operation times out
 class AsyncTimeoutException extends TimeoutException {
-  AsyncTimeoutException(String message, Duration timeout) 
-      : super(message, timeout);
+  AsyncTimeoutException(String super.message, Duration super.timeout);
 }
 
 /// Mixin for classes that need proper async initialization patterns
