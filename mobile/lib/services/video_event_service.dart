@@ -541,11 +541,14 @@ class VideoEventService extends ChangeNotifier {
       
       final event = eventData;
 
-      // Fast-path de-duplication before logging
+      // Fast-path de-duplication before logging and processing
       final paginationState = _paginationStates[subscriptionType];
-      if (paginationState != null && paginationState.seenEventIds.contains(event.id)) {
-        // Already processed this event for this subscription type
-        return;
+      if (paginationState != null) {
+        if (paginationState.seenEventIds.contains(event.id)) {
+          return;
+        }
+        // Mark seen early to prevent repeated logs for the same event (even if later skipped)
+        paginationState.markEventSeen(event.id);
       }
       
       Log.info('📥 Received $subscriptionType event: kind=${event.kind}, author=${event.pubkey.substring(0, 8)}..., id=${event.id.substring(0, 8)}...',
@@ -801,8 +804,11 @@ class VideoEventService extends ChangeNotifier {
       final event = eventData;
       // Fast-path de-duplication before logging
       final paginationState = _paginationStates[subscriptionType];
-      if (paginationState != null && paginationState.seenEventIds.contains(event.id)) {
-        return;
+      if (paginationState != null) {
+        if (paginationState.seenEventIds.contains(event.id)) {
+          return;
+        }
+        paginationState.markEventSeen(event.id);
       }
       
       Log.info('📥 Received historical $subscriptionType event: kind=${event.kind}, author=${event.pubkey.substring(0, 8)}..., id=${event.id.substring(0, 8)}...',

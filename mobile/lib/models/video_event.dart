@@ -115,6 +115,8 @@ class VideoEvent {
         case 'imeta':
           developer.log('🔍 DEBUG: Found imeta tag with ${tag.length} elements',
               name: 'VideoEvent');
+          developer.log('🔍 DEBUG: Full imeta tag contents: $tag',
+              name: 'VideoEvent');
           // Parse imeta tag which contains comma-separated metadata
           // Ensure we have a List<String> for the parser
           final iMetaTag = List<String>.from(tag);
@@ -157,6 +159,8 @@ class VideoEvent {
               case 'image':
                 // NIP-92 uses 'image' for thumbnail in imeta
                 thumbnailUrl ??= value;
+                developer.log('✅ Set thumbnailUrl from imeta image tag: $value',
+                    name: 'VideoEvent');
               case 'blurhash':
                 // Blurhash for progressive loading
                 blurhash ??= value;
@@ -321,6 +325,7 @@ class VideoEvent {
     }
 
     // Generate fallback thumbnail URL if none provided
+    developer.log('🖼️ BEFORE FALLBACK: thumbnailUrl = $thumbnailUrl', name: 'VideoEvent');
     final String? finalThumbnailUrl = thumbnailUrl ?? _generateFallbackThumbnailUrl(videoUrl, event.id);
     
     if (finalThumbnailUrl != thumbnailUrl) {
@@ -329,6 +334,7 @@ class VideoEvent {
     
     developer.log('🖼️ FINAL: thumbnailUrl = $finalThumbnailUrl', name: 'VideoEvent');
     developer.log('🖼️ FINAL: blurhash = $blurhash', name: 'VideoEvent');
+    developer.log('🖼️ FINAL: event.id = ${event.id}', name: 'VideoEvent');
 
     return VideoEvent(
       id: event.id,
@@ -749,11 +755,14 @@ class VideoEvent {
     try {
       final uri = Uri.parse(correctedUrl);
       
-      // For api.openvine.co videos, use the thumbnail API service with event ID
+      // For api.openvine.co videos, use the thumbnail API service
       if (uri.host.contains('api.openvine.co') || uri.host.contains('apt.openvine.co')) {
-        // Use the event ID for thumbnail generation, not the media ID
-        // The thumbnail API expects event IDs
-        return ThumbnailApiService.getThumbnailUrl(eventId);
+        // Extract video ID from path like /media/12345
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.isNotEmpty && pathSegments.first == 'media' && pathSegments.length > 1) {
+          final videoId = pathSegments[1];
+          return ThumbnailApiService.getThumbnailUrl(videoId);
+        }
       }
       
       // For other video hosts, try to generate a thumbnail URL pattern
