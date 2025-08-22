@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased Changes]
 
 ### Fixed
+- **Video Upload and Publishing**: Resolved critical issues preventing video uploads and Nostr event publishing
+  - Fixed Hive Duration serialization error by converting Duration fields to milliseconds (int)
+  - Resolved "HiveError: Cannot write, unknown type: Duration" that was blocking upload persistence
+  - Fixed backend health check to use existing NIP-96 info endpoint instead of non-existent /health endpoint
+  - Uploads now successfully save to local storage and complete the publishing flow
+  - Added comprehensive logging throughout upload pipeline for better debugging
+
+- **macOS Navigation Bar Error**: Fixed RangeError in BottomNavigationBar on app startup
+  - Replaced deprecated `withValues(alpha: 0.7)` with `withOpacity(0.7)` for color transparency
+  - Fixed incorrect indentation causing Flutter to misinterpret widget structure
+  - Resolved "RangeError: Invalid value: Not in inclusive range" error
+
+- **Relay Settings Screen**: Updated to show external relays instead of internal gateway
+  - Now displays actual external relays (e.g., wss://relay3.openvine.co) not localhost:8080
+  - Connected to NostrService to fetch configured external relay list
+  - Added functional add/remove relay UI with validation
+  - Included informative banner explaining external relay synchronization
+
+- **UserProfileService Compilation**: Added missing prefetch tracking fields
+  - Added `_prefetchActive` and `_lastPrefetchAt` fields to fix undefined getter errors
+  - Resolved compilation errors preventing macOS builds
+
 - **Video Publishing and Profile Refresh Issues**: Comprehensive fix for video publishing workflow
   - **Profile Screen Refresh**: Profile now automatically refreshes when returning from video publishing
     - Added `didChangeDependencies()` lifecycle method to detect tab activation
