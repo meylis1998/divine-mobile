@@ -5,7 +5,20 @@ All notable changes to the OpenVine mobile application will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-07-29
+## [Unreleased] - 2025-09-12
+
+### Added
+- **Multi-Account Support Planning**: Comprehensive implementation plan for multiple Nostr accounts
+  - Created detailed architecture documentation at `docs/MULTI_ACCOUNT_IMPLEMENTATION.md`
+  - Designed AccountManager service for managing multiple identities
+  - Planned secure key storage using flutter_secure_storage with biometric protection
+  - Architected account switching with <500ms target performance
+  - Designed shared embedded relay infrastructure across all accounts
+  - Planned account-specific subscriptions, settings, and state preservation
+  - Created data models for UserAccount, AccountState, and RelayConfig
+  - Designed migration strategy for existing single-account users
+  - Documented complete API reference and testing strategies
+  - Planned 5-phase implementation roadmap with security-first approach
 
 ### Added
 - **Analytics-Driven Trending**: Implemented trending content based on real analytics data
