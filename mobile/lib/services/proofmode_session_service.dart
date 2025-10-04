@@ -17,6 +17,7 @@ class RecordingSegment {
     required this.startTime,
     required this.endTime,
     required this.frameHashes,
+    this.frameTimestamps,
     this.sensorData,
   });
 
@@ -24,6 +25,7 @@ class RecordingSegment {
   final DateTime startTime;
   final DateTime endTime;
   final List<String> frameHashes;
+  final List<DateTime>? frameTimestamps;
   final Map<String, dynamic>? sensorData;
 
   Duration get duration => endTime.difference(startTime);
@@ -34,6 +36,7 @@ class RecordingSegment {
         'endTime': endTime.toIso8601String(),
         'duration': duration.inMilliseconds,
         'frameHashes': frameHashes,
+        'frameTimestamps': frameTimestamps?.map((t) => t.toIso8601String()).toList(),
         'sensorData': sensorData,
       };
 
@@ -43,6 +46,11 @@ class RecordingSegment {
         startTime: DateTime.parse(json['startTime'] as String),
         endTime: DateTime.parse(json['endTime'] as String),
         frameHashes: (json['frameHashes'] as List<dynamic>).cast<String>(),
+        frameTimestamps: json['frameTimestamps'] != null
+            ? (json['frameTimestamps'] as List<dynamic>)
+                .map((t) => DateTime.parse(t as String))
+                .toList()
+            : null,
         sensorData: json['sensorData'] as Map<String, dynamic>?,
       );
 }
@@ -201,8 +209,14 @@ class ProofModeSessionService {
   ProofSession? _currentSession;
   Timer? _pauseMonitorTimer;
 
+  /// Get the current active session
+  ProofSession? get currentSession => _currentSession;
+
   /// Start a new proof session for vine recording
-  Future<String?> startSession() async {
+  Future<String?> startSession({
+    int frameSampleRate = 1,
+    int maxFrameHashes = 1000,
+  }) async {
     if (!await ProofModeConfig.isCaptureEnabled) {
       Log.info('ProofMode capture disabled, skipping session start',
           name: 'ProofModeSessionService', category: LogCategory.system);
@@ -226,6 +240,8 @@ class ProofModeSessionService {
         challengeNonce: challengeNonce,
         startTime: DateTime.now(),
         deviceAttestation: attestation,
+        frameSampleRate: frameSampleRate,
+        maxFrameHashes: maxFrameHashes,
       );
 
       Log.info('Started ProofMode session: $sessionId',
@@ -237,6 +253,59 @@ class ProofModeSessionService {
           name: 'ProofModeSessionService', category: LogCategory.system);
       return null;
     }
+  }
+
+  /// Capture frame data from camera during recording
+  Future<void> captureFrame(Uint8List? frameData) async {
+    if (frameData == null) {
+      throw ArgumentError('Frame data cannot be null');
+    }
+
+    final session = _currentSession;
+    if (session == null) {
+      throw StateError('No active session to capture frame');
+    }
+
+    if (!session.isRecording) {
+      throw StateError('Cannot capture frame when not recording');
+    }
+
+    try {
+      session.captureFrame(frameData);
+    } catch (e) {
+      Log.error('Failed to capture frame: $e',
+          name: 'ProofModeSessionService', category: LogCategory.system);
+      rethrow;
+    }
+  }
+
+  /// Pause recording (stop current segment)
+  Future<void> pauseRecording() async {
+    await stopRecordingSegment();
+  }
+
+  /// Resume recording (start new segment)
+  Future<void> resumeRecording() async {
+    await startRecordingSegment();
+  }
+
+  /// End the current session
+  Future<void> endSession() async {
+    final session = _currentSession;
+    if (session == null) {
+      throw StateError('No active session to end');
+    }
+
+    Log.info('Ending ProofMode session: ${session.sessionId}',
+        name: 'ProofModeSessionService', category: LogCategory.system);
+
+    // Stop any active recording
+    if (session.isRecording) {
+      await stopRecordingSegment();
+    }
+
+    _pauseMonitorTimer?.cancel();
+    _currentSession = null;
   }
 
   /// Start recording a segment
@@ -439,12 +508,16 @@ class ProofSession {
     required this.challengeNonce,
     required this.startTime,
     this.deviceAttestation,
+    this.frameSampleRate = 1,
+    this.maxFrameHashes = 1000,
   });
 
   final String sessionId;
   final String challengeNonce;
   final DateTime startTime;
   final DeviceAttestation? deviceAttestation;
+  final int frameSampleRate;
+  final int maxFrameHashes;
 
   final List<RecordingSegment> segments = [];
   final List<PauseProof> pauseProofs = [];
@@ -453,15 +526,39 @@ class ProofSession {
   RecordingSegment? _currentSegment;
   DateTime? _currentSegmentStart;
   List<String> _currentFrameHashes = [];
+  List<DateTime> _currentFrameTimestamps = [];
 
   PauseProof? _currentPauseProof;
   DateTime? _currentPauseStart;
 
+  int _frameCounter = 0;
+
   bool get isRecording => _currentSegment != null;
+
+  /// Get all frame hashes across all segments
+  List<String> get frameHashes {
+    final allHashes = <String>[];
+    for (final segment in segments) {
+      allHashes.addAll(segment.frameHashes);
+    }
+    if (_currentFrameHashes.isNotEmpty) {
+      allHashes.addAll(_currentFrameHashes);
+    }
+    return allHashes;
+  }
 
   void startRecordingSegment(String segmentId) {
     _currentSegmentStart = DateTime.now();
     _currentFrameHashes = [];
+    _currentFrameTimestamps = [];
+    _frameCounter = 0;
+    // Set current segment to indicate recording is active
+    _currentSegment = RecordingSegment(
+      segmentId: segmentId,
+      startTime: _currentSegmentStart!,
+      endTime: _currentSegmentStart!, // Will be updated on stop
+      frameHashes: [],
+    );
 
     // End current pause proof if active
     if (_currentPauseProof != null && _currentPauseStart != null) {
@@ -484,12 +581,14 @@ class ProofSession {
       startTime: _currentSegmentStart!,
       endTime: DateTime.now(),
       frameHashes: List.from(_currentFrameHashes),
+      frameTimestamps: List.from(_currentFrameTimestamps),
     );
 
     segments.add(segment);
     _currentSegment = null;
     _currentSegmentStart = null;
     _currentFrameHashes = [];
+    _currentFrameTimestamps = [];
 
     // Start new pause proof
     _currentPauseStart = DateTime.now();
@@ -499,6 +598,34 @@ class ProofSession {
     if (isRecording) {
       _currentFrameHashes.add(hash);
     }
+  }
+
+  /// Capture frame data and hash it
+  void captureFrame(Uint8List frameData) {
+    if (!isRecording) {
+      throw StateError('Cannot capture frame when not recording');
+    }
+
+    _frameCounter++;
+
+    // Apply frame sampling - only capture every Nth frame
+    if (_frameCounter % frameSampleRate != 0) {
+      return;
+    }
+
+    // Check if we've hit the max frame hash limit
+    final totalHashes = frameHashes.length;
+    if (totalHashes >= maxFrameHashes) {
+      return;
+    }
+
+    // Generate SHA256 hash
+    final hash = sha256.convert(frameData);
+    final hashString = hash.toString();
+
+    // Store hash and timestamp
+    _currentFrameHashes.add(hashString);
+    _currentFrameTimestamps.add(DateTime.now());
   }
 
   void addInteraction(UserInteractionProof interaction) {
