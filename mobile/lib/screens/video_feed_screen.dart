@@ -16,6 +16,7 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/video_page_view.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 
 /// Feed context for filtering videos
 enum FeedContext {
@@ -133,6 +134,21 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     WidgetsBinding.instance.addObserver(this);
 
     // Feed mode removed - each screen manages its own content
+
+    // Listen for tab changes - clear active video when tab becomes hidden
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listenManual(
+        tabVisibilityProvider,
+        (prev, next) {
+          if (next != 0) {
+            // This tab (Home = tab 0) is no longer visible
+            Log.info('🔄 Tab 0 (Home Feed) hidden, clearing active video',
+                name: 'VideoFeedScreen', category: LogCategory.ui);
+            ref.read(activeVideoProvider.notifier).clearActiveVideo();
+          }
+        },
+      );
+    });
   }
 
   @override

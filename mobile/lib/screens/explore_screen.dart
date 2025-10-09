@@ -8,6 +8,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/top_hashtags_service.dart';
@@ -43,6 +44,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
     Log.info('🎯 ExploreScreenPure: Initialized with revolutionary architecture',
         category: LogCategory.video);
+
+    // Listen for tab changes - clear active video when tab becomes hidden
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listenManual(
+        tabVisibilityProvider,
+        (prev, next) {
+          if (next != 2) {
+            // This tab (Explore = tab 2) is no longer visible
+            Log.info('🔄 Tab 2 (Explore) hidden, clearing active video',
+                name: 'ExploreScreen', category: LogCategory.ui);
+            ref.read(activeVideoProvider.notifier).clearActiveVideo();
+          }
+        },
+      );
+    });
   }
 
   Future<void> _loadHashtags() async {

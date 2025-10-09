@@ -14,6 +14,7 @@ import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/profile_videos_provider.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -73,6 +74,19 @@ class _ProfileScreenScrollableState
       Log.info('🎯 ProfileScreenScrollable: postFrameCallback - calling _initializeProfile for ${widget.profilePubkey?.substring(0, 8) ?? 'own'}',
           name: 'ProfileScreenScrollable', category: LogCategory.ui);
       _initializeProfile();
+
+      // Listen for tab changes - clear active video when tab becomes hidden
+      ref.listenManual(
+        tabVisibilityProvider,
+        (prev, next) {
+          if (next != 3) {
+            // This tab (Profile = tab 3) is no longer visible
+            Log.info('🔄 Tab 3 (Profile) hidden, clearing active video',
+                name: 'ProfileScreenScrollable', category: LogCategory.ui);
+            ref.read(activeVideoProvider.notifier).clearActiveVideo();
+          }
+        },
+      );
     });
   }
 
