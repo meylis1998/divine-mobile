@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/screens/explore_screen_router.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/home_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 
@@ -33,9 +34,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/hashtag/:tag/:index',
         builder: (context, state) {
-          final tag = state.pathParameters['tag'] ?? '';
-          final index = int.tryParse(state.pathParameters['index'] ?? '0') ?? 0;
-          return _PlaceholderScreen(title: 'Hashtag: $tag', index: index);
+          return const HashtagScreenRouter();
         },
       ),
       GoRoute(
