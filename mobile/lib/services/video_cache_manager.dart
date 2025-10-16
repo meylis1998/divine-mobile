@@ -202,6 +202,22 @@ class VideoCacheManager extends CacheManager {
     }
   }
 
+  /// Remove a corrupted video from cache so it can be re-downloaded
+  Future<void> removeCorruptedVideo(String videoId) async {
+    try {
+      Log.info('🗑️ Removing corrupted video ${videoId.substring(0, 8)}... from cache',
+          name: 'VideoCacheManager', category: LogCategory.video);
+
+      await removeFile(videoId);
+
+      Log.info('✅ Corrupted video ${videoId.substring(0, 8)}... removed from cache',
+          name: 'VideoCacheManager', category: LogCategory.video);
+    } catch (error) {
+      Log.error('❌ Error removing corrupted video ${videoId.substring(0, 8)}... from cache: $error',
+          name: 'VideoCacheManager', category: LogCategory.video);
+    }
+  }
+
   /// Clear all cached videos (useful for testing or when user wants to free space)
   Future<void> clearAllCache() async {
     try {

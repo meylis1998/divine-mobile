@@ -8,6 +8,7 @@ import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/screens/home_screen_router.dart';
+import 'package:openvine/screens/notifications_screen.dart';
 import 'package:openvine/screens/profile_screen_scrollable.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/screens/settings_screen.dart';
@@ -16,7 +17,7 @@ import 'package:openvine/screens/settings_screen.dart';
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
 final _exploreKey = GlobalKey<NavigatorState>(debugLabel: 'explore');
-final _hashtagKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag');
+final _notificationsKey = GlobalKey<NavigatorState>(debugLabel: 'notifications');
 final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 /// Maps URL location to bottom nav tab index
@@ -28,7 +29,7 @@ int tabIndexFromLocation(String loc) {
       return 0;
     case 'explore':
       return 1;
-    case 'hashtag':
+    case 'notifications':
       return 2;
     case 'profile':
       return 3;
@@ -85,23 +86,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // HASHTAG tab subtree
+          // NOTIFICATIONS tab subtree
           GoRoute(
-            path: '/hashtag/:tag/:index',
-            name: 'hashtag',
-            pageBuilder: (ctx, st) {
-              final tag = st.pathParameters['tag'] ?? 'trending';
-              return NoTransitionPage(
-                key: st.pageKey,
-                child: Navigator(
-                  key: _hashtagKey,
-                  onGenerateRoute: (r) => MaterialPageRoute(
-                    builder: (_) => HashtagFeedScreen(hashtag: tag),
-                    settings: const RouteSettings(name: 'hashtag-root'),
-                  ),
+            path: '/notifications/:index',
+            name: 'notifications',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: Navigator(
+                key: _notificationsKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const NotificationsScreen(),
+                  settings: const RouteSettings(name: 'notifications-root'),
                 ),
-              );
-            },
+              ),
+            ),
           ),
 
           // PROFILE tab subtree
@@ -127,7 +125,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Non-tab routes outside the shell (camera/settings)
+      // Non-tab routes outside the shell (camera/settings/hashtag)
       GoRoute(
         path: '/camera',
         builder: (_, __) => const UniversalCameraScreenPure(),
@@ -135,6 +133,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (_, __) => const SettingsScreen(),
+      ),
+      // Hashtag as push route (accessible from explore)
+      GoRoute(
+        path: '/hashtag/:tag/:index',
+        name: 'hashtag',
+        builder: (ctx, st) {
+          final tag = st.pathParameters['tag'] ?? 'trending';
+          return HashtagFeedScreen(hashtag: tag);
+        },
       ),
     ],
   );

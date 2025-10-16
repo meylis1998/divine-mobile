@@ -189,9 +189,24 @@ VideoPlayerController individualVideoController(
 
     Log.error(logMessage, name: 'IndividualVideoController', category: LogCategory.system);
 
-    // Mark video as broken for errors that indicate the video URL is non-functional
-    // Check if provider is still mounted before using ref
-    if (_isVideoError(errorMessage) && ref.mounted) {
+    // Check for corrupted cache file (OSStatus error -12848 or "media may be damaged")
+    if (_isCacheCorruption(errorMessage)) {
+      Log.warning('🗑️ Detected corrupted cache for video $videoIdDisplay... - removing and will retry',
+          name: 'IndividualVideoController', category: LogCategory.video);
+
+      // Remove corrupted cache file and invalidate provider to trigger retry
+      videoCache.removeCorruptedVideo(params.videoId).then((_) {
+        if (ref.mounted) {
+          Log.info('🔄 Invalidating provider to retry download for video $videoIdDisplay...',
+              name: 'IndividualVideoController', category: LogCategory.video);
+          ref.invalidateSelf();
+        }
+      }).catchError((removeError) {
+        Log.error('❌ Failed to remove corrupted cache: $removeError',
+            name: 'IndividualVideoController', category: LogCategory.video);
+      });
+    } else if (_isVideoError(errorMessage) && ref.mounted) {
+      // Mark video as broken for errors that indicate the video URL is non-functional
       ref.read(brokenVideoTrackerProvider.future).then((tracker) {
         // Double-check still mounted before marking broken
         if (ref.mounted) {
@@ -221,6 +236,15 @@ VideoPlayerController individualVideoController(
   // This ensures videos can only play when widget is mounted and visible
 
   return controller;
+}
+
+/// Check if error indicates a corrupted cache file
+bool _isCacheCorruption(String errorMessage) {
+  final lowerError = errorMessage.toLowerCase();
+  return lowerError.contains('osstatus error -12848') ||
+         lowerError.contains('media may be damaged') ||
+         lowerError.contains('cannot open') ||
+         (lowerError.contains('failed to load video') && lowerError.contains('damaged'));
 }
 
 /// Check if error indicates a broken/non-functional video

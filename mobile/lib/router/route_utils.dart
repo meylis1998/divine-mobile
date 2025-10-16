@@ -5,8 +5,9 @@
 enum RouteType {
   home,
   explore,
+  notifications,
   profile,
-  hashtag,
+  hashtag, // Still supported as push route within explore
   camera,
   settings,
 }
@@ -61,6 +62,11 @@ RouteContext parseRoute(String path) {
         videoIndex: index,
       );
 
+    case 'notifications':
+      final rawIndex = segments.length > 1 ? int.tryParse(segments[1]) ?? 0 : 0;
+      final index = rawIndex < 0 ? 0 : rawIndex; // Normalize negative indices
+      return RouteContext(type: RouteType.notifications, videoIndex: index);
+
     case 'hashtag':
       if (segments.length < 2) {
         return const RouteContext(type: RouteType.home, videoIndex: 0);
@@ -98,6 +104,11 @@ String buildRoute(RouteContext context) {
       final rawIndex = context.videoIndex ?? 0;
       final index = rawIndex < 0 ? 0 : rawIndex; // Normalize negative indices
       return '/explore/$index';
+
+    case RouteType.notifications:
+      final rawIndex = context.videoIndex ?? 0;
+      final index = rawIndex < 0 ? 0 : rawIndex; // Normalize negative indices
+      return '/notifications/$index';
 
     case RouteType.profile:
       final npub = Uri.encodeComponent(context.npub ?? ''); // Encode URL

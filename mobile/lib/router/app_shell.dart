@@ -27,6 +27,8 @@ class AppShell extends ConsumerWidget {
         return 'diVine';
       case RouteType.explore:
         return 'Explore';
+      case RouteType.notifications:
+        return 'Notifications';
       case RouteType.hashtag:
         final raw = ctx?.hashtag ?? '';
         return raw.isEmpty ? '#—' : '#$raw';
@@ -46,7 +48,7 @@ class AppShell extends ConsumerWidget {
       case 1:
         return RouteType.explore;
       case 2:
-        return RouteType.hashtag;
+        return RouteType.notifications;
       case 3:
         return RouteType.profile;
       default:
@@ -68,10 +70,7 @@ class AppShell extends ConsumerWidget {
         context.goExplore(lastIndex);
         break;
       case 2:
-        // For hashtag, need current tag - default to 'trending'
-        final ctx = ref.read(pageContextProvider).asData?.value;
-        final tag = ctx?.hashtag ?? 'trending';
-        context.goHashtag(tag, lastIndex);
+        context.goNotifications(lastIndex);
         break;
       case 3:
         // For profile, need current npub - default to 'me'
@@ -117,10 +116,10 @@ class AppShell extends ConsumerWidget {
         currentIndex: currentIndex,
         onTap: (index) => _handleTabTap(context, ref, index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home),    label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
-          BottomNavigationBarItem(icon: Icon(Icons.tag),     label: 'Tags'),
-          BottomNavigationBarItem(icon: Icon(Icons.person),  label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.home),          label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore),       label: 'Explore'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.person),        label: 'Profile'),
         ],
       ),
     );

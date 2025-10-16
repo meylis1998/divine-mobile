@@ -41,6 +41,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
       // Explore route not yet implemented, use home feed as fallback
       videosAsync = ref.watch(videosForHomeRouteProvider);
       break;
+    case RouteType.notifications:
     case RouteType.camera:
     case RouteType.settings:
       // Non-video routes - return null
