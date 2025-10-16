@@ -70,8 +70,13 @@ Future<List<Todo>> getTodos() async {
 
     final match = RegExp(r'^([^:]+):(\d+):.*?TODO[:\s]*(.*)$').firstMatch(line);
     if (match != null) {
+      final file = match.group(1)!;
+
+      // Skip generated files
+      if (_isGeneratedFile(file)) continue;
+
       todos.add(Todo(
-        match.group(1)!,
+        file,
         int.parse(match.group(2)!),
         match.group(3)!.trim(),
       ));
@@ -79,6 +84,20 @@ Future<List<Todo>> getTodos() async {
   }
 
   return todos;
+}
+
+bool _isGeneratedFile(String filepath) {
+  final basename = filepath.split('/').last;
+
+  // Skip build directory
+  if (filepath.contains('/build/')) return true;
+
+  // Skip generated Dart files
+  if (basename.endsWith('.g.dart')) return true;
+  if (basename.endsWith('.freezed.dart')) return true;
+  if (basename.endsWith('.mocks.dart')) return true;
+
+  return false;
 }
 
 Future<TodoAnalysis> analyzeTodo(Todo todo) async {
