@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:openvine/utils/unified_logger.dart';
 import 'page_context_provider.dart';
 import 'route_utils.dart';
 import 'nav_extensions.dart';
@@ -63,6 +64,10 @@ class AppShell extends ConsumerWidget {
     final routeType = _routeTypeForTab(tabIndex);
     final lastIndex = ref.read(lastTabPositionProvider.notifier).getPosition(routeType);
 
+    // Log user interaction
+    Log.info('👆 User tapped bottom nav: tab=$tabIndex (${_tabName(tabIndex)})',
+        name: 'Navigation', category: LogCategory.ui);
+
     // Navigate to last position in that tab
     switch (tabIndex) {
       case 0:
@@ -84,6 +89,16 @@ class AppShell extends ConsumerWidget {
     }
   }
 
+  String _tabName(int index) {
+    switch (index) {
+      case 0: return 'Home';
+      case 1: return 'Explore';
+      case 2: return 'Notifications';
+      case 3: return 'Profile';
+      default: return 'Unknown';
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = _titleFor(ref);
@@ -101,7 +116,10 @@ class AppShell extends ConsumerWidget {
         leading: showBackButton
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  Log.info('👆 User tapped back button', name: 'Navigation', category: LogCategory.ui);
+                  Navigator.of(context).pop();
+                },
               )
             : null,
         title: Text(
@@ -121,12 +139,18 @@ class AppShell extends ConsumerWidget {
           IconButton(
             tooltip: 'Search',
             icon: const Icon(Icons.search),
-            onPressed: () => context.goSearch(),
+            onPressed: () {
+              Log.info('👆 User tapped search button', name: 'Navigation', category: LogCategory.ui);
+              context.goSearch();
+            },
           ),
           IconButton(
             tooltip: 'Open camera',
             icon: const Icon(Icons.photo_camera_outlined),
-            onPressed: () => context.pushCamera(),
+            onPressed: () {
+              Log.info('👆 User tapped camera button', name: 'Navigation', category: LogCategory.ui);
+              context.pushCamera();
+            },
           ),
         ],
       ),

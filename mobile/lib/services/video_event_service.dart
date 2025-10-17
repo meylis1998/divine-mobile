@@ -2252,14 +2252,6 @@ class VideoEventService extends ChangeNotifier {
       return; // Don't add videos without valid URLs
     }
 
-    // Debug logging for hashtag subscriptions
-    if (subscriptionType == SubscriptionType.hashtag) {
-      Log.info(
-          '📝 Adding video to hashtag list: ${videoEvent.id.substring(0, 8)} - hashtags: ${videoEvent.hashtags}',
-          name: 'VideoEventService',
-          category: LogCategory.video);
-    }
-
     final eventList = _eventLists[subscriptionType];
     if (eventList == null) {
       Log.error('Invalid subscription type: $subscriptionType',
@@ -2279,11 +2271,6 @@ class VideoEventService extends ChangeNotifier {
     // Fetch profile for video author if not already cached
     // This uses existing WebSocket connection with REQ command
     if (_userProfileService != null && !_userProfileService.hasProfile(videoEvent.pubkey)) {
-      Log.debug(
-        'Fetching profile for video author ${videoEvent.pubkey.substring(0, 8)}...',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
       _userProfileService.fetchProfile(videoEvent.pubkey).catchError((error) {
         Log.warning(
           'Failed to fetch profile for ${videoEvent.pubkey.substring(0, 8)}: $error',

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/visibility_tracker.dart';
 
 void main() {
   testWidgets('VideoFeedItem does not crash when disposed during video initialization',
@@ -25,7 +25,8 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        // Override necessary providers for test
+        // Use NoopVisibilityTracker to prevent timer leaks in tests
+        visibilityTrackerProvider.overrideWithValue(NoopVisibilityTracker()),
       ],
     );
     addTearDown(container.dispose);
@@ -47,7 +48,10 @@ void main() {
     // Pump once to start video initialization
     await tester.pump();
 
-    // Immediately navigate away (simulating Home → Explore navigation)
+    // Pump to let visibility detector timer fire (500ms)
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Now navigate away (simulating Home → Explore navigation during video init)
     // This should dispose the VideoFeedItem while video is initializing
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -61,8 +65,8 @@ void main() {
     );
 
     // Pump to complete disposal and let any pending callbacks fire
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    // Use pumpAndSettle to ensure all timers (including visibility detector) complete
+    await tester.pumpAndSettle();
 
     // Should complete without "ref after unmount" crash
     expect(tester.takeException(), isNull,

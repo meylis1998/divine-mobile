@@ -81,13 +81,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // EXPLORE tab subtree - single route with optional index
-          // /explore = grid mode, /explore/:index = feed mode
+          // EXPLORE tab - grid mode (no index)
           GoRoute(
-            path: '/explore/:index?',
+            path: '/explore',
             name: 'explore',
             pageBuilder: (ctx, st) => NoTransitionPage(
-              key: st.pageKey,
+              key: const ValueKey('explore-page'),
+              child: Navigator(
+                key: _exploreKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const ExploreScreen(),
+                  settings: const RouteSettings(name: 'explore-root'),
+                ),
+              ),
+            ),
+          ),
+
+          // EXPLORE tab - feed mode (with video index)
+          GoRoute(
+            path: '/explore/:index',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: const ValueKey('explore-page'),
               child: Navigator(
                 key: _exploreKey,
                 onGenerateRoute: (r) => MaterialPageRoute(
@@ -134,14 +148,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
 
-          // SEARCH route (inside shell for AppBar, but hides bottom nav)
-          // Single route with optional searchTerm and index
-          // /search = empty, /search/:term = grid with term, /search/:term/:index = feed
+          // SEARCH route - empty search
           GoRoute(
-            path: '/search/:searchTerm?/:index?',
+            path: '/search',
             name: 'search',
             pageBuilder: (ctx, st) => NoTransitionPage(
-              key: st.pageKey,
+              key: const ValueKey('search-page'),
               child: Navigator(
                 key: _searchKey,
                 onGenerateRoute: (r) => MaterialPageRoute(
@@ -152,14 +164,57 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // HASHTAG route (inside shell to preserve explore tab and bottom nav)
-          // Single route with optional index
-          // /hashtag/:tag = grid mode, /hashtag/:tag/:index = feed mode
+          // SEARCH route - with term, grid mode
           GoRoute(
-            path: '/hashtag/:tag/:index?',
+            path: '/search/:searchTerm',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: const ValueKey('search-page'),
+              child: Navigator(
+                key: _searchKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const SearchScreenPure(embedded: true),
+                  settings: const RouteSettings(name: 'search-root'),
+                ),
+              ),
+            ),
+          ),
+
+          // SEARCH route - with term and index, feed mode
+          GoRoute(
+            path: '/search/:searchTerm/:index',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: const ValueKey('search-page'),
+              child: Navigator(
+                key: _searchKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const SearchScreenPure(embedded: true),
+                  settings: const RouteSettings(name: 'search-root'),
+                ),
+              ),
+            ),
+          ),
+
+          // HASHTAG route - grid mode (no index)
+          GoRoute(
+            path: '/hashtag/:tag',
             name: 'hashtag',
             pageBuilder: (ctx, st) => NoTransitionPage(
-              key: st.pageKey,
+              key: const ValueKey('hashtag-page'),
+              child: Navigator(
+                key: _hashtagKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const HashtagScreenRouter(),
+                  settings: const RouteSettings(name: 'hashtag-root'),
+                ),
+              ),
+            ),
+          ),
+
+          // HASHTAG route - feed mode (with video index)
+          GoRoute(
+            path: '/hashtag/:tag/:index',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: const ValueKey('hashtag-page'),
               child: Navigator(
                 key: _hashtagKey,
                 onGenerateRoute: (r) => MaterialPageRoute(

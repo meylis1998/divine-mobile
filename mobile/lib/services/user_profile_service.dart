@@ -207,10 +207,6 @@ class UserProfileService {
     // Check if already requesting this profile - STOP HERE, don't create duplicate subscriptions
     // (Note: forceRefresh already cleaned up existing requests above)
     if (_pendingRequests.contains(pubkey)) {
-      Log.warning(
-          '⏳ Profile request already pending for ${pubkey.substring(0, 8)}... (skipping duplicate)',
-          name: 'UserProfileService',
-          category: LogCategory.system);
       return null;
     }
 
@@ -235,10 +231,6 @@ class UserProfileService {
 
     try {
       _pendingRequests.add(pubkey);
-      Log.debug(
-          '🔍 Starting profile fetch for user: ${pubkey.substring(0, 8)}... (using batch)',
-          name: 'UserProfileService',
-          category: LogCategory.system);
 
       // Add to batch instead of creating individual subscription
       _pendingBatchPubkeys.add(pubkey);
@@ -263,11 +255,6 @@ class UserProfileService {
   void _handleProfileEvent(Event event) {
     try {
       if (event.kind != 0) return;
-
-      Log.debug(
-          '📨 Received profile event for ${event.pubkey.substring(0, 8)}...',
-          name: 'UserProfileService',
-          category: LogCategory.system);
 
       // Parse profile data from event content
       final profile = UserProfile.fromNostrEvent(event);
@@ -298,11 +285,6 @@ class UserProfileService {
       }
 
       _cleanupProfileRequest(event.pubkey);
-
-      Log.debug(
-          '✅ Cached profile for ${event.pubkey.substring(0, 8)}: ${profile.bestDisplayName}',
-          name: 'UserProfileService',
-          category: LogCategory.system);
     } catch (e) {
       Log.error('Error parsing profile event: $e',
           name: 'UserProfileService', category: LogCategory.system);

@@ -1,8 +1,6 @@
 // ABOUTME: Route parsing and building utilities
 // ABOUTME: Converts between URLs and structured route context
 
-import 'package:openvine/utils/unified_logger.dart';
-
 /// Route types supported by the app
 enum RouteType {
   home,
@@ -35,7 +33,6 @@ class RouteContext {
 /// Parse a URL path into a structured RouteContext
 /// Normalizes negative indices to 0 and decodes URL-encoded parameters
 RouteContext parseRoute(String path) {
-  Log.info('ROUTE parse: $path', name: 'Route', category: LogCategory.ui);
   final segments = path.split('/').where((s) => s.isNotEmpty).toList();
 
   if (segments.isEmpty) {
