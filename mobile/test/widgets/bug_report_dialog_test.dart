@@ -11,6 +11,7 @@ import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 
 import 'bug_report_dialog_test.mocks.dart';
+import '../helpers/test_provider_overrides.dart';
 
 @GenerateMocks([BugReportService])
 void main() {
