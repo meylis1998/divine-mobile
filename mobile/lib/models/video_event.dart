@@ -51,7 +51,7 @@ class VideoEvent {
     }
 
     developer.log(
-        '🔍 DEBUG: Parsing Kind ${event.kind} event ${event.id.substring(0, 8)}...',
+        '🔍 DEBUG: Parsing Kind ${event.kind} event ${event.id}',
         name: 'VideoEvent');
     developer.log('🔍 DEBUG: Event has ${event.tags.length} tags',
         name: 'VideoEvent');
@@ -670,11 +670,9 @@ class VideoEvent {
     }
   }
 
-  /// Get shortened pubkey for display (first 8 characters + npub prefix)
+  /// Get pubkey for display
   String get displayPubkey {
-    // In a real implementation, convert to npub format
-    // For now, just show first 8 chars
-    return pubkey.length > 8 ? pubkey.substring(0, 8) : pubkey;
+    return pubkey;
   }
 
   /// Check if this event has video content
@@ -816,7 +814,7 @@ class VideoEvent {
 
   @override
   String toString() => 'VideoEvent('
-      'id: ${id.substring(0, 8)}..., '
+      'id: $id, '
       'pubkey: $displayPubkey, '
       'title: $title, '
       'duration: $formattedDuration, '
@@ -872,11 +870,17 @@ class VideoEvent {
 
   /// Score video URL by format preference
   /// Higher scores = better format preference
-  /// MP4 is most reliable, HLS/m3u8 is currently broken so avoid it
+  /// HLS is best for adaptive bitrate, then fall back to MP4
   static int _scoreVideoUrl(String url) {
     final urlLower = url.toLowerCase();
 
-    // MP4 is best - universal compatibility and works reliably
+    // Reject broken vine.co URLs immediately
+    if (urlLower.contains('vine.co')) return -1;
+
+    // HLS (.m3u8) is BEST - adaptive bitrate streaming
+    if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 110;
+
+    // MP4 is good fallback - universal compatibility
     if (urlLower.contains('.mp4')) return 100;
 
     // WebM is good for web
@@ -887,9 +891,6 @@ class VideoEvent {
 
     // AVI is supported but not optimal
     if (urlLower.contains('.avi')) return 60;
-
-    // HLS (.m3u8) is BROKEN - avoid it
-    if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 10;
 
     // DASH can be problematic
     if (urlLower.contains('.mpd') || urlLower.contains('dash')) return 10;
