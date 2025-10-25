@@ -99,6 +99,7 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter> with VideoP
 
             // Check if video list changed (e.g., reordered due to social provider update)
             // If current video moved to different index, update URL to maintain position
+            bool urlUpdatePending = false;
             if (_currentVideoId != null && videos.isNotEmpty) {
               final currentVideoIndex = videos.indexWhere((v) => v.id == _currentVideoId);
               if (currentVideoIndex != -1 && currentVideoIndex != urlIndex) {
@@ -114,13 +115,14 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter> with VideoP
                     RouteContext(type: RouteType.home, videoIndex: currentVideoIndex),
                   ));
                 });
-                return; // Skip rest of sync logic, let rebuild handle it
+                urlUpdatePending = true;
               }
             }
 
             // Sync controller when URL changes externally (back/forward/deeplink)
             // Use post-frame to avoid calling jumpToPage during build
-            if (_controller!.hasClients) {
+            // Skip if URL update is already pending from reorder detection
+            if (_controller!.hasClients && !urlUpdatePending) {
               final safeIndex = urlIndex.clamp(0, itemCount - 1);
               final currentPage = _controller!.page?.round() ?? 0;
 

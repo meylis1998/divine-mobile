@@ -23,6 +23,11 @@ class MockHashtagService extends Mock implements HashtagService {
 }
 
 void main() {
+  setUpAll(() {
+    // Register fallback values for mocktail
+    registerFallbackValue(SubscriptionType.hashtag);
+  });
+
   group('HashtagFeedScreen Widget Tests', () {
     late MockVideoEventService mockVideoService;
     late MockHashtagService mockHashtagService;
@@ -53,6 +58,8 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn([]);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -69,6 +76,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(true);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(true);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn([]);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -85,6 +93,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn([]);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -118,6 +127,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn(testVideos);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -148,6 +158,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn(testVideos);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -176,6 +187,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn(testVideos);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -191,6 +203,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn([]);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -211,6 +224,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn([]);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
@@ -238,6 +252,7 @@ void main() {
 
       when(() => mockVideoService.isLoading).thenReturn(false);
       when(() => mockVideoService.isLoadingForSubscription(any<SubscriptionType>())).thenReturn(false);
+      when(() => mockVideoService.getEventCount(any<SubscriptionType>())).thenReturn(0);
       when(() => mockHashtagService.getVideosByHashtags([testHashtag]))
           .thenReturn(testVideos);
       when(() => mockHashtagService.getHashtagStats(testHashtag))
