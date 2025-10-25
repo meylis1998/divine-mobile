@@ -9,15 +9,15 @@ void main() {
   group('AppForeground Provider', () {
     test('should start in foreground state', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       final state = container.read(appForegroundProvider);
       expect(state, isTrue, reason: 'App should start in foreground');
+
+      container.dispose();
     });
 
     test('should transition to background when setForeground(false) is called', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Initially foreground
       expect(container.read(appForegroundProvider), isTrue);
@@ -27,11 +27,12 @@ void main() {
 
       // Should now be background
       expect(container.read(appForegroundProvider), isFalse);
+
+      container.dispose();
     });
 
     test('should transition back to foreground when setForeground(true) is called', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Start foreground
       expect(container.read(appForegroundProvider), isTrue);
@@ -43,11 +44,12 @@ void main() {
       // Resume to foreground
       container.read(appForegroundProvider.notifier).setForeground(true);
       expect(container.read(appForegroundProvider), isTrue);
+
+      container.dispose();
     });
 
     test('should notify listeners when foreground state changes', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       final states = <bool>[];
 
@@ -66,11 +68,12 @@ void main() {
 
       expect(states, equals([false, true, false]),
           reason: 'Should emit state change for each setForeground call');
+
+      container.dispose();
     });
 
     test('should handle rapid foreground/background transitions', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Rapid transitions
       for (int i = 0; i < 10; i++) {
@@ -79,11 +82,12 @@ void main() {
 
       // Final state should be false (last iteration i=9, 9%2=1, so false)
       expect(container.read(appForegroundProvider), isFalse);
+
+      container.dispose();
     });
 
     test('isAppInForegroundProvider should mirror appForegroundProvider state', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Initially both should be true
       expect(container.read(appForegroundProvider), isTrue);
@@ -98,6 +102,8 @@ void main() {
       container.read(appForegroundProvider.notifier).setForeground(true);
       expect(container.read(appForegroundProvider), isTrue);
       expect(container.read(isAppInForegroundProvider), isTrue);
+
+      container.dispose();
     });
   });
 }

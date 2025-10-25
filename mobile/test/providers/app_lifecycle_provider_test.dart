@@ -58,10 +58,10 @@ void main() {
       ],
     );
 
-    addTearDown(container.dispose);
-
     // Should return video at index 1
     expect(container.read(activeVideoIdProvider), 'v1');
+
+    container.dispose();
   });
 
   test('activeVideoIdProvider returns null when backgrounded', () {
@@ -101,9 +101,9 @@ void main() {
       ],
     );
 
-    addTearDown(container.dispose);
-
     // Should return null when backgrounded
     expect(container.read(activeVideoIdProvider), isNull);
+
+    container.dispose();
   });
 }

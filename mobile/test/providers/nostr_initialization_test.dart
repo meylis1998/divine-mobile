@@ -10,19 +10,19 @@ void main() {
     test('starts uninitialized (false)', () {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Act
       final state = container.read(nostrInitializationProvider);
 
       // Assert
       expect(state, isFalse, reason: 'Should start as uninitialized');
+
+      container.dispose();
     });
 
     test('becomes true when markInitialized is called', () {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Act - mark as initialized
       container
@@ -32,12 +32,13 @@ void main() {
 
       // Assert
       expect(state, isTrue, reason: 'Should be initialized after markInitialized()');
+
+      container.dispose();
     });
 
     test('notifies listeners when state changes', () {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       final states = <bool>[];
       container.listen(
@@ -52,6 +53,8 @@ void main() {
 
       // Assert
       expect(states, [true], reason: 'Should notify with true when initialized');
+
+      container.dispose();
     });
   });
 
@@ -59,19 +62,19 @@ void main() {
     test('returns false when NostrInitialization is false', () {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Act
       final ready = container.read(nostrReadyProvider);
 
       // Assert
       expect(ready, isFalse, reason: 'Should not be ready when uninitialized');
+
+      container.dispose();
     });
 
     test('returns true when NostrInitialization is true', () {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Act - mark as initialized
       container
@@ -81,12 +84,13 @@ void main() {
 
       // Assert
       expect(ready, isTrue, reason: 'Should be ready when initialized');
+
+      container.dispose();
     });
 
     test('notifies listeners when initialization state changes', () async {
       // Arrange
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       // Read initial value to ensure provider is instantiated
       container.read(nostrReadyProvider);
@@ -108,6 +112,8 @@ void main() {
       // Assert
       expect(readyStates, [true],
         reason: 'nostrReadyProvider should notify when initialization changes');
+
+      container.dispose();
     });
   });
 }

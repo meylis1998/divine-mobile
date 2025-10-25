@@ -23,12 +23,13 @@ void main() {
           ),
         ],
       );
-      addTearDown(container.dispose);
 
       final activeVideoId = container.read(activeVideoIdProvider);
 
       // Search route should not activate any video
       expect(activeVideoId, isNull);
+
+      container.dispose();
     });
 
     test('activeVideoIdProvider returns null when on search route even if videoIndex present', () {
@@ -44,12 +45,13 @@ void main() {
           ),
         ],
       );
-      addTearDown(container.dispose);
 
       final activeVideoId = container.read(activeVideoIdProvider);
 
       // Search route should never activate video, even with index
       expect(activeVideoId, isNull);
+
+      container.dispose();
     });
   });
 }
