@@ -149,18 +149,17 @@ class VideoEvents extends _$VideoEvents {
       _isSubscribed = true;
     }
 
-    // Always emit current events if available
+    // Always emit current events if available (no reordering - preserve insertion order)
     final currentEvents = List<VideoEvent>.from(service.discoveryVideos);
-    final reordered = _reorderBySeen(currentEvents, seenState);
 
-    Log.debug('VideoEvents: Emitting ${reordered.length} current events',
+    Log.debug('VideoEvents: Emitting ${currentEvents.length} current events',
         name: 'VideoEventsProvider', category: LogCategory.video);
 
     Future.microtask(() {
       if (_canEmit) {
-        _controller!.add(reordered);
+        _controller!.add(currentEvents);
         Log.info(
-          'VideoEvents: ✅ Emitted ${reordered.length} events to stream',
+          'VideoEvents: ✅ Emitted ${currentEvents.length} events to stream',
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
@@ -182,9 +181,7 @@ class VideoEvents extends _$VideoEvents {
   /// Listener callback for service changes
   void _onVideoEventServiceChange() {
     final service = ref.read(videoEventServiceProvider);
-    final seenState = ref.read(seenVideosProvider);
     final newEvents = List<VideoEvent>.from(service.discoveryVideos);
-    final reordered = _reorderBySeen(newEvents, seenState);
 
     Log.debug(
       '🔔 VideoEvents: Listener fired! Service has ${newEvents.length} discovery videos',
@@ -192,8 +189,8 @@ class VideoEvents extends _$VideoEvents {
       category: LogCategory.video,
     );
 
-    // Store pending events for debounced emission
-    _pendingEvents = reordered;
+    // Store pending events for debounced emission (no reordering - preserve order)
+    _pendingEvents = newEvents;
 
     // Cancel any existing timer
     _debounceTimer?.cancel();
@@ -210,22 +207,6 @@ class VideoEvents extends _$VideoEvents {
         _pendingEvents = null;
       }
     });
-  }
-
-  /// Reorder events to show unseen first
-  List<VideoEvent> _reorderBySeen(List<VideoEvent> events, SeenVideosState seenState) {
-    final unseen = <VideoEvent>[];
-    final seen = <VideoEvent>[];
-
-    for (final video in events) {
-      if (seenState.seenVideoIds.contains(video.id)) {
-        seen.add(video);
-      } else {
-        unseen.add(video);
-      }
-    }
-
-    return [...unseen, ...seen];
   }
 
 

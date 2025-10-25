@@ -7,7 +7,6 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -205,35 +204,18 @@ class HomeFeed extends _$HomeFeed {
     // DEBUG: Dump all events with cdn.divine.video thumbnails
     videoEventService.debugDumpCdnDivineVideoThumbnails();
 
-    // Reorder to show unseen videos first
-    final seenVideosState = ref.watch(seenVideosProvider);
-
-    final unseen = <VideoEvent>[];
-    final seen = <VideoEvent>[];
-
-    for (final video in followingVideos) {
-      if (seenVideosState.seenVideoIds.contains(video.id)) {
-        seen.add(video);
-      } else {
-        unseen.add(video);
-      }
-    }
-
-    // Sort each list by creation time (newest first)
-    unseen.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    seen.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    // Combine: unseen videos first, then seen videos
-    final reorderedVideos = [...unseen, ...seen];
+    // Sort by creation time (newest first) without reordering based on seen status
+    // This preserves stable order and prevents videos from jumping around
+    followingVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     Log.info(
-      '🏠 HomeFeed: Reordered to show ${unseen.length} unseen first, then ${seen.length} seen',
+      '🏠 HomeFeed: Sorted ${followingVideos.length} videos by creation time (newest first)',
       name: 'HomeFeedProvider',
       category: LogCategory.video,
     );
 
     // Auto-fetch profiles for new videos and wait for completion
-    await _scheduleBatchProfileFetch(reorderedVideos);
+    await _scheduleBatchProfileFetch(followingVideos);
 
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
@@ -247,8 +229,8 @@ class HomeFeed extends _$HomeFeed {
     }
 
     final feedState = VideoFeedState(
-      videos: reorderedVideos,
-      hasMoreContent: reorderedVideos.length >= 10,
+      videos: followingVideos,
+      hasMoreContent: followingVideos.length >= 10,
       isLoadingMore: false,
       error: null,
       lastUpdated: DateTime.now(),
@@ -257,7 +239,7 @@ class HomeFeed extends _$HomeFeed {
     final buildDuration = DateTime.now().difference(now).inMilliseconds;
 
     Log.info(
-      '✅ HomeFeed: BUILD #$buildId COMPLETE - ${reorderedVideos.length} videos from following in ${buildDuration}ms',
+      '✅ HomeFeed: BUILD #$buildId COMPLETE - ${followingVideos.length} videos from following in ${buildDuration}ms',
       name: 'HomeFeedProvider',
       category: LogCategory.video,
     );

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 import 'package:openvine/mixins/page_controller_sync_mixin.dart';
 import 'package:openvine/mixins/video_prefetch_mixin.dart';
 import 'package:openvine/providers/home_screen_controllers.dart';
@@ -24,11 +25,12 @@ class HomeScreenRouter extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
-    with VideoPrefetchMixin, PageControllerSyncMixin {
+    with VideoPrefetchMixin, PageControllerSyncMixin, AsyncValueUIHelpersMixin {
   PageController? _controller;
   int? _lastUrlIndex;
   int? _lastPrefetchIndex;
   String? _currentVideoId; // Track the video ID we're currently viewing
+  bool _urlUpdateScheduled = false; // Prevent infinite rebuild loops
 
   @override
   void dispose() {
@@ -51,8 +53,9 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
     // Read derived context from router
     final pageContext = ref.watch(pageContextProvider);
 
-    return pageContext.when(
-      data: (ctx) {
+    return buildAsyncUI(
+      pageContext,
+      onData: (ctx) {
         // Only handle home routes
         if (ctx.type != RouteType.home) {
           return const Center(child: Text('Not a home route'));
@@ -65,8 +68,9 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
         // Get video data from home feed
         final videosAsync = ref.watch(videosForHomeRouteProvider);
 
-        return videosAsync.when(
-          data: (state) {
+        return buildAsyncUI(
+          videosAsync,
+          onData: (state) {
             final videos = state.videos;
 
             // Determine target index from route context
@@ -119,7 +123,7 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
             // Check if video list changed (e.g., reordered due to social provider update)
             // If current video moved to different index, update URL to maintain position
             bool urlUpdatePending = false;
-            if (_currentVideoId != null && videos.isNotEmpty) {
+            if (_currentVideoId != null && videos.isNotEmpty && !_urlUpdateScheduled) {
               final currentVideoIndex = videos.indexWhere((v) => v.id == _currentVideoId);
               if (currentVideoIndex != -1 && currentVideoIndex != urlIndex) {
                 // Video we're viewing is now at a different index - update URL silently
@@ -128,8 +132,10 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                   name: 'HomeScreenRouter',
                   category: LogCategory.video,
                 );
+                _urlUpdateScheduled = true; // Prevent multiple pending updates
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
+                  _urlUpdateScheduled = false; // Reset flag after update
                   // Use event-based routing (always use event ID, not index)
                   context.go(buildRoute(
                     RouteContext(
@@ -232,14 +238,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(
-            child: Text('Error: $error'),
-          ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 }
