@@ -100,6 +100,23 @@ class NostrServiceFunction implements INostrService {
       Log.info('Function channel session created and connected',
           name: 'NostrServiceFunction', category: LogCategory.relay);
 
+      // MIGRATION: Remove old relay3.openvine.co if present
+      const oldRelay = 'wss://relay3.openvine.co';
+      final currentRelays = _embeddedRelay!.connectedRelays;
+
+      if (currentRelays.contains(oldRelay)) {
+        Log.info('🔄 MIGRATION: Removing old relay $oldRelay',
+            name: 'NostrServiceFunction', category: LogCategory.relay);
+        try {
+          await _embeddedRelay!.removeExternalRelay(oldRelay);
+          Log.info('✅ MIGRATION: Successfully removed old relay',
+              name: 'NostrServiceFunction', category: LogCategory.relay);
+        } catch (e) {
+          Log.error('❌ MIGRATION: Failed to remove old relay: $e',
+              name: 'NostrServiceFunction', category: LogCategory.relay);
+        }
+      }
+
       // Add external relays for proxying
       for (final relayUrl in relaysToAdd) {
         try {

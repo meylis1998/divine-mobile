@@ -138,6 +138,25 @@ class NostrService implements INostrService {
       // Initialize embeddedRelayFailed for web platform
       bool embeddedRelayFailed = kIsWeb;
 
+      // MIGRATION: Remove old relay3.openvine.co if present
+      if (!embeddedRelayFailed && _embeddedRelay != null) {
+        const oldRelay = 'wss://relay3.openvine.co';
+        final currentRelays = _embeddedRelay!.connectedRelays;
+
+        if (currentRelays.contains(oldRelay)) {
+          Log.info('🔄 MIGRATION: Removing old relay $oldRelay',
+              name: 'NostrService', category: LogCategory.relay);
+          try {
+            await _embeddedRelay!.removeExternalRelay(oldRelay);
+            Log.info('✅ MIGRATION: Successfully removed old relay',
+                name: 'NostrService', category: LogCategory.relay);
+          } catch (e) {
+            Log.error('❌ MIGRATION: Failed to remove old relay: $e',
+                name: 'NostrService', category: LogCategory.relay);
+          }
+        }
+      }
+
       // Add external relays (embedded relay will manage connections if available)
       if (!embeddedRelayFailed && _embeddedRelay != null) {
         Log.info('🔗 Connecting to ${relaysToAdd.length} external relay(s)...',
