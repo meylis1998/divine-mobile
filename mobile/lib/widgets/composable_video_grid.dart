@@ -173,13 +173,14 @@ class ComposableVideoGrid extends ConsumerWidget {
                   ],
                 ),
               ),
-              // Video info
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              // Video info - wrapped in Flexible to prevent overflow
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     // Creator name
                     _buildCreatorName(ref, video),
                     const SizedBox(height: 2),
@@ -231,6 +232,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
               ),
             ],
           ),
