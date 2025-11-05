@@ -119,14 +119,19 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Get current user's npub and redirect
+          // Get current user's npub and redirect (preserve grid/feed mode from context)
           final currentUserNpub = NostrEncoding.encodePublicKey(authService.currentPublicKeyHex!);
-          final videoIndex = ctx.videoIndex ?? 0;
+          final videoIndex = ctx.videoIndex; // Don't default to 0 - preserve null for grid mode
 
           // Redirect to actual user profile using GoRouter explicitly
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              GoRouter.of(context).go('/profile/$currentUserNpub/$videoIndex');
+              // Use context extension to properly handle null videoIndex (grid mode)
+              if (videoIndex != null) {
+                context.goProfile(currentUserNpub, videoIndex);
+              } else {
+                context.goProfileGrid(currentUserNpub);
+              }
             }
           });
 

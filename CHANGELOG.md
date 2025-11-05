@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased Changes]
 
+### Fixed
+- **Profile Navigation**: Fixed issue where tapping Profile from drawer/bottom nav would skip grid view and go directly to fullscreen video feed
+  - Added missing `/profile/:npub` route for grid mode (was only `/profile/:npub/:index`)
+  - Fixed route parser to return `null` videoIndex for grid mode instead of defaulting to `0`
+  - Fixed 'me' profile redirect to preserve grid/feed mode (was always adding `/0` to URL)
+
 ### Added
 - **Key Management Screen**: Simple, user-friendly interface for Nostr key import and backup
   - Clear explanation of what Nostr keys are (npub/nsec concepts)

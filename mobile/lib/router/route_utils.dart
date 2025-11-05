@@ -60,12 +60,21 @@ RouteContext parseRoute(String path) {
         return const RouteContext(type: RouteType.home);
       }
       final npub = Uri.decodeComponent(segments[1]); // Decode URL encoding
-      final rawIndex = segments.length > 2 ? int.tryParse(segments[2]) ?? 0 : 0;
-      final index = rawIndex < 0 ? 0 : rawIndex;
+      // Grid mode (no index) vs feed mode (with index)
+      if (segments.length > 2) {
+        final rawIndex = int.tryParse(segments[2]) ?? 0;
+        final index = rawIndex < 0 ? 0 : rawIndex;
+        return RouteContext(
+          type: RouteType.profile,
+          npub: npub,
+          videoIndex: index,
+        );
+      }
+      // Grid mode - no videoIndex
       return RouteContext(
         type: RouteType.profile,
         npub: npub,
-        videoIndex: index,
+        videoIndex: null,
       );
 
     case 'notifications':

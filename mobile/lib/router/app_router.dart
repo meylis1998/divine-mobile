@@ -20,10 +20,10 @@ import 'package:openvine/screens/video_editor_screen.dart';
 import 'package:openvine/services/video_stop_navigator_observer.dart';
 
 // Navigator keys for per-tab state preservation
-// One key per logical screen (not per route variant)
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
-final _exploreKey = GlobalKey<NavigatorState>(debugLabel: 'explore');
+final _exploreGridKey = GlobalKey<NavigatorState>(debugLabel: 'explore-grid');
+final _exploreFeedKey = GlobalKey<NavigatorState>(debugLabel: 'explore-feed');
 final _notificationsKey = GlobalKey<NavigatorState>(debugLabel: 'notifications');
 final _searchKey = GlobalKey<NavigatorState>(debugLabel: 'search');
 final _hashtagKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag');
@@ -116,7 +116,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (ctx, st) => NoTransitionPage(
               key: st.pageKey,
               child: Navigator(
-                key: _exploreKey,
+                key: _exploreGridKey,
                 onGenerateRoute: (r) => MaterialPageRoute(
                   builder: (_) => const ExploreScreen(),
                   settings: const RouteSettings(name: 'explore-root'),
@@ -131,7 +131,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (ctx, st) => NoTransitionPage(
               key: st.pageKey,
               child: Navigator(
-                key: _exploreKey,
+                key: _exploreFeedKey,
                 onGenerateRoute: (r) => MaterialPageRoute(
                   builder: (_) => const ExploreScreen(),
                   settings: const RouteSettings(name: 'explore-root'),
@@ -156,11 +156,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // PROFILE tab subtree
+          // PROFILE tab subtree - grid mode (no index)
+          GoRoute(
+            path: '/profile/:npub',
+            name: 'profile',
+            pageBuilder: (ctx, st) {
+              // ProfileScreenRouter gets npub from pageContext (router-driven)
+              // Use MaterialPage for swipe-back gesture support
+              return MaterialPage(
+                key: st.pageKey,
+                child: const ProfileScreenRouter(),
+              );
+            },
+          ),
+
+          // PROFILE tab subtree - feed mode (with video index)
           // Note: /profile/me/:index is handled by ProfileScreenRouter detecting "me" and redirecting
           GoRoute(
             path: '/profile/:npub/:index',
-            name: 'profile',
             pageBuilder: (ctx, st) {
               // ProfileScreenRouter gets npub from pageContext (router-driven)
               // Use MaterialPage for swipe-back gesture support
