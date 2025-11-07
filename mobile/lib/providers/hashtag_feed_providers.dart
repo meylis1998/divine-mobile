@@ -91,17 +91,30 @@ class HashtagFeed extends _$HashtagFeed {
     });
 
     // Wait for initial batch of videos to arrive
+    Log.info(
+        '🏷️⏳ HashtagFeed: Waiting for videos to arrive for #$tag',
+        name: 'HashtagFeedProvider',
+        category: LogCategory.video);
+
     final completer = Completer<void>();
     int stableCount = 0;
     Timer? stabilityTimer;
 
     void checkStability() {
       final currentCount = videoEventService.hashtagVideos(tag).length;
+      Log.info(
+          '🏷️📊 HashtagFeed: Stability check - count changed from $stableCount to $currentCount',
+          name: 'HashtagFeedProvider',
+          category: LogCategory.video);
       if (currentCount != stableCount) {
         stableCount = currentCount;
         stabilityTimer?.cancel();
         stabilityTimer = Timer(const Duration(milliseconds: 300), () {
           if (!completer.isCompleted) {
+            Log.info(
+                '🏷️✅ HashtagFeed: Count stabilized at $stableCount videos',
+                name: 'HashtagFeedProvider',
+                category: LogCategory.video);
             completer.complete();
           }
         });
@@ -113,6 +126,10 @@ class HashtagFeed extends _$HashtagFeed {
     // Maximum wait time
     Timer(const Duration(seconds: 3), () {
       if (!completer.isCompleted) {
+        Log.warning(
+            '🏷️⏰ HashtagFeed: Timeout reached (3s) with $stableCount videos',
+            name: 'HashtagFeedProvider',
+            category: LogCategory.video);
         completer.complete();
       }
     });

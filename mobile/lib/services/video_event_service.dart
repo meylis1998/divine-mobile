@@ -709,6 +709,29 @@ class VideoEventService extends ChangeNotifier {
           }
         }
 
+        // Extra debug for hashtag feed
+        if (subscriptionType == SubscriptionType.hashtag) {
+          Log.info('🏷️🏷️🏷️ HASHTAG SUBSCRIPTION DEBUG:',
+              name: 'VideoEventService', category: LogCategory.video);
+          Log.info('  Hashtags requested: ${hashtags?.join(", ") ?? "none"}',
+              name: 'VideoEventService', category: LogCategory.video);
+          Log.info('  Lowercase hashtags: ${lowercaseHashtags?.join(", ") ?? "none"}',
+              name: 'VideoEventService', category: LogCategory.video);
+          Log.info('  Filters being sent to NostrService:',
+              name: 'VideoEventService', category: LogCategory.video);
+          for (var i = 0; i < filters.length; i++) {
+            final f = filters[i];
+            Log.info(
+                '    Filter $i: kinds=${f.kinds}, t=${f.t}, limit=${f.limit}',
+                name: 'VideoEventService',
+                category: LogCategory.video);
+            Log.info(
+                '    Full filter JSON: ${f.toJson()}',
+                name: 'VideoEventService',
+                category: LogCategory.video);
+          }
+        }
+
         // Store current subscription parameters for duplicate detection BEFORE any early returns
         _subscriptionParams[subscriptionType] = {
           'authors': authors,
@@ -820,6 +843,23 @@ class VideoEventService extends ChangeNotifier {
             Log.info('✅ EOSE received for $subscriptionType after ${eoseDuration.inMilliseconds}ms with $eventCount events',
                 name: 'VideoEventService', category: LogCategory.video);
 
+            // Extra logging for hashtag subscriptions
+            if (subscriptionType == SubscriptionType.hashtag) {
+              Log.info(
+                  '🏷️✅ HASHTAG EOSE: $eventCount events received, hashtag buckets count: ${_hashtagBuckets.length}',
+                  name: 'VideoEventService',
+                  category: LogCategory.video);
+              if (lowercaseHashtags != null) {
+                for (final tag in lowercaseHashtags) {
+                  final count = _hashtagBuckets[tag]?.length ?? 0;
+                  Log.info(
+                      '🏷️📊 Bucket "$tag" has $count videos',
+                      name: 'VideoEventService',
+                      category: LogCategory.video);
+                }
+              }
+            }
+
             // Warn if no events received - trigger automatic diagnostics
             if (eventCount == 0) {
               Log.warning('⚠️ EOSE received but NO EVENTS for $subscriptionType - feed will be empty!',
@@ -871,6 +911,14 @@ class VideoEventService extends ChangeNotifier {
                   name: 'VideoEventService',
                   category: LogCategory.video);
             }
+
+            if (subscriptionType == SubscriptionType.hashtag) {
+              Log.info(
+                  '🏷️📥 HASHTAG EVENT #$eventCount RECEIVED: kind=${event.kind}, id=${event.id}',
+                  name: 'VideoEventService',
+                  category: LogCategory.video);
+            }
+
             _handleNewVideoEvent(event, subscriptionType);
           },
           onError: (error) {
@@ -2738,14 +2786,29 @@ class VideoEventService extends ChangeNotifier {
     // Populate keyed buckets for route-aware feeds
     if (subscriptionType == SubscriptionType.hashtag) {
       // Add video to each of its hashtag buckets
+      Log.info(
+          '🏷️📦 Adding hashtag event to buckets: id=${videoEvent.id}, hashtags=${videoEvent.hashtags.join(", ")}',
+          name: 'VideoEventService',
+          category: LogCategory.video);
+
       for (final tag in videoEvent.hashtags) {
         final bucket = _hashtagBuckets.putIfAbsent(tag, () => []);
-        if (!bucket.any((e) => e.id == videoEvent.id)) {
+        final wasAdded = !bucket.any((e) => e.id == videoEvent.id);
+        if (wasAdded) {
           if (isHistorical) {
             bucket.add(videoEvent);
           } else {
             bucket.insert(0, videoEvent);
           }
+          Log.info(
+              '🏷️✅ Added to bucket "$tag" (now has ${bucket.length} videos)',
+              name: 'VideoEventService',
+              category: LogCategory.video);
+        } else {
+          Log.info(
+              '🏷️⏭️ Skipped duplicate for bucket "$tag"',
+              name: 'VideoEventService',
+              category: LogCategory.video);
         }
       }
     } else if (subscriptionType == SubscriptionType.profile) {
