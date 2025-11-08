@@ -1,6 +1,15 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/content_blocklist_service.dart';
+import 'dart:async';
 
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/content_blocklist_service.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+
+import 'content_blocklist_service_test.mocks.dart';
+
+@GenerateMocks([INostrService])
 void main() {
   group('ContentBlocklistService', () {
     late ContentBlocklistService service;
@@ -82,6 +91,172 @@ void main() {
       expect(stats['total_blocks'], isA<int>());
       expect(stats['runtime_blocks'], isA<int>());
       expect(stats['internal_blocks'], isA<int>());
+    });
+  });
+
+  group('ContentBlocklistService - Mutual Mute Sync', () {
+    late ContentBlocklistService service;
+    late MockINostrService mockNostrService;
+
+    setUp(() {
+      service = ContentBlocklistService();
+      mockNostrService = MockINostrService();
+    });
+
+    test('syncMuteListsInBackground subscribes to kind 10000 with our pubkey', () async {
+      const ourPubkey = 'test_our_pubkey_hex';
+
+      when(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).thenAnswer((_) => Stream.empty());
+
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+
+      // Verify subscribeToEvents was called
+      final captured = verify(mockNostrService.subscribeToEvents(
+        filters: captureAnyNamed('filters'),
+      )).captured;
+
+      expect(captured.length, equals(1));
+      final filters = captured[0] as List;
+      expect(filters.length, equals(1));
+
+      final filter = filters[0];
+      expect(filter.kinds, contains(10000));
+      expect(filter.p, contains(ourPubkey));
+    });
+
+    test('syncMuteListsInBackground only subscribes once', () async {
+      const ourPubkey = 'test_our_pubkey_hex';
+
+      when(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).thenAnswer((_) => Stream.empty());
+
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+
+      // Should only subscribe once
+      verify(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).called(1);
+    });
+
+    test('handleMuteListEvent adds muter to blocklist when our pubkey is in tags', () async {
+      const ourPubkey = '0000000000000000000000000000000000000000000000000000000000000001';
+      const muterPubkey = '0000000000000000000000000000000000000000000000000000000000000002';
+
+      // Create a kind 10000 event with our pubkey in the 'p' tags
+      final event = Event(
+        muterPubkey,
+        10000,
+        [
+          ['p', ourPubkey],
+          ['p', 'some_other_pubkey'],
+        ],
+        '',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      event.id = 'event-id';
+      event.sig = 'signature';
+
+      when(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).thenAnswer((_) => Stream.fromIterable([event]));
+
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+
+      // Give the stream time to emit
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Verify muter is now blocked
+      expect(service.shouldFilterFromFeeds(muterPubkey), isTrue);
+    });
+
+    test('handleMuteListEvent removes muter when our pubkey not in tags (unmuted)', () async {
+      const ourPubkey = '0000000000000000000000000000000000000000000000000000000000000001';
+      const muterPubkey = '0000000000000000000000000000000000000000000000000000000000000002';
+
+      // First event: muter adds us to their list
+      final muteEvent = Event(
+        muterPubkey,
+        10000,
+        [
+          ['p', ourPubkey],
+        ],
+        '',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      muteEvent.id = 'event-id-1';
+      muteEvent.sig = 'signature';
+
+      // Second event: muter removes us from their list (replaceable event)
+      final unmuteEvent = Event(
+        muterPubkey,
+        10000,
+        [
+          ['p', 'some_other_pubkey'], // Our pubkey is gone
+        ],
+        '',
+        createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 60,
+      );
+      unmuteEvent.id = 'event-id-2';
+      unmuteEvent.sig = 'signature';
+
+      // Create a stream controller to manually emit events
+      final controller = StreamController<Event>();
+
+      when(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).thenAnswer((_) => controller.stream);
+
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+
+      // First event - adds to blocklist
+      controller.add(muteEvent);
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(service.shouldFilterFromFeeds(muterPubkey), isTrue);
+
+      // Second event - removes from blocklist
+      controller.add(unmuteEvent);
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(service.shouldFilterFromFeeds(muterPubkey), isFalse);
+
+      controller.close();
+    });
+
+    test('shouldFilterFromFeeds checks mutual mute blocklist', () async {
+      const ourPubkey = '0000000000000000000000000000000000000000000000000000000000000001';
+      const muterPubkey = '0000000000000000000000000000000000000000000000000000000000000002';
+      const randomPubkey = '0000000000000000000000000000000000000000000000000000000000000003';
+
+      final event = Event(
+        muterPubkey,
+        10000,
+        [
+          ['p', ourPubkey],
+        ],
+        '',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      event.id = 'event-id';
+      event.sig = 'signature';
+
+      when(mockNostrService.subscribeToEvents(
+        filters: anyNamed('filters'),
+      )).thenAnswer((_) => Stream.fromIterable([event]));
+
+      await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
+
+      // Give the stream time to emit
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Mutual muter should be filtered
+      expect(service.shouldFilterFromFeeds(muterPubkey), isTrue);
+
+      // Random user should not be filtered
+      expect(service.shouldFilterFromFeeds(randomPubkey), isFalse);
     });
   });
 }

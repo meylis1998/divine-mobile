@@ -86,6 +86,39 @@ class AppDatabase extends _$AppDatabase {
               CREATE INDEX IF NOT EXISTS idx_video_metrics_views
               ON video_metrics(views DESC)
             ''');
+
+            // Backfill metrics for ALL existing video events (kind 34236 and 6)
+            // This parses tags from existing events and populates video_metrics
+            // CRITICAL: Must happen during migration, not background, so queries work immediately
+            await customStatement('''
+              INSERT INTO video_metrics (event_id, loop_count, likes, views, comments, avg_completion,
+                                         has_proofmode, has_device_attestation, has_pgp_signature, updated_at)
+              SELECT
+                e.id,
+                CAST(json_extract(
+                  (SELECT value FROM json_each(e.tags)
+                   WHERE json_extract(value, '\$[0]') = 'loops' LIMIT 1),
+                  '\$[1]'
+                ) AS INTEGER),
+                CAST(json_extract(
+                  (SELECT value FROM json_each(e.tags)
+                   WHERE json_extract(value, '\$[0]') = 'likes' LIMIT 1),
+                  '\$[1]'
+                ) AS INTEGER),
+                NULL,
+                CAST(json_extract(
+                  (SELECT value FROM json_each(e.tags)
+                   WHERE json_extract(value, '\$[0]') = 'comments' LIMIT 1),
+                  '\$[1]'
+                ) AS INTEGER),
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                datetime('now')
+              FROM event e
+              WHERE e.kind IN (34236, 6)
+            ''');
           }
         },
       );

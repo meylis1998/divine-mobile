@@ -62,12 +62,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // diVine wordmark logo
+                  // diVine logo
                   Image.asset(
-                    'assets/icon/White on black.png',
-                    height: 50,
+                    'assets/icon/app_icon.png',
+                    height: 60,
+                    width: 60,
                     fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
                   ),
                   const SizedBox(height: 12),
                   Text(

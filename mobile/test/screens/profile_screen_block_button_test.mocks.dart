@@ -3,8 +3,11 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:async' as _i3;
+
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:openvine/services/content_blocklist_service.dart' as _i2;
+import 'package:openvine/services/nostr_service_interface.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -105,6 +108,27 @@ class MockContentBlocklistService extends _i1.Mock
   @override
   void clearRuntimeBlocks() => super.noSuchMethod(
     Invocation.method(#clearRuntimeBlocks, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i3.Future<void> syncMuteListsInBackground(
+    _i4.INostrService? nostrService,
+    String? ourPubkey,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncMuteListsInBackground, [
+              nostrService,
+              ourPubkey,
+            ]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+    Invocation.method(#dispose, []),
     returnValueForMissingStub: null,
   );
 }

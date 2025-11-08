@@ -186,6 +186,7 @@ flutter:
     - assets/videos/
     - assets/top_1000_hashtags.json
     - assets/fonts/
+    - assets/icon/app_icon.png
     - assets/icon/White on black.png
     - assets/icon/Ivory on Green.png
     - assets/icon/Black on white.png

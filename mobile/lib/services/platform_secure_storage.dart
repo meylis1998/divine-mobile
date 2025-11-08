@@ -99,6 +99,19 @@ class PlatformSecureStorage {
     ),
   );
 
+  // Legacy storage with old accessibility settings for migration
+  static const FlutterSecureStorage _legacyStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+    mOptions: MacOsOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
+
   bool _isInitialized = false;
   Set<SecureStorageCapability> _capabilities = {};
   String? _platformName;
@@ -206,6 +219,60 @@ class PlatformSecureStorage {
               securityLevel: SecurityLevel.software,
             );
           } catch (e) {
+            // Handle duplicate item error (-25299) from keychain accessibility migration
+            // This occurs when an existing item was stored with first_unlock_this_device
+            // and we're now trying to store with first_unlock
+            if (e is PlatformException &&
+                (e.code.contains('-25299') || e.message?.contains('already exists') == true)) {
+              Log.warning(
+                  'Keychain duplicate item detected (-25299) - attempting migration from old accessibility',
+                  name: 'PlatformSecureStorage',
+                  category: LogCategory.system);
+
+              try {
+                // CRITICAL: Read from legacy storage (old accessibility settings)
+                final legacyData = await _legacyStorage.read(key: keyId);
+
+                if (legacyData == null) {
+                  // Can't read from legacy storage either - this is a real problem
+                  return const SecureStorageResult(
+                    success: false,
+                    error: 'Keychain item exists but cannot be read with old or new accessibility. Manual migration required.',
+                  );
+                }
+
+                Log.info(
+                    'Successfully read existing key from legacy storage - preserving data during migration',
+                    name: 'PlatformSecureStorage',
+                    category: LogCategory.system);
+
+                // Delete the old item using legacy storage
+                await _legacyStorage.delete(key: keyId);
+
+                // Re-store the EXISTING data with new accessibility
+                // This preserves the user's original key!
+                await _fallbackStorage.write(
+                  key: keyId,
+                  value: legacyData,
+                );
+
+                Log.info(
+                    '✅ Successfully migrated keychain item from first_unlock_this_device to first_unlock (data preserved)',
+                    name: 'PlatformSecureStorage',
+                    category: LogCategory.system);
+
+                return const SecureStorageResult(
+                  success: true,
+                  securityLevel: SecurityLevel.software,
+                );
+              } catch (retryError) {
+                return SecureStorageResult(
+                  success: false,
+                  error: 'Failed to migrate keychain item: $retryError',
+                );
+              }
+            }
+
             return SecureStorageResult(
               success: false,
               error: 'Fallback storage failed: $e',

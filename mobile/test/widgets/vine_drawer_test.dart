@@ -23,7 +23,7 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn('test_pubkey_' + '0' * 54);
     });
 
-    testWidgets('displays diVine wordmark image in header', (tester) async {
+    testWidgets('displays diVine logo image in header', (tester) async {
       final scaffoldKey = GlobalKey<ScaffoldState>();
 
       await tester.pumpWidget(
@@ -45,16 +45,16 @@ void main() {
       scaffoldKey.currentState!.openDrawer();
       await tester.pumpAndSettle();
 
-      // Verify wordmark image is present (White on black.png)
+      // Verify logo image is present (app_icon.png)
       expect(
         find.byWidgetPredicate(
           (widget) =>
               widget is Image &&
               widget.image is AssetImage &&
-              (widget.image as AssetImage).assetName.contains('White on black.png'),
+              (widget.image as AssetImage).assetName.contains('app_icon.png'),
         ),
         findsOneWidget,
-        reason: 'diVine wordmark image should be displayed in drawer header',
+        reason: 'diVine logo image should be displayed in drawer header',
       );
     });
 
