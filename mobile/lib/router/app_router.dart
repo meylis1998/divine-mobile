@@ -115,6 +115,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           );
         },
         routes: [
+          // PROFILE EDITING routes (must be before /profile/:npub to avoid conflicts)
+          GoRoute(
+            path: '/edit-profile',
+            name: 'edit-profile',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: const ProfileSetupScreen(isNewUser: false),
+            ),
+          ),
+          GoRoute(
+            path: '/setup-profile',
+            name: 'setup-profile',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: const ProfileSetupScreen(isNewUser: true),
+            ),
+          ),
+
           // HOME tab subtree
           GoRoute(
             path: '/home/:index',
@@ -280,24 +298,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   settings: const RouteSettings(name: 'HashtagScreen'),
                 ),
               ),
-            ),
-          ),
-
-          // PROFILE EDITING routes (inside shell, with bottom nav hidden)
-          GoRoute(
-            path: '/edit-profile',
-            name: 'edit-profile',
-            pageBuilder: (ctx, st) => NoTransitionPage(
-              key: st.pageKey,
-              child: const ProfileSetupScreen(isNewUser: false),
-            ),
-          ),
-          GoRoute(
-            path: '/setup-profile',
-            name: 'setup-profile',
-            pageBuilder: (ctx, st) => NoTransitionPage(
-              key: st.pageKey,
-              child: const ProfileSetupScreen(isNewUser: true),
             ),
           ),
         ],
