@@ -1749,6 +1749,15 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
                 'Why are you reporting this content?',
                 style: TextStyle(color: VineTheme.whiteText),
               ),
+              const SizedBox(height: 8),
+              const Text(
+                'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
               const SizedBox(height: 16),
               Container(
                 constraints: const BoxConstraints(maxHeight: 400),

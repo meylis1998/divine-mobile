@@ -10,6 +10,7 @@ import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
+import 'package:openvine/screens/safety_settings_screen.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -135,6 +136,18 @@ class SettingsScreen extends ConsumerWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => const NotificationSettingsScreen(),
+              ),
+            ),
+          ),
+          _buildSettingsTile(
+            context,
+            icon: Icons.shield,
+            title: 'Safety & Privacy',
+            subtitle: 'Blocked users, muted content, and report history',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SafetySettingsScreen(),
               ),
             ),
           ),

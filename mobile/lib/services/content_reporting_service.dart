@@ -99,7 +99,7 @@ class ContentReportingService {
 
   // divine moderation relay for reports
   static const String moderationRelayUrl =
-      'wss://localhost:8080'; // Embedded relay
+      'wss://relay.divine.video'; // Divine moderation relay
   static const String reportsStorageKey = 'content_reports_history';
 
   final List<ContentReport> _reportHistory = [];
