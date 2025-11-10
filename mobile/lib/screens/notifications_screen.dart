@@ -47,7 +47,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           color: VineTheme.cardBackground,
           child: TabBar(
             controller: _tabController,
-            isScrollable: false,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             indicatorColor: VineTheme.whiteText,
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.tab,
@@ -58,6 +59,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 20),
             onTap: (index) {
               setState(() {
                 switch (index) {
