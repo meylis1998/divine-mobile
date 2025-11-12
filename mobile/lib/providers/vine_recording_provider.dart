@@ -161,6 +161,10 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     final result = await _controller.finishRecording();
     updateState();
 
+    Log.info('🔍 PROOFMODE DEBUG: stopRecording() called', category: LogCategory.video);
+    Log.info('🔍 Video file: ${result.$1?.path ?? "NULL"}', category: LogCategory.video);
+    Log.info('🔍 Native proof: ${result.$2?.toString() ?? "NULL"}', category: LogCategory.video);
+
     // Auto-create draft immediately after recording finishes
     if (result.$1 != null) {
       try {
@@ -172,9 +176,13 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
           try {
             proofManifestJson = jsonEncode(result.$2!.toJson());
             Log.info('📜 Native ProofMode data attached to draft', category: LogCategory.video);
+            Log.info('🔍 Proof JSON length: ${proofManifestJson.length} chars', category: LogCategory.video);
+            Log.info('🔍 Proof verification level: ${result.$2!.verificationLevel}', category: LogCategory.video);
           } catch (e) {
             Log.error('Failed to serialize NativeProofData for draft: $e', category: LogCategory.video);
           }
+        } else {
+          Log.warning('⚠️ NO NATIVE PROOF DATA FROM RECORDING! ProofMode will not be published.', category: LogCategory.video);
         }
 
         final draft = VineDraft.create(
