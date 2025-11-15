@@ -89,10 +89,15 @@ if (ZendeskSupportService.isAvailable) {
 **Show new ticket screen:**
 ```dart
 final success = await ZendeskSupportService.showNewTicketScreen(
-  subject: 'Support Request',
-  tags: ['mobile', 'bug'],
+  subject: 'Support Request',  // iOS only - Android users fill in UI
+  tags: ['mobile', 'bug'],      // iOS only - Android users fill in UI
 );
 ```
+
+**Platform Limitations:**
+- **iOS**: Supports pre-filling subject and tags
+- **Android**: SDK v5.1.2 does not support pre-filling - users must fill these fields in the UI
+- **Both**: Description field not supported by either SDK
 
 **Show ticket list:**
 ```dart
