@@ -33,7 +33,7 @@ SubscriptionManager videoEventsSubscriptionManager(Ref ref) {
 }
 
 /// Stream provider for video events from Nostr
-@Riverpod(keepAlive: false)
+@Riverpod(keepAlive: true) // Keep alive to prevent state loss on tab switches
 class VideoEvents extends _$VideoEvents {
   StreamController<List<VideoEvent>>? _controller;
   Timer? _debounceTimer;

@@ -29,7 +29,7 @@ resolve_device() {
             ;;
         "android")
             echo "🤖 Looking for Android devices..." >&2
-            local android_device_id=$(flutter devices --machine | jq -r '.[] | select(.targetPlatform == "android") | .id' | head -1)
+            local android_device_id=$(flutter devices --machine | jq -r '.[] | select(.targetPlatform | startswith("android")) | .id' | head -1)
 
             if [ -n "$android_device_id" ] && [ "$android_device_id" != "null" ]; then
                 echo "🤖 Found Android device: $android_device_id" >&2

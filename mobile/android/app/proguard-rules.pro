@@ -1,4 +1,5 @@
-# ProGuard rules for OpenVine
+# ABOUTME: ProGuard/R8 keep rules to prevent release APK loading screen hang caused by bytecode stripping
+# ABOUTME: Preserves Flutter engine, platform channels, SharedPreferences, and reflection-based Android classes
 
 # Allow duplicate classes from java-opentimestamps fat JAR
 # This library bundles Guava, Protobuf, JSR305, and Okio internally
@@ -7,6 +8,81 @@
 -dontwarn javax.annotation.**
 -dontwarn okio.**
 
-# Keep ProofMode classes
+# Keep MainActivity and all its methods (platform channel setup)
+-keep class co.openvine.app.MainActivity { *; }
+
+# Keep ProofMode classes (cryptographic proof generation library)
 -keep class org.witness.proofmode.** { *; }
 -keep class com.eternitywall.** { *; }
+
+# Keep Kotlin metadata and reflection (required for platform channels)
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class * {
+    @kotlin.Metadata <methods>;
+}
+
+# Keep all Kotlin lambdas and SAM conversions (MethodChannel handlers)
+-keepclassmembernames class * {
+    private *** lambda$*(...);
+}
+-keep class kotlin.jvm.internal.Lambda { *; }
+-keepclassmembers class * extends kotlin.jvm.internal.Lambda {
+    public *** invoke(...);
+}
+
+# Flutter engine core classes (reflection-based platform integration)
+# Without these, Flutter engine initialization fails silently in release builds
+-keep class io.flutter.app.** { *; }
+-keep class io.flutter.embedding.engine.** { *; }
+-keep class io.flutter.embedding.android.FlutterActivity { *; }
+-keep class io.flutter.embedding.android.FlutterFragment { *; }
+
+# Platform channels (method invocation via reflection)
+# Critical for all Flutter plugin communication (camera, storage, etc)
+-keep class io.flutter.plugin.common.MethodChannel { *; }
+-keep class io.flutter.plugin.common.EventChannel { *; }
+-keep class io.flutter.plugin.common.BasicMessageChannel { *; }
+-keep class io.flutter.plugin.common.StandardMethodCodec { *; }
+-keep class io.flutter.plugin.common.StandardMessageCodec { *; }
+-keep class io.flutter.plugin.common.JSONMethodCodec { *; }
+
+# All Flutter plugins (registered via reflection)
+-keep class io.flutter.plugins.** { *; }
+
+# GeneratedPluginRegistrant (auto-registration of Flutter plugins)
+# R8 was stripping this class, preventing plugins from being registered
+-keep class io.flutter.plugins.GeneratedPluginRegistrant { *; }
+
+# SharedPreferences (used in router redirect for TOS check on app startup)
+# R8 was stripping this, causing router redirect to hang forever waiting for response
+-keepclassmembers class * implements android.content.SharedPreferences {
+    *;
+}
+
+# Firebase classes (crash reporting and analytics)
+# These use reflection for initialization
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# Keep all native methods (platform channels rely on JNI)
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep all classes with @Keep annotation (standard Android best practice)
+-keep @androidx.annotation.Keep class * { *; }
+-keepclassmembers class * {
+    @androidx.annotation.Keep *;
+}
+
+# Ignore missing Play Core classes (we don't use deferred components)
+# Flutter's embedding layer references these, but we're not using split installs
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
+# Ignore FFmpegKit classes (not needed on Android - using continuous recording)
+# iOS/macOS use FFmpeg for video processing, but Android uses camera-based recording
+-dontwarn com.arthenica.ffmpegkit.**
+-dontwarn com.antonkarpenko.ffmpegkit.**

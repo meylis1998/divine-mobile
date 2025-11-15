@@ -54,16 +54,28 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            // Enable R8 minification for code shrinking and obfuscation
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // TEMPORARILY DISABLE R8 minification for debugging
+            isMinifyEnabled = false
+            isShrinkResources = false
+            // Apply ProGuard rules to prevent stripping Flutter/platform channel classes
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
     packaging {
-        // Handle duplicate resource files from dependencies
-        jniLibs.pickFirsts.add("**")
-        resources.pickFirsts.add("**")
+        // Handle specific duplicate resource files from dependencies
+        // DO NOT use wildcards for jniLibs - it excludes libflutter.so!
+        resources {
+            // Pick first for duplicate classes from java-opentimestamps fat JAR
+            pickFirsts.add("META-INF/DEPENDENCIES")
+            pickFirsts.add("META-INF/LICENSE")
+            pickFirsts.add("META-INF/LICENSE.txt")
+            pickFirsts.add("META-INF/NOTICE")
+            pickFirsts.add("META-INF/NOTICE.txt")
+        }
     }
 }
 

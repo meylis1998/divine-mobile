@@ -124,7 +124,7 @@ final class VideoEventsProvider
         argument: null,
         retry: null,
         name: r'videoEventsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -137,7 +137,7 @@ final class VideoEventsProvider
   VideoEvents create() => VideoEvents();
 }
 
-String _$videoEventsHash() => r'4a8c86f6d3936001d4da2f7adbad238833d843a3';
+String _$videoEventsHash() => r'ad3a805f4bb70f004037f4cf985baa91488fe658';
 
 /// Stream provider for video events from Nostr
 

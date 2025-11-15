@@ -22,6 +22,10 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/list_card.dart';
+import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/user_list_people_screen.dart';
 
 /// Pure ExploreScreen using revolutionary Riverpod architecture
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -126,12 +130,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       tabName: tabName,
     );
 
-    // Lists tab doesn't need provider refresh currently
-    // TODO: When Lists tab has real content, add list provider refresh here
+    // Lists tab - refresh lists when activated
     if (_tabController.index == 2) { // Lists tab
       Log.debug('🔄 Lists tab activated',
           category: LogCategory.video);
-      // ref.read(listsProvider.notifier).refreshAll(); // TODO: implement
+      // Invalidate providers to refresh list data
+      ref.invalidate(userListsProvider);
+      ref.invalidate(curatedListsProvider);
     }
 
     // Exit feed or hashtag mode when user switches tabs
@@ -340,40 +345,160 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildListsTab() {
-    // Placeholder for Lists tab - will be implemented with full list browsing UI
-    return Container(
-      key: const Key('lists-tab-content'),
-      child: Center(
+    final allListsAsync = ref.watch(allListsProvider);
+
+    return allListsAsync.when(
+      data: (data) {
+        final userLists = data.userLists;
+        final curatedLists = data.curatedLists;
+
+        if (userLists.isEmpty && curatedLists.isEmpty) {
+          return Container(
+            key: const Key('lists-tab-content'),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.library_books,
+                      size: 64, color: VineTheme.secondaryText),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Lists Yet',
+                    style: TextStyle(
+                      color: VineTheme.primaryText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your first list to get started',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: VineTheme.secondaryText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          color: VineTheme.vineGreen,
+          onRefresh: () async {
+            // Invalidate both providers to refresh
+            ref.invalidate(userListsProvider);
+            ref.invalidate(curatedListsProvider);
+          },
+          child: ListView(
+            key: const Key('lists-tab-content'),
+            children: [
+              // User Lists section (people lists)
+              if (userLists.isNotEmpty) ...[
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.group,
+                          color: VineTheme.vineGreen, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'People Lists',
+                        style: TextStyle(
+                          color: VineTheme.primaryText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...userLists.map((userList) => UserListCard(
+                      userList: userList,
+                      onTap: () {
+                        Log.info('Tapped user list: ${userList.name}',
+                            category: LogCategory.ui);
+                        // Navigate to user list people screen
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                UserListPeopleScreen(userList: userList),
+                          ),
+                        );
+                      },
+                    )),
+                const SizedBox(height: 16),
+              ],
+
+              // Curated Video Lists section
+              if (curatedLists.isNotEmpty) ...[
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.video_library,
+                          color: VineTheme.vineGreen, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Video Lists',
+                        style: TextStyle(
+                          color: VineTheme.primaryText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...curatedLists.map((curatedList) => CuratedListCard(
+                      curatedList: curatedList,
+                      onTap: () {
+                        Log.info('Tapped curated list: ${curatedList.name}',
+                            category: LogCategory.ui);
+                        // Navigate to curated list video feed
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => CuratedListFeedScreen(
+                              listId: curatedList.id,
+                              listName: curatedList.name,
+                            ),
+                          ),
+                        );
+                      },
+                    )),
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => Center(
+        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+      ),
+      error: (error, stack) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.library_books, size: 64, color: VineTheme.secondaryText),
+            Icon(Icons.error, size: 64, color: VineTheme.likeRed),
             const SizedBox(height: 16),
             Text(
-              'Lists',
+              'Failed to load lists',
               style: TextStyle(
-                color: VineTheme.primaryText,
+                color: VineTheme.likeRed,
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Discover curated video and user lists',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Coming soon: Browse lists, follow lists,\nand create your own!',
-              textAlign: TextAlign.center,
+              error.toString(),
               style: TextStyle(
                 color: VineTheme.secondaryText,
                 fontSize: 12,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -781,8 +906,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
         // Refresh the appropriate provider based on tab
         if (tabName == 'Lists') {
-          // TODO: Implement lists provider refresh when Lists tab has real content
-          // await ref.read(listsProvider.notifier).refreshAll();
+          // Refresh list providers
+          ref.invalidate(userListsProvider);
+          ref.invalidate(curatedListsProvider);
         } else if (tabName == "New Videos") {
           // Refresh popular now feed - call refresh() to force new subscription
           await ref.read(popularNowFeedProvider.notifier).refresh();

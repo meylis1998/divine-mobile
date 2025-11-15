@@ -90,6 +90,11 @@ class VideoFeedBuilder {
 
       // Only update if video count actually changed
       if (currentCount != _lastKnownCount) {
+        Log.warning(
+          '🔔 VideoFeedBuilder: Video count changed for ${config.subscriptionType}: $_lastKnownCount -> $currentCount',
+          name: 'VideoFeedBuilder',
+          category: LogCategory.video,
+        );
         _lastKnownCount = currentCount;
 
         // Debounce updates to avoid excessive rebuilds
@@ -97,6 +102,12 @@ class VideoFeedBuilder {
         _debounceTimer = Timer(const Duration(milliseconds: 500), () {
           final videos = config.getVideos(_service);
           final sortedVideos = config.sortVideos(videos);
+
+          Log.info(
+            '📊 VideoFeedBuilder: Emitting state update for ${config.subscriptionType} with ${sortedVideos.length} videos',
+            name: 'VideoFeedBuilder',
+            category: LogCategory.video,
+          );
 
           final state = VideoFeedState(
             videos: sortedVideos,

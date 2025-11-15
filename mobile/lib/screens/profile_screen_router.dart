@@ -15,6 +15,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/optimistic_follow_provider.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
+import 'package:openvine/providers/profile_reposts_provider.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
@@ -392,7 +393,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                       children: [
                         _buildVideosGrid(videos, userIdHex),
                         _buildLikedGrid(socialService),
-                        _buildRepostsGrid(),
+                        _buildRepostsGrid(userIdHex),
                       ],
                     ),
                   ),
@@ -1150,37 +1151,209 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     );
   }
 
-  Widget _buildRepostsGrid() {
-    return CustomScrollView(
-      slivers: [
-        SliverFillRemaining(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.repeat, color: Colors.grey, size: 64),
-                SizedBox(height: 16),
-                Text(
-                  'No Reposts Yet',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+  Widget _buildRepostsGrid(String userIdHex) {
+    // Watch the reposts provider
+    final repostsAsync = ref.watch(profileRepostsProvider(userIdHex));
+
+    return repostsAsync.when(
+      data: (reposts) {
+        if (reposts.isEmpty) {
+          return CustomScrollView(
+            slivers: [
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.repeat, color: Colors.grey, size: 64),
+                      SizedBox(height: 16),
+                      Text(
+                        'No Reposts Yet',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Videos you repost will appear here',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Videos you repost will appear here',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
+              ),
+            ],
+          );
+        }
+
+        // Show reposts in a grid (same format as videos grid)
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(2),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 2,
+                  mainAxisSpacing: 2,
+                  childAspectRatio: 1,
                 ),
-              ],
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index >= reposts.length) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final videoEvent = reposts[index];
+                    return GestureDetector(
+                      onTap: () {
+                        final npub = NostrEncoding.encodePublicKey(userIdHex);
+                        Log.info(
+                          '🎯 ProfileScreenRouter REPOSTS TAB TAP: gridIndex=$index, '
+                          'npub=$npub, videoId=${videoEvent.id}',
+                          category: LogCategory.video,
+                        );
+                        // Navigate to fullscreen video mode using GoRouter
+                        context.goProfile(npub, index);
+                      },
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: VineTheme.cardBackground,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: videoEvent.thumbnailUrl != null &&
+                                        videoEvent.thumbnailUrl!.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: videoEvent.thumbnailUrl!,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) => DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(4),
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                VineTheme.vineGreen.withValues(alpha: 0.3),
+                                                Colors.blue.withValues(alpha: 0.3),
+                                              ],
+                                            ),
+                                          ),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: VineTheme.whiteText,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (context, url, error) => DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(4),
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                VineTheme.vineGreen.withValues(alpha: 0.3),
+                                                Colors.blue.withValues(alpha: 0.3),
+                                              ],
+                                            ),
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.play_circle_outline,
+                                              color: VineTheme.whiteText,
+                                              size: 24,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(4),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              VineTheme.vineGreen.withValues(alpha: 0.3),
+                                              Colors.blue.withValues(alpha: 0.3),
+                                            ],
+                                          ),
+                                        ),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.play_circle_outline,
+                                            color: VineTheme.whiteText,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const Center(
+                              child: Icon(
+                                Icons.play_circle_filled,
+                                color: Colors.white70,
+                                size: 32,
+                              ),
+                            ),
+                            // Repost indicator badge
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Icon(
+                                  Icons.repeat,
+                                  color: VineTheme.vineGreen,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            if (videoEvent.duration != null)
+                              Positioned(
+                                bottom: 4,
+                                right: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    videoEvent.formattedDuration,
+                                    style: const TextStyle(
+                                      color: VineTheme.whiteText,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: reposts.length,
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+      ),
+      error: (error, stack) => Center(
+        child: Text('Error loading reposts: $error'),
+      ),
     );
   }
 

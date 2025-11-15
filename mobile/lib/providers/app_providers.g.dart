@@ -1823,12 +1823,12 @@ final class ContentReportingServiceProvider
 String _$contentReportingServiceHash() =>
     r'90600ce05c4cc607ee58bb9166d14fb5982b7430';
 
-/// Curated list service for NIP-51 lists
+/// Curated list service for NIP-51 kind 30005 video lists
 
 @ProviderFor(curatedListService)
 const curatedListServiceProvider = CuratedListServiceProvider._();
 
-/// Curated list service for NIP-51 lists
+/// Curated list service for NIP-51 kind 30005 video lists
 
 final class CuratedListServiceProvider
     extends
@@ -1840,7 +1840,7 @@ final class CuratedListServiceProvider
     with
         $FutureModifier<CuratedListService>,
         $FutureProvider<CuratedListService> {
-  /// Curated list service for NIP-51 lists
+  /// Curated list service for NIP-51 kind 30005 video lists
   const CuratedListServiceProvider._()
     : super(
         from: null,
@@ -1869,6 +1869,50 @@ final class CuratedListServiceProvider
 
 String _$curatedListServiceHash() =>
     r'4cb1e31f4432938d5c0f9944a55dc52266d37c96';
+
+/// User list service for NIP-51 kind 30000 people lists
+
+@ProviderFor(userListService)
+const userListServiceProvider = UserListServiceProvider._();
+
+/// User list service for NIP-51 kind 30000 people lists
+
+final class UserListServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserListService>,
+          UserListService,
+          FutureOr<UserListService>
+        >
+    with $FutureModifier<UserListService>, $FutureProvider<UserListService> {
+  /// User list service for NIP-51 kind 30000 people lists
+  const UserListServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'userListServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$userListServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<UserListService> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserListService> create(Ref ref) {
+    return userListService(ref);
+  }
+}
+
+String _$userListServiceHash() => r'1b006662ce4e9219818ed3870ed1ecf8f4a6e2fd';
 
 /// Bookmark service for NIP-51 bookmarks
 

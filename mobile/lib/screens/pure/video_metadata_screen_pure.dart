@@ -17,6 +17,7 @@ import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/upload_progress_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openvine/utils/video_duration_extractor.dart';
 
 /// Pure video metadata screen using revolutionary single-controller Riverpod architecture
 class VideoMetadataScreenPure extends ConsumerStatefulWidget {
@@ -184,11 +185,14 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       Log.info('📝 Starting background upload for draft: ${_currentDraft!.id}',
           category: LogCategory.video);
 
+      // Get video duration with fallback
+      final videoDuration = await _getVideoDuration();
+
       // Start upload in background - single source of truth from draft
       final pendingUpload = await uploadManager.startUploadFromDraft(
         draft: _currentDraft!,
         nostrPubkey: pubkey,
-        videoDuration: _videoController?.value.duration ?? Duration.zero,
+        videoDuration: videoDuration,
       );
 
       // Store upload ID in state
@@ -245,6 +249,44 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       Log.error('📝 Failed to cancel background upload: $e',
           category: LogCategory.video);
     }
+  }
+
+  /// Get video duration with fallback to file extraction
+  ///
+  /// First tries to get duration from the video player controller.
+  /// If that returns zero/null, extracts duration directly from the video file.
+  /// This prevents publishing videos with 0-second duration.
+  Future<Duration> _getVideoDuration() async {
+    // Try video player controller first (if initialized)
+    if (_videoController != null && _isVideoInitialized) {
+      final playerDuration = _videoController!.value.duration;
+      if (playerDuration != Duration.zero) {
+        Log.debug('Got duration from video player: ${playerDuration.inMilliseconds}ms',
+            name: 'VideoMetadataScreen', category: LogCategory.video);
+        return playerDuration;
+      }
+      Log.warning('Video player initialized but duration is zero',
+          name: 'VideoMetadataScreen', category: LogCategory.video);
+    }
+
+    // Fallback: extract duration from video file
+    if (_currentDraft != null) {
+      Log.info('Extracting duration from video file as fallback',
+          name: 'VideoMetadataScreen', category: LogCategory.video);
+      final extractedDuration = await extractVideoDuration(_currentDraft!.videoFile);
+      if (extractedDuration != null && extractedDuration != Duration.zero) {
+        Log.info('Extracted duration from file: ${extractedDuration.inMilliseconds}ms',
+            name: 'VideoMetadataScreen', category: LogCategory.video);
+        return extractedDuration;
+      }
+      Log.error('Failed to extract duration from video file',
+          name: 'VideoMetadataScreen', category: LogCategory.video);
+    }
+
+    // Last resort: return zero and warn
+    Log.error('Could not determine video duration - using 0',
+        name: 'VideoMetadataScreen', category: LogCategory.video);
+    return Duration.zero;
   }
 
   @override
@@ -1238,13 +1280,16 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
       hashtags: _hashtags.isEmpty ? null : _hashtags,
     );
 
+    // Get video duration with fallback
+    final videoDuration = await _getVideoDuration();
+
     final pendingUpload = await uploadManager.startUploadFromDraft(
       draft: updatedDraft,
       nostrPubkey: pubkey,
-      videoDuration: _videoController?.value.duration ?? Duration.zero,
+      videoDuration: videoDuration,
     );
 
-    Log.info('📝 Upload started, ID: ${pendingUpload.id}',
+    Log.info('📝 Upload started with duration ${videoDuration.inSeconds}s, ID: ${pendingUpload.id}',
         category: LogCategory.video);
 
     // Track upload progress

@@ -18,7 +18,7 @@ part 'popular_now_feed_provider.g.dart';
 /// - Poll interval elapses (uses same auto-refresh as home feed)
 /// - User pulls to refresh
 /// - VideoEventService updates with new videos
-@Riverpod(keepAlive: false) // Auto-dispose when no listeners
+@Riverpod(keepAlive: true) // Keep alive to prevent state loss on tab switches
 class PopularNowFeed extends _$PopularNowFeed {
   VideoFeedBuilder? _builder;
 

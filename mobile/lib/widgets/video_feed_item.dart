@@ -509,6 +509,62 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                 hasBottomNavigation: widget.hasBottomNavigation,
                 contextTitle: widget.contextTitle,
               ),
+
+              // Repost header (shown at top if video is a repost)
+              if (video.isRepost && video.reposterPubkey != null)
+                Positioned(
+                  top: MediaQuery.of(context).viewPadding.top + 8,
+                  left: 16,
+                  right: 16,
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      // Fetch reposter's profile
+                      final userProfileService = ref.watch(userProfileServiceProvider);
+                      final reposterProfile = userProfileService.getCachedProfile(video.reposterPubkey!);
+
+                      // If profile not cached, fetch it
+                      if (reposterProfile == null && !userProfileService.shouldSkipProfileFetch(video.reposterPubkey!)) {
+                        Future.microtask(() {
+                          userProfileService.fetchProfile(video.reposterPubkey!);
+                        });
+                      }
+
+                      final displayName = reposterProfile?.bestDisplayName ??
+                                         video.reposterPubkey!.substring(0, 8);
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.repeat,
+                              color: VineTheme.vineGreen,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '$displayName reposted',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),

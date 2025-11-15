@@ -19,6 +19,7 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curation_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/user_list_service.dart';
 // Removed legacy explore_video_manager.dart import
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
@@ -521,7 +522,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   return service;
 }
 
-/// Curated list service for NIP-51 lists
+/// Curated list service for NIP-51 kind 30005 video lists
 @riverpod
 Future<CuratedListService> curatedListService(Ref ref) async {
   final nostrService = ref.watch(nostrServiceProvider);
@@ -535,6 +536,19 @@ Future<CuratedListService> curatedListService(Ref ref) async {
   );
 
   // Initialize the service to create default list and sync with relays
+  await service.initialize();
+
+  return service;
+}
+
+/// User list service for NIP-51 kind 30000 people lists
+@riverpod
+Future<UserListService> userListService(Ref ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
+
+  final service = UserListService(prefs: prefs);
+
+  // Initialize the service to load lists
   await service.initialize();
 
   return service;

@@ -13,7 +13,23 @@ class MainActivity : FlutterActivity() {
     private val TAG = "OpenVineProofMode"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
+        try {
+            super.configureFlutterEngine(flutterEngine)
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during FlutterEngine configuration", e)
+            Log.e(TAG, "Exception message: ${e.message}")
+            Log.e(TAG, "Exception cause: ${e.cause?.message}")
+
+            // Handle FFmpegKit initialization failure on Android (not needed - using continuous recording)
+            // FFmpegKit is only used on iOS/macOS for video processing
+            if (e.message?.contains("FFmpegKit") == true || e.cause?.message?.contains("ffmpegkit") == true) {
+                Log.w(TAG, "FFmpegKit plugin failed to initialize (expected on Android)", e)
+                // Continue without FFmpegKit - Android uses camera-based continuous recording
+            } else {
+                // Re-throw other exceptions
+                throw e
+            }
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

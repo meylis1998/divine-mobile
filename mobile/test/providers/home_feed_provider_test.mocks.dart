@@ -244,6 +244,14 @@ class MockVideoEventService extends _i1.Mock implements _i4.VideoEventService {
           as bool);
 
   @override
+  _i8.Future<List<String>> getRepostersForVideo(String? videoId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getRepostersForVideo, [videoId]),
+            returnValue: _i8.Future<List<String>>.value(<String>[]),
+          )
+          as _i8.Future<List<String>>);
+
+  @override
   _i8.Future<void> subscribeToVideoFeed({
     required _i4.SubscriptionType? subscriptionType,
     List<String>? authors,
