@@ -97,11 +97,7 @@ dependencies:
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
     path: ../nostr_sdk
-  
-  # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
-  flutter_embedded_nostr_relay:
-    path: ../flutter_embedded_nostr_relay/flutter_embedded_nostr_relay
-  
+
   # Logging
   logging: ^1.2.0
   

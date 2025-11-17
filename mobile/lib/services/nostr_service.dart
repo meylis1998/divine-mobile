@@ -1,42 +1,35 @@
-// ABOUTME: NostrService - production implementation using embedded relay DIRECTLY
-// ABOUTME: Uses flutter_embedded_nostr_relay API directly, manages external relay connections
+// ABOUTME: NostrService - production implementation using nostr_sdk RelayPool directly
+// ABOUTME: Manages direct WebSocket connections to Nostr relays without embedded relay layer
 
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
-    as embedded;
-import 'package:logging/logging.dart' as logging;
+import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
+import 'package:nostr_sdk/nostr.dart' as nostr_lib;
+import 'package:nostr_sdk/relay/relay.dart';
+import 'package:nostr_sdk/relay/relay_base.dart';
+import 'package:nostr_sdk/relay/relay_pool.dart';
+import 'package:nostr_sdk/relay/relay_status.dart';
+import 'package:nostr_sdk/relay/client_connected.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/nip94_metadata.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/p2p_discovery_service.dart';
-import 'package:openvine/services/p2p_video_sync_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Production implementation of NostrService using EmbeddedNostrRelay directly
-/// Manages external relay connections and provides unified API to the app
+/// Production implementation of NostrService using nostr_sdk RelayPool directly
+/// Manages direct WebSocket connections to Nostr relays without embedded relay layer
 class NostrService implements INostrService {
   NostrService(this._keyManager, {
-    embedded.EmbeddedNostrRelay? embeddedRelay,
     void Function()? onInitialized,
   }) : _onInitialized = onInitialized {
     UnifiedLogger.info('🏗️  NostrService CONSTRUCTOR called - creating NEW instance', name: 'NostrService');
-    UnifiedLogger.info('   Initial relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.warning('⚠️  This is a new instance - any previously added relays are LOST!', name: 'NostrService');
-
-    // Allow injecting an embedded relay for testing
-    if (embeddedRelay != null) {
-      _embeddedRelay = embeddedRelay;
-      UnifiedLogger.info('   Embedded relay injected (testing mode)', name: 'NostrService');
-    }
+    UnifiedLogger.info('   Using direct relay connections via nostr_sdk RelayPool', name: 'NostrService');
   }
 
   final NostrKeyManager _keyManager;
@@ -45,13 +38,10 @@ class NostrService implements INostrService {
   final Map<String, bool> _relayAuthStates = {};
   final _authStateController = StreamController<Map<String, bool>>.broadcast();
 
-  // Embedded relay (handles external connections automatically)
-  embedded.EmbeddedNostrRelay? _embeddedRelay;
-
-  // P2P sync components
-  P2PDiscoveryService? _p2pService;
-  P2PVideoSyncService? _videoSyncService;
-  bool _p2pEnabled = false;
+  // Direct relay management via nostr_sdk
+  nostr_lib.Nostr? _nostr;
+  RelayPool? _relayPool;
+  final Map<String, Relay> _relays = {};
 
   bool _isInitialized = false;
   bool _isDisposed = false;
@@ -66,59 +56,28 @@ class NostrService implements INostrService {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (_isInitialized) {
       UnifiedLogger.info('🔄 initialize() called but service is already initialized', name: 'NostrService');
-      return; // Already initialized
+      return;
     }
 
     UnifiedLogger.info('🚀 initialize() called - starting NostrService initialization', name: 'NostrService');
     UnifiedLogger.info('   customRelays parameter: ${customRelays ?? "null (will use default)"}', name: 'NostrService');
-    UnifiedLogger.info('   enableP2P: $enableP2P', name: 'NostrService');
 
-    Log.info('Starting initialization with embedded relay',
-        name: 'NostrService', category: LogCategory.relay);
-
-    // Load relay configuration from SharedPreferences (unless customRelays is explicitly provided)
+    // Load relay configuration from SharedPreferences
     List<String> relaysToAdd;
     if (customRelays != null) {
-      // If customRelays explicitly provided, use them
       relaysToAdd = customRelays;
-      Log.info('Using provided customRelays: $customRelays',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.info('Using provided customRelays: $customRelays', name: 'NostrService');
     } else {
-      // Load from SharedPreferences or use default
       final prefs = await SharedPreferences.getInstance();
       final savedRelays = prefs.getStringList(_relayConfigKey);
 
       if (savedRelays != null && savedRelays.isNotEmpty) {
         relaysToAdd = savedRelays;
-        Log.info('✅ Loaded ${savedRelays.length} relay(s) from SharedPreferences',
-            name: 'NostrService', category: LogCategory.relay);
-
-        // MIGRATION: Remove old relay3.openvine.co if present in saved config
-        const oldRelay = 'wss://relay3.openvine.co';
-        if (relaysToAdd.contains(oldRelay)) {
-          Log.info('🔄 MIGRATION: Removing old relay from saved config: $oldRelay',
-              name: 'NostrService', category: LogCategory.relay);
-          relaysToAdd = relaysToAdd.where((r) => r != oldRelay).toList();
-
-          // Ensure we have at least the default relay
-          final defaultRelay = AppConstants.defaultRelayUrl;
-          if (!relaysToAdd.contains(defaultRelay)) {
-            relaysToAdd.add(defaultRelay);
-          }
-
-          // Save migrated config back to SharedPreferences
-          await _saveRelayConfig(relaysToAdd);
-          Log.info('✅ MIGRATION: Saved updated relay config',
-              name: 'NostrService', category: LogCategory.relay);
-        }
+        UnifiedLogger.info('✅ Loaded ${savedRelays.length} relay(s) from SharedPreferences', name: 'NostrService');
       } else {
-        // No saved config, use default
         final defaultRelay = AppConstants.defaultRelayUrl;
         relaysToAdd = [defaultRelay];
-        Log.info('📋 No saved relay config found, using default: $defaultRelay',
-            name: 'NostrService', category: LogCategory.relay);
-
-        // Save default to SharedPreferences for next time
+        UnifiedLogger.info('📋 No saved relay config found, using default: $defaultRelay', name: 'NostrService');
         await _saveRelayConfig(relaysToAdd);
       }
     }
@@ -133,196 +92,119 @@ class NostrService implements INostrService {
     for (var relay in relaysToAdd) {
       UnifiedLogger.info('   - $relay', name: 'NostrService');
     }
-    UnifiedLogger.warning('⚠️  NOTE: Only these relays will be loaded. Any relays added via UI are NOT persisted!', name: 'NostrService');
 
     try {
-      // Skip embedded relay initialization on web platform
-      if (kIsWeb) {
-        Log.info('Skipping embedded relay initialization on web platform',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.logInitializationStep('Skipped embedded relay on web');
+      // Initialize nostr_sdk - handle both authenticated and anonymous modes
+      final privateKey = _keyManager.privateKey;
+      final publicKey = _keyManager.publicKey;
+
+      // If we have keys, create authenticated Nostr instance
+      if (publicKey != null && privateKey != null) {
+        UnifiedLogger.info('🔑 Creating authenticated Nostr instance with publicKey: $publicKey', name: 'NostrService');
+
+        // Create signer from private key
+        final signer = LocalNostrSigner(privateKey);
+
+        // Create Nostr instance with RelayPool
+        _nostr = nostr_lib.Nostr(
+          signer,
+          publicKey,
+          [], // eventFilters - empty for now
+          (url) => RelayBase(url, RelayStatus(url)), // tempRelayGener
+        );
+
+        _relayPool = _nostr!.relayPool;
       } else {
-        // Initialize embedded relay (use injected instance if provided)
-        _embeddedRelay ??= embedded.EmbeddedNostrRelay();
+        // No keys available yet - this can happen on first app launch or logout
+        // Initialize anyway for read-only functionality (viewing public feeds)
+        UnifiedLogger.warning('🔓 No keys available - initializing in anonymous mode', name: 'NostrService');
+        UnifiedLogger.warning('   Users can view public content but cannot publish until logged in', name: 'NostrService');
 
-        Log.info('Initializing embedded relay...',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.logInitializationStep('Creating embedded relay instance');
+        // Create anonymous Nostr instance with temp keys for read-only access
+        // These temp keys won't be used for publishing - only for relay connections
+        final tempPrivateKey = generatePrivateKey();
+        final tempPublicKey = getPublicKey(tempPrivateKey);
+        final signer = LocalNostrSigner(tempPrivateKey);
 
+        _nostr = nostr_lib.Nostr(
+          signer,
+          tempPublicKey,
+          [], // eventFilters - empty for now
+          (url) => RelayBase(url, RelayStatus(url)), // tempRelayGener
+        );
+
+        _relayPool = _nostr!.relayPool;
+      }
+
+      UnifiedLogger.info('✅ Nostr instance created successfully', name: 'NostrService');
+
+      // Connect to relays
+      UnifiedLogger.info('🔗 Connecting to ${relaysToAdd.length} relay(s)...', name: 'NostrService');
+
+      for (final relayUrl in relaysToAdd) {
         try {
-          CrashReportingService.instance.logInitializationStep('Starting embedded relay initialization');
-          await _embeddedRelay!.initialize(
-            logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-            enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
-          );
-          Log.info('Embedded relay initialized successfully',
-              name: 'NostrService', category: LogCategory.relay);
-          CrashReportingService.instance.logInitializationStep('Embedded relay initialized successfully');
-        } catch (e) {
-        Log.error('Embedded relay initialization encountered issues: $e',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.recordError(e, StackTrace.current,
-            reason: 'Embedded relay initialization failed');
-        CrashReportingService.instance.logInitializationStep('Embedded relay failed: $e');
+          final connectStart = DateTime.now();
+          UnifiedLogger.info('🔌 Connecting to relay: $relayUrl', name: 'NostrService');
 
-        // Check if this is a Web platform issue (path_provider not supported)
-        if (e.toString().contains('path_provider') ||
-            e.toString().contains('getApplicationSupportDirectory')) {
-          Log.warning('Embedded relay not supported on Web platform, will use fallback',
-              name: 'NostrService', category: LogCategory.relay);
-          _embeddedRelay = null; // Clear the failed instance
-        } else {
-          // On iOS, the relay might continue with limited functionality
-          // Check if it's still marked as initialized
-          if (!_embeddedRelay!.isInitialized) {
-            Log.warning('Embedded relay failed to initialize properly',
-                name: 'NostrService', category: LogCategory.relay);
+          // Create relay instance
+          final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
+          _relays[relayUrl] = relay;
+
+          // Configure vine.hol.is to always require auth
+          if (relayUrl.contains('vine.hol.is')) {
+            relay.relayStatus.alwaysAuth = true;
+            UnifiedLogger.info('🔐 Configured $relayUrl to always require auth', name: 'NostrService');
+          }
+
+          // Add to relay pool
+          final success = await _relayPool!.add(relay);
+
+          final connectDuration = DateTime.now().difference(connectStart);
+          _configuredRelays.add(relayUrl);
+
+          if (success && relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+            _relayAuthStates[relayUrl] = true;
+            UnifiedLogger.info('✅ Relay connected: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
           } else {
-            Log.info('Embedded relay continuing with limited functionality',
-                name: 'NostrService', category: LogCategory.relay);
+            UnifiedLogger.error('❌ Relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
+            _relayAuthStates[relayUrl] = false;
           }
-        }
-      }
-      }
-
-      // Initialize embeddedRelayFailed for web platform
-      bool embeddedRelayFailed = kIsWeb;
-
-      // MIGRATION: Remove old relay3.openvine.co if present
-      if (!embeddedRelayFailed && _embeddedRelay != null) {
-        const oldRelay = 'wss://relay3.openvine.co';
-        final currentRelays = _embeddedRelay!.connectedRelays;
-
-        if (currentRelays.contains(oldRelay)) {
-          Log.info('🔄 MIGRATION: Removing old relay $oldRelay',
-              name: 'NostrService', category: LogCategory.relay);
-          try {
-            await _embeddedRelay!.removeExternalRelay(oldRelay);
-            Log.info('✅ MIGRATION: Successfully removed old relay',
-                name: 'NostrService', category: LogCategory.relay);
-          } catch (e) {
-            Log.error('❌ MIGRATION: Failed to remove old relay: $e',
-                name: 'NostrService', category: LogCategory.relay);
-          }
-        }
-      }
-
-      // Add external relays (embedded relay will manage connections if available)
-      if (!embeddedRelayFailed && _embeddedRelay != null) {
-        Log.info('🔗 Connecting to ${relaysToAdd.length} external relay(s)...',
-            name: 'NostrService', category: LogCategory.relay);
-
-        for (final relayUrl in relaysToAdd) {
-          try {
-            final connectStart = DateTime.now();
-            Log.info('🔌 Connecting to external relay: $relayUrl',
-                name: 'NostrService', category: LogCategory.relay);
-
-            await _embeddedRelay!.addExternalRelay(relayUrl);
-
-            final connectDuration = DateTime.now().difference(connectStart);
-            _configuredRelays.add(relayUrl);
-
-            // Check if the relay is actually connected
-            final connectedRelays = _embeddedRelay!.connectedRelays;
-            final isConnected = connectedRelays.contains(relayUrl);
-
-            if (isConnected) {
-              Log.info('✅ External relay connected: $relayUrl (${connectDuration.inMilliseconds}ms)',
-                  name: 'NostrService', category: LogCategory.relay);
-            } else {
-              Log.error('❌ External relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays list!',
-                  name: 'NostrService', category: LogCategory.relay);
-
-              // Report relay connection failure to Crashlytics
-              CrashReportingService.instance.recordError(
-                Exception('Relay connection failed: $relayUrl'),
-                StackTrace.current,
-                reason: 'Relay not in connected list after ${connectDuration.inMilliseconds}ms\n'
-                    'Configured relays: ${_configuredRelays.length}\n'
-                    'Connected relays: ${connectedRelays.length}',
-              );
-            }
-
-            Log.info('📊 Connected relays: ${connectedRelays.length}/${_configuredRelays.length} total',
-                name: 'NostrService', category: LogCategory.relay);
-          } catch (e, stackTrace) {
-            Log.error('❌ Failed to add relay $relayUrl: $e',
-                name: 'NostrService', category: LogCategory.relay);
-
-            // Report relay add exception to Crashlytics
-            CrashReportingService.instance.recordError(
-              Exception('Exception adding relay: $relayUrl - $e'),
-              stackTrace,
-              reason: 'Configured relays: ${_configuredRelays.length}',
-            );
-          }
-        }
-
-        // Final connection summary
-        final finalConnected = _embeddedRelay!.connectedRelays;
-        Log.info('🎯 External relay connection complete: ${finalConnected.length}/${_configuredRelays.length} relays connected',
-            name: 'NostrService', category: LogCategory.relay);
-        if (finalConnected.isEmpty && _configuredRelays.isNotEmpty) {
-          Log.error('⚠️ WARNING: No external relays connected! App will have limited functionality.',
-              name: 'NostrService', category: LogCategory.relay);
-
-          // Report complete relay connection failure to Crashlytics
-          // This is the most critical case - user won't see any content
+        } catch (e, stackTrace) {
+          UnifiedLogger.error('❌ Failed to add relay $relayUrl: $e', name: 'NostrService');
           CrashReportingService.instance.recordError(
-            Exception('CRITICAL: No relays connected'),
-            StackTrace.current,
-            reason: 'All relay connections failed\n'
-                'Configured relays: ${_configuredRelays.join(", ")}\n'
-                'Attempted: ${_configuredRelays.length} relays\n'
-                'Connected: 0 relays',
-          );
-
-          // Set custom keys for filtering
-          CrashReportingService.instance.setCustomKey(
-            'zero_relays_connected',
-            'true',
-          );
-          CrashReportingService.instance.setCustomKey(
-            'configured_relay_count',
-            _configuredRelays.length.toString(),
+            Exception('Exception adding relay: $relayUrl - $e'),
+            stackTrace,
+            reason: 'Configured relays: ${_configuredRelays.length}',
           );
         }
       }
 
-      // Initialize P2P sync if enabled
-      if (enableP2P) {
-        _p2pEnabled = true;
-        // P2P initialization moved to lazy loading when needed
+      // Final connection summary
+      final connectedCount = _relays.values.where((r) => r.relayStatus.connected == ClientConneccted.CONNECTED).length;
+      UnifiedLogger.info('🎯 Relay connection complete: $connectedCount/${_configuredRelays.length} relays connected', name: 'NostrService');
+
+      if (connectedCount == 0 && _configuredRelays.isNotEmpty) {
+        UnifiedLogger.error('⚠️ WARNING: No relays connected! App will have limited functionality.', name: 'NostrService');
+        CrashReportingService.instance.recordError(
+          Exception('CRITICAL: No relays connected'),
+          StackTrace.current,
+          reason: 'All relay connections failed\nConfigured relays: ${_configuredRelays.join(", ")}\nAttempted: ${_configuredRelays.length} relays\nConnected: 0 relays',
+        );
       }
 
       _isInitialized = true;
-      _onInitialized?.call(); // Notify that initialization is complete
-      Log.info(
-          'Initialization complete with ${_configuredRelays.length} external relays',
-          name: 'NostrService',
-          category: LogCategory.relay);
-    } catch (e) {
-      Log.error('Embedded relay initialization failed, attempting fallback: $e',
-          name: 'NostrService', category: LogCategory.relay);
+      _onInitialized?.call();
+      UnifiedLogger.info('✅ NostrService initialization complete with $connectedCount/${_configuredRelays.length} relays', name: 'NostrService');
 
-      // FALLBACK: Ensure at least the default relay is in the configured list
-      // even if embedded relay fails, so UI shows the relay and retry is possible
-      if (!_configuredRelays.contains(defaultRelay)) {
-        _configuredRelays.add(defaultRelay);
-        Log.info('Added default relay to configured list for retry capability',
-            name: 'NostrService', category: LogCategory.relay);
-      }
+    } catch (e, stackTrace) {
+      UnifiedLogger.error('❌ NostrService initialization failed: $e', name: 'NostrService');
+      CrashReportingService.instance.recordError(e, stackTrace, reason: 'NostrService initialization failed');
 
       // Mark as partially initialized to allow app to continue
-      _isInitialized = true; // Allow app to continue even with failures
-      _onInitialized?.call(); // Notify that initialization is complete (even if partial)
+      _isInitialized = true;
+      _onInitialized?.call();
 
-      // Don't throw error - let app continue with limited functionality
-      Log.warning(
-          'NostrService initialized with limited functionality - relay connections may need manual retry',
-          name: 'NostrService',
-          category: LogCategory.relay);
+      UnifiedLogger.warning('NostrService initialized with limited functionality - relay connections may need manual retry', name: 'NostrService');
     }
   }
 
@@ -335,17 +217,11 @@ class NostrService implements INostrService {
   @override
   List<String> get connectedRelays {
     final relays = <String>[];
-
-    // Always include the embedded relay if it's initialized (on non-web platforms)
-    if (!kIsWeb && _embeddedRelay != null && _embeddedRelay!.isInitialized) {
-      relays.add('ws://localhost:7447');
+    for (final entry in _relays.entries) {
+      if (entry.value.relayStatus.connected == ClientConneccted.CONNECTED) {
+        relays.add(entry.key);
+      }
     }
-
-    // Add external relays managed by the embedded relay
-    if (_embeddedRelay != null) {
-      relays.addAll(_embeddedRelay!.connectedRelays);
-    }
-
     return relays;
   }
 
@@ -362,7 +238,9 @@ class NostrService implements INostrService {
   int get relayCount => _configuredRelays.length;
 
   @override
-  int get connectedRelayCount => _embeddedRelay?.connectedRelays.length ?? 0;
+  int get connectedRelayCount {
+    return _relays.values.where((r) => r.relayStatus.connected == ClientConneccted.CONNECTED).length;
+  }
 
   @override
   List<String> get relays => List.from(_configuredRelays);
@@ -370,28 +248,23 @@ class NostrService implements INostrService {
   @override
   Map<String, dynamic> get relayStatuses {
     final statuses = <String, dynamic>{};
-
-    // Get status from embedded relay for all configured external relays
-    final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
     for (final relayUrl in _configuredRelays) {
-      final isConnected = connectedRelays.contains(relayUrl);
+      final relay = _relays[relayUrl];
+      final isConnected = relay?.relayStatus.connected == ClientConneccted.CONNECTED;
       statuses[relayUrl] = {
         'connected': isConnected,
-        'authenticated': isConnected, // Embedded relay handles auth
+        'authenticated': relay?.relayStatus.authed ?? false,
       };
-      // Update our auth state tracking
       _relayAuthStates[relayUrl] = isConnected;
     }
-
     return statuses;
   }
 
   @override
   Map<String, bool> get relayAuthStates {
-    // Update auth states from embedded relay status
-    final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
     for (final relayUrl in _configuredRelays) {
-      _relayAuthStates[relayUrl] = connectedRelays.contains(relayUrl);
+      final relay = _relays[relayUrl];
+      _relayAuthStates[relayUrl] = relay?.relayStatus.connected == ClientConneccted.CONNECTED;
     }
     return Map.from(_relayAuthStates);
   }
@@ -401,19 +274,21 @@ class NostrService implements INostrService {
 
   @override
   bool isRelayAuthenticated(String relayUrl) {
-    final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
-    return connectedRelays.contains(relayUrl);
+    final relay = _relays[relayUrl];
+    return relay?.relayStatus.authed ?? false;
   }
 
   @override
   bool get isVineRelayAuthenticated {
-    final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
-    return _configuredRelays.any((relay) => connectedRelays.contains(relay));
+    return _configuredRelays.any((url) {
+      final relay = _relays[url];
+      return relay?.relayStatus.authed ?? false;
+    });
   }
 
   @override
   void setAuthTimeout(Duration timeout) {
-    // Not applicable for embedded relay
+    // Not applicable for direct relay connections
   }
 
   @override
@@ -423,91 +298,42 @@ class NostrService implements INostrService {
       void Function()? onEose}) {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
-    if (_embeddedRelay == null) {
-      throw StateError('Embedded relay not initialized');
+    if (_relayPool == null) {
+      throw StateError('RelayPool not initialized');
     }
 
-    // Generate deterministic subscription ID based on filter content
-    // This prevents duplicate subscriptions with identical filters
     final filterHash = _generateFilterHash(filters);
     final id = 'sub_$filterHash';
 
-    // Check if we already have this exact subscription
     if (_subscriptions.containsKey(id) && !_subscriptions[id]!.isClosed) {
-      Log.info('🔄 Reusing existing subscription $id with identical filters',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.info('🔄 Reusing existing subscription $id with identical filters', name: 'NostrService');
       return _subscriptions[id]!.stream;
     }
 
-    // Check for too many concurrent subscriptions
     if (_subscriptions.length >= 10 && !bypassLimits) {
-      Log.warning(
-          'Too many concurrent subscriptions (${_subscriptions.length}). Cleaning up old ones.',
-          name: 'NostrService',
-          category: LogCategory.relay);
-
-      // Clean up any closed controllers
+      UnifiedLogger.warning('Too many concurrent subscriptions (${_subscriptions.length}). Cleaning up old ones.', name: 'NostrService');
       _subscriptions.removeWhere((key, controller) => controller.isClosed);
-
-      Log.info('After cleanup of closed controllers: ${_subscriptions.length}',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.info('After cleanup of closed controllers: ${_subscriptions.length}', name: 'NostrService');
     }
 
     final controller = StreamController<Event>.broadcast();
-    // Per-subscription de-duplication to avoid duplicate EVENTs from multiple relays/filters
     final seenEventIds = <String>{};
-    // Track replaceable events (kind, pubkey) -> (eventId, timestamp) for deduplication
     final replaceableEvents = <String, (String, int)>{};
 
-    // Pre-initialize replaceableEvents map from database AND deliver cached events to subscriber
-    // This ensures cached profiles are available immediately without waiting for relay sync
-    // Skip for discovery/explore subscriptions (no authors filter = all videos, doesn't benefit from pre-init)
-    final hasAuthorsFilter = filters.any((f) => f.authors != null && f.authors!.isNotEmpty);
-    if (hasAuthorsFilter) {
-      _preInitializeReplaceableEvents(replaceableEvents, filters, controller, seenEventIds);
-    }
-
     _subscriptions[id] = controller;
-    Log.debug('Total active subscriptions: ${_subscriptions.length}',
-        name: 'NostrService', category: LogCategory.relay);
+    UnifiedLogger.debug('Total active subscriptions: ${_subscriptions.length}', name: 'NostrService');
 
-    // Convert nostr_sdk filters to embedded relay filters
-    final embeddedFilters = filters.map(_convertToEmbeddedFilter).toList();
+    // Convert filters to JSON for relay pool
+    final filterJsonList = filters.map((f) => f.toJson()).toList();
 
-    // Debug logging for filters
-    Log.debug(
-        'Creating subscription $id with ${embeddedFilters.length} filters',
-        name: 'NostrService',
-        category: LogCategory.relay);
-    for (var i = 0; i < embeddedFilters.length; i++) {
-      final filter = embeddedFilters[i];
-      Log.debug(
-          '  Filter $i: kinds=${filter.kinds}, authors=${filter.authors?.length ?? 0} authors, tags=${filter.tags}',
-          name: 'NostrService',
-          category: LogCategory.relay);
-      // Log first few authors for debugging
-      if (filter.authors != null && filter.authors!.isNotEmpty) {
-        final authorsPreview = filter.authors!.take(3).join(', ');
-        Log.debug('    First authors: $authorsPreview',
-            name: 'NostrService', category: LogCategory.relay);
-      }
-    }
+    UnifiedLogger.debug('Creating subscription $id with ${filterJsonList.length} filters', name: 'NostrService');
 
-    // Use embedded relay directly - it handles external relay subscriptions automatically
-    Log.debug('Calling embedded relay subscribe with $id',
-        name: 'NostrService', category: LogCategory.relay);
-    final subscription = _embeddedRelay!.subscribe(
-      subscriptionId: id,
-      filters: embeddedFilters,
-      onEvent: (embeddedEvent) {
-        // Use batched logging for repetitive relay event logs
-        // RelayEventLogBatcher.batchRelayEvent(subscriptionId: id); // Commented out - too verbose
-        // Convert embedded relay event to nostr_sdk event
-        final event = _convertFromEmbeddedEvent(embeddedEvent);
-
-        // Drop exact duplicates (same event ID sent twice)
+    // Subscribe via relay pool
+    final subscriptionId = _relayPool!.subscribe(
+      filterJsonList,
+      (event) {
+        // Deduplication logic
         if (seenEventIds.contains(event.id)) {
-          // Use batched logging for duplicate events
           RelayEventLogBatcher.batchDuplicateEvent(
             eventId: event.id,
             subscriptionId: id,
@@ -515,19 +341,15 @@ class NostrService implements INostrService {
           return;
         }
 
-        // Handle replaceable events (NIP-01, NIP-16, NIP-33)
-        // Replaceable: kind 0, 3, 10000-19999
-        // Parameterized replaceable: kind 30000-39999
+        // Handle replaceable events
         final isReplaceable = event.kind == 0 ||
-                             event.kind == 3 ||
-                             (event.kind >= 10000 && event.kind < 20000) ||
-                             (event.kind >= 30000 && event.kind < 40000);
+            event.kind == 3 ||
+            (event.kind >= 10000 && event.kind < 20000) ||
+            (event.kind >= 30000 && event.kind < 40000);
 
         if (isReplaceable) {
-          // Key for tracking: "kind:pubkey" (or "kind:pubkey:d-tag" for parameterized)
           String replaceKey = '${event.kind}:${event.pubkey}';
 
-          // For parameterized replaceable events, include d-tag
           if (event.kind >= 30000 && event.kind < 40000) {
             final dTag = event.tags.firstWhere(
               (tag) => tag.isNotEmpty && tag[0] == 'd',
@@ -538,390 +360,124 @@ class NostrService implements INostrService {
             }
           }
 
-          // Check if we've seen this replaceable event before
           if (replaceableEvents.containsKey(replaceKey)) {
             final (oldEventId, oldTimestamp) = replaceableEvents[replaceKey]!;
 
             if (event.createdAt > oldTimestamp) {
-              // New event is newer - replace the old one
-              Log.debug('Replacing old ${event.kind} event (ts:$oldTimestamp) with newer (ts:${event.createdAt})',
-                  name: 'NostrService', category: LogCategory.relay);
+              UnifiedLogger.debug('Replacing old ${event.kind} event (ts:$oldTimestamp) with newer (ts:${event.createdAt})', name: 'NostrService');
               replaceableEvents[replaceKey] = (event.id, event.createdAt);
-              seenEventIds.remove(oldEventId); // Clean up old ID
+              seenEventIds.remove(oldEventId);
               seenEventIds.add(event.id);
             } else {
-              // Old event is newer - drop this one (silent - correct behavior)
               return;
             }
           } else {
-            // First time seeing this replaceable event
             replaceableEvents[replaceKey] = (event.id, event.createdAt);
             seenEventIds.add(event.id);
           }
         } else {
-          // Non-replaceable event - just track by ID
           seenEventIds.add(event.id);
         }
 
-        // Note: We intentionally allow the same event to appear in different subscriptions
-        // (e.g., search results and hashtag feeds) since they serve different contexts.
-        // Per-subscription deduplication (seenEventIds above) prevents duplicates within
-        // the same subscription.
-
         if (!controller.isClosed) {
-          // Debug log for home feed events
-          if (id.contains('homeFeed')) {
-            Log.debug(
-                'Received home feed event - kind: ${event.kind}, author: ${event.pubkey}...',
-                name: 'NostrService',
-                category: LogCategory.relay);
-          }
           controller.add(event);
         }
       },
-      onEose: () {
-        UnifiedLogger.debug('EOSE received for subscription $id',
-            name: 'NostrService');
-        try {
-          onEose?.call();
-        } catch (e) {
-          UnifiedLogger.error('Error in onEose callback for $id: $e',
-              name: 'NostrService');
-        }
-
-        // Auto-cleanup profile subscriptions (kind 0) after EOSE to prevent leaks
-        // Profile fetches are one-time queries, not live subscriptions
-        final isProfileSubscription = filters.any((f) =>
-          f.kinds != null &&
-          f.kinds!.length == 1 &&
-          f.kinds!.first == 0
-        );
-
-        if (isProfileSubscription && _subscriptions.containsKey(id)) {
-          // Close profile subscriptions immediately after EOSE since they're one-time fetches
-          Log.debug('Auto-closing profile subscription after EOSE: $id',
-              name: 'NostrService', category: LogCategory.relay);
-
-          // Schedule cleanup to allow any in-flight events to complete
-          Timer(const Duration(milliseconds: 500), () {
-            if (_subscriptions.containsKey(id)) {
-              try {
-                _subscriptions[id]?.close();
-                _subscriptions.remove(id);
-                Log.debug('Closed profile subscription $id (${_subscriptions.length} remaining)',
-                    name: 'NostrService', category: LogCategory.relay);
-              } catch (e) {
-                // Ignore errors
-              }
-            }
-          });
-        }
-      },
-      onError: (error) {
-        if (!controller.isClosed) {
-          controller.addError(error);
-        }
-      },
+      id: id,
+      sendAfterAuth: true, // Send after auth for relays that require it
     );
 
     // Handle controller disposal
     controller.onCancel = () {
-      Log.debug(
-          'Stream cancelled for subscription $id - scheduling graceful shutdown in 2 seconds',
-          name: 'NostrService',
-          category: LogCategory.relay);
-
-      // Remove from tracking immediately to prevent reuse during grace period
+      UnifiedLogger.debug('Stream cancelled for subscription $id', name: 'NostrService');
       _subscriptions.remove(id);
-      UnifiedLogger.debug(
-          'Active subscriptions after removal: ${_subscriptions.length}',
-          name: 'NostrService');
 
-      // CRITICAL: Keep subscription AND controller alive for grace period
-      // This allows external relays (200-500ms latency) to finish sending events
-      // before we close the embedded relay's storage stream
       Future.delayed(const Duration(seconds: 2), () async {
         try {
-          // Close the embedded relay subscription first
-          subscription.close();
-          UnifiedLogger.info(
-              'Closed embedded relay subscription $id after grace period',
-              name: 'NostrService');
-
-          // Then close the controller
+          _relayPool!.unsubscribe(subscriptionId);
           if (!controller.isClosed) {
             await controller.close();
-            UnifiedLogger.debug('Closed stream controller for $id',
-                name: 'NostrService');
           }
         } catch (e) {
-          UnifiedLogger.error('Error during graceful shutdown of $id: $e',
-              name: 'NostrService');
+          UnifiedLogger.error('Error during subscription cleanup: $e', name: 'NostrService');
         }
       });
     };
 
-    return controller.stream;
-  }
-
-  /// Pre-initialize the replaceable events map from database and deliver cached events to subscriber
-  /// This ensures cached profile events are delivered immediately without waiting for relay sync
-  Future<void> _preInitializeReplaceableEvents(
-    Map<String, (String, int)> replaceableEvents,
-    List<nostr.Filter> filters,
-    StreamController<Event> controller,
-    Set<String> seenEventIds,
-  ) async {
-    try {
-      // Create filter for just replaceable events matching the subscription filters
-      final replaceableFilters = filters.map((f) {
-        // Extract kinds from filter that are replaceable
-        final kindsToQuery = f.kinds?.where((k) =>
-          k == 0 || k == 3 || (k >= 10000 && k < 20000) || (k >= 30000 && k < 40000)
-        ).toList();
-
-        if (kindsToQuery == null || kindsToQuery.isEmpty) return null;
-
-        // Create new filter with only replaceable kinds
-        return nostr.Filter(
-          kinds: kindsToQuery,
-          authors: f.authors,
-          limit: 1000, // Limit to avoid loading too much
-        );
-      }).whereType<nostr.Filter>().toList();
-
-      if (replaceableFilters.isEmpty) return; // No replaceable events to query
-
-      final existingEvents = await getEvents(
-        filters: replaceableFilters,
-        limit: 1000,
-      );
-
-      Log.debug(
-        'Pre-initialized ${existingEvents.length} replaceable events from database',
-        name: 'NostrService',
-        category: LogCategory.relay,
-      );
-
-      // Populate the map with existing events AND deliver them to subscriber
-      for (final event in existingEvents) {
-        String replaceKey = '${event.kind}:${event.pubkey}';
-
-        // For parameterized replaceable events, include d-tag
-        if (event.kind >= 30000 && event.kind < 40000) {
-          try {
-            final dTag = event.tags.firstWhere(
-              (tag) => tag.isNotEmpty && tag[0] == 'd',
-              orElse: () => ['d', ''],
-            );
-            replaceKey += ':${dTag.length > 1 ? dTag[1] : ''}';
-          } catch (e) {
-            // No d-tag, use empty string
-            replaceKey += ':';
-          }
+    // Call onEose if provided (note: relay pool doesn't have EOSE callback in subscribe)
+    // We'll need to handle this differently or via query method
+    if (onEose != null) {
+      Timer(const Duration(seconds: 2), () {
+        try {
+          onEose();
+        } catch (e) {
+          UnifiedLogger.error('Error in onEose callback: $e', name: 'NostrService');
         }
-
-        // Track for deduplication
-        replaceableEvents[replaceKey] = (event.id, event.createdAt);
-        seenEventIds.add(event.id);
-
-        // CRITICAL FIX: Deliver cached event to subscriber immediately
-        if (!controller.isClosed) {
-          controller.add(event);
-        }
-      }
-    } catch (e) {
-      Log.warning(
-        'Failed to pre-initialize replaceable events: $e',
-        name: 'NostrService',
-        category: LogCategory.relay,
-      );
-      // Non-fatal - subscription will still work, just may log duplicates
+      });
     }
+
+    return controller.stream;
   }
 
   @override
   Future<NostrBroadcastResult> broadcastEvent(Event event) async {
-    // Allow reinitializing if disposed (since we're keepAlive)
     if (_isDisposed) {
-      Log.warning('NostrService was disposed, attempting to reinitialize',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.warning('NostrService was disposed, attempting to reinitialize', name: 'NostrService');
       _isDisposed = false;
       _isInitialized = false;
       await initialize();
     }
 
     if (!_isInitialized) throw StateError('NostrService not initialized');
-    if (_embeddedRelay == null) {
-      throw StateError('Embedded relay not initialized');
+    if (_nostr == null || _relayPool == null) {
+      throw StateError('Nostr or RelayPool not initialized');
     }
 
-    // Log broadcast attempt
-    Log.info('🚀 Broadcasting event ${event.id} (kind ${event.kind})',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('📊 Relay Status:',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Embedded relay initialized: ${_embeddedRelay!.isInitialized}',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Configured relays: ${_configuredRelays.join(", ")}',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Connected relays: ${_embeddedRelay!.connectedRelays.join(", ")}',
-        name: 'NostrService', category: LogCategory.relay);
+    UnifiedLogger.info('🚀 Broadcasting event ${event.id} (kind ${event.kind})', name: 'NostrService');
+    UnifiedLogger.info('📊 Relay Status:', name: 'NostrService');
+    UnifiedLogger.info('   - Configured relays: ${_configuredRelays.join(", ")}', name: 'NostrService');
+    UnifiedLogger.info('   - Connected relays: ${connectedRelays.join(", ")}', name: 'NostrService');
 
     final results = <String, bool>{};
     final errors = <String, String>{};
 
     try {
-      // Check if embedded relay is still initialized before publishing
-      if (!_embeddedRelay!.isInitialized) {
-        Log.warning('Embedded relay is not initialized, attempting to reinitialize',
-            name: 'NostrService', category: LogCategory.relay);
-
-        // Try to reinitialize the embedded relay
-        try {
-          await _embeddedRelay!.initialize(
-            logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-            enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
-          );
-          Log.info('Embedded relay reinitialized successfully',
-              name: 'NostrService', category: LogCategory.relay);
-
-          // Re-add external relays
-          for (final relayUrl in _configuredRelays) {
-            try {
-              await _embeddedRelay!.addExternalRelay(relayUrl);
-              Log.info('Re-added external relay: $relayUrl',
-                  name: 'NostrService', category: LogCategory.relay);
-            } catch (e) {
-              Log.warning('Failed to re-add external relay $relayUrl: $e',
-                  name: 'NostrService', category: LogCategory.relay);
-            }
-          }
-        } catch (e) {
-          Log.error('Failed to reinitialize embedded relay: $e',
-              name: 'NostrService', category: LogCategory.relay);
-          throw StateError('Embedded relay cannot be reinitialized: $e');
-        }
-      }
-
-      // Convert nostr_sdk event to embedded relay event
-      final embeddedEvent = _convertToEmbeddedEvent(event);
-
-      // Debug logging for contact list events
-      if (event.kind == 3) {
-        Log.info('📋 Publishing contact list event to embedded relay',
-            name: 'NostrService', category: LogCategory.relay);
-      }
-
-      // Try to publish with stream closure recovery
-      bool success = false;
-      try {
-        // Publish to embedded relay - it will automatically forward to external relays
-        Log.info('📤 Publishing to embedded relay...',
-            name: 'NostrService', category: LogCategory.relay);
-        success = await _embeddedRelay!.publish(embeddedEvent);
-        Log.info('✅ Embedded relay publish result: $success',
-            name: 'NostrService', category: LogCategory.relay);
-      } catch (e) {
-        Log.error('❌ Embedded relay publish error: $e',
-            name: 'NostrService', category: LogCategory.relay);
-        // Check if the error is due to stream closure
-        if (e.toString().contains('Cannot add new events after calling close') ||
-            e.toString().contains('Bad state')) {
-          Log.warning('Embedded relay stream closed, attempting recovery',
-              name: 'NostrService', category: LogCategory.relay);
-
-          // Try to reinitialize the embedded relay completely
-          try {
-            // Create a new embedded relay instance
-            _embeddedRelay = embedded.EmbeddedNostrRelay();
-            await _embeddedRelay!.initialize(
-              enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
-            );
-
-            // Re-add external relays
-            for (final relayUrl in _configuredRelays) {
-              try {
-                await _embeddedRelay!.addExternalRelay(relayUrl);
-                Log.info('Re-added external relay after recovery: $relayUrl',
-                    name: 'NostrService', category: LogCategory.relay);
-              } catch (e) {
-                Log.warning('Failed to re-add external relay $relayUrl: $e',
-                    name: 'NostrService', category: LogCategory.relay);
-              }
-            }
-
-            // Retry the publish
-            success = await _embeddedRelay!.publish(embeddedEvent);
-            Log.info('Successfully published after stream recovery',
-                name: 'NostrService', category: LogCategory.relay);
-          } catch (recoveryError) {
-            Log.error('Failed to recover from stream closure: $recoveryError',
-                name: 'NostrService', category: LogCategory.relay);
-            rethrow;
-          }
-        } else {
-          // Re-throw other errors
-          rethrow;
-        }
-      }
+      // Send via relay pool
+      final success = _relayPool!.send(["EVENT", event.toJson()]);
 
       if (success) {
-        // Mark local and connected external relays as successful
-        results['local'] = true;
-        Log.info('✅ Local embedded relay: SUCCESS',
-            name: 'NostrService', category: LogCategory.relay);
-
-        // The embedded relay handles external relay publishing
         for (final relayUrl in _configuredRelays) {
-          final isConnected =
-              _embeddedRelay!.connectedRelays.contains(relayUrl);
+          final relay = _relays[relayUrl];
+          final isConnected = relay?.relayStatus.connected == ClientConneccted.CONNECTED;
           results[relayUrl] = isConnected;
+
           if (isConnected) {
-            Log.info('✅ External relay $relayUrl: CONNECTED (event forwarded)',
-                name: 'NostrService', category: LogCategory.relay);
+            UnifiedLogger.info('✅ Relay $relayUrl: event sent', name: 'NostrService');
           } else {
-            Log.warning('⚠️  External relay $relayUrl: NOT CONNECTED',
-                name: 'NostrService', category: LogCategory.relay);
+            UnifiedLogger.warning('⚠️  Relay $relayUrl: NOT CONNECTED', name: 'NostrService');
             errors[relayUrl] = 'Relay not connected';
           }
         }
       } else {
-        results['local'] = false;
-        errors['local'] = 'Event rejected by embedded relay';
-        Log.error('❌ Local embedded relay: REJECTED',
-            name: 'NostrService', category: LogCategory.relay);
-
-        // Mark all external relays as failed too
         for (final relayUrl in _configuredRelays) {
           results[relayUrl] = false;
-          errors[relayUrl] = 'Local relay publish failed';
-          Log.error('❌ External relay $relayUrl: FAILED (local publish rejected)',
-              name: 'NostrService', category: LogCategory.relay);
+          errors[relayUrl] = 'Failed to send to relay pool';
+          UnifiedLogger.error('❌ Relay $relayUrl: FAILED', name: 'NostrService');
         }
       }
     } catch (e) {
-      results['local'] = false;
-      errors['local'] = e.toString();
-
-      // Mark all external relays as failed too
       for (final relayUrl in _configuredRelays) {
         results[relayUrl] = false;
-        errors[relayUrl] = 'Embedded relay error: $e';
+        errors[relayUrl] = 'Exception: $e';
       }
     }
 
     final successCount = results.values.where((success) => success).length;
 
-    Log.info('📊 Broadcast Summary:',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Success: $successCount/${results.length} relays',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Results: $results',
-        name: 'NostrService', category: LogCategory.relay);
+    UnifiedLogger.info('📊 Broadcast Summary:', name: 'NostrService');
+    UnifiedLogger.info('   - Success: $successCount/${results.length} relays', name: 'NostrService');
     if (errors.isNotEmpty) {
-      Log.info('   - Errors: $errors',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.info('   - Errors: $errors', name: 'NostrService');
     }
 
     return NostrBroadcastResult(
@@ -939,188 +495,139 @@ class NostrService implements INostrService {
     required String content,
     List<String> hashtags = const [],
   }) async {
-    // TODO: Implement file metadata publishing to embedded relay
     throw UnimplementedError('File metadata publishing not yet implemented');
   }
 
   @override
   Future<bool> addRelay(String relayUrl) async {
     UnifiedLogger.info('🔌 addRelay() called for: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
 
     if (_configuredRelays.contains(relayUrl)) {
       UnifiedLogger.warning('⚠️  Relay already in configuration: $relayUrl', name: 'NostrService');
-      return false; // Already added
+      return false;
     }
 
-    // Add to configured list even if embedded relay isn't ready
     _configuredRelays.add(relayUrl);
     UnifiedLogger.info('✅ Added relay to configuration: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
 
-    // Persist to SharedPreferences
     await _saveRelayConfig(_configuredRelays);
 
-    // Try to connect if embedded relay is available
-    if (_embeddedRelay != null) {
+    if (_relayPool != null) {
       try {
-        await _embeddedRelay!.addExternalRelay(relayUrl);
-        UnifiedLogger.info('🔗 Connected to relay: $relayUrl',
-            name: 'NostrService');
+        final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
+        _relays[relayUrl] = relay;
 
-        // Notify auth state listeners
-        _relayAuthStates[relayUrl] = true;
-        _authStateController.add(Map.from(_relayAuthStates));
+        if (relayUrl.contains('vine.hol.is')) {
+          relay.relayStatus.alwaysAuth = true;
+        }
 
-        return true;
+        final success = await _relayPool!.add(relay);
+
+        if (success) {
+          _relayAuthStates[relayUrl] = true;
+          _authStateController.add(Map.from(_relayAuthStates));
+          UnifiedLogger.info('🔗 Connected to relay: $relayUrl', name: 'NostrService');
+          return true;
+        } else {
+          UnifiedLogger.error('❌ Failed to connect relay: $relayUrl', name: 'NostrService');
+        }
       } catch (e) {
-        UnifiedLogger.error('❌ Failed to connect relay (will retry): $e',
-            name: 'NostrService');
+        UnifiedLogger.error('❌ Exception connecting relay: $e', name: 'NostrService');
       }
-    } else {
-      UnifiedLogger.warning('⚠️  Embedded relay not ready, will retry initialization', name: 'NostrService');
-      // Try to initialize embedded relay again
-      await retryInitialization();
     }
 
-    return true; // Added to config even if not connected yet
+    return true;
   }
 
-  /// Retry initialization of embedded relay and reconnect configured relays
   @override
   Future<void> retryInitialization() async {
-    Log.info('🔄 Starting relay connection retry...', name: 'NostrService', category: LogCategory.relay);
+    UnifiedLogger.info('🔄 Starting relay connection retry...', name: 'NostrService');
 
-    if (_embeddedRelay != null) {
-      Log.info('Embedded relay already exists - attempting to reconnect external relays',
-          name: 'NostrService', category: LogCategory.relay);
-
-      // Get current connection status before retry
-      final beforeConnected = _embeddedRelay!.connectedRelays;
-      Log.info('📊 Before retry: ${beforeConnected.length}/${_configuredRelays.length} relays connected',
-          name: 'NostrService', category: LogCategory.relay);
-
-      // Try to reconnect configured relays
-      for (final relayUrl in _configuredRelays) {
-        try {
-          final connectStart = DateTime.now();
-          Log.info('🔌 Reconnecting to relay: $relayUrl',
-              name: 'NostrService', category: LogCategory.relay);
-
-          await _embeddedRelay!.addExternalRelay(relayUrl);
-
-          final connectDuration = DateTime.now().difference(connectStart);
-          final connectedRelays = _embeddedRelay!.connectedRelays;
-          final isConnected = connectedRelays.contains(relayUrl);
-
-          if (isConnected) {
-            _relayAuthStates[relayUrl] = true;
-            Log.info('✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)',
-                name: 'NostrService', category: LogCategory.relay);
-          } else {
-            Log.error('❌ Failed to reconnect relay: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays',
-                name: 'NostrService', category: LogCategory.relay);
-          }
-        } catch (e) {
-          Log.error('❌ Failed to reconnect relay $relayUrl: $e',
-              name: 'NostrService', category: LogCategory.relay);
-        }
-      }
-
-      // Final status after retry
-      final afterConnected = _embeddedRelay!.connectedRelays;
-      Log.info('🎯 Retry complete: ${afterConnected.length}/${_configuredRelays.length} relays connected',
-          name: 'NostrService', category: LogCategory.relay);
-      if (afterConnected.length > beforeConnected.length) {
-        Log.info('✨ Successfully connected ${afterConnected.length - beforeConnected.length} additional relay(s)',
-            name: 'NostrService', category: LogCategory.relay);
-      } else if (afterConnected.isEmpty) {
-        Log.error('⚠️ WARNING: Still no relays connected after retry!',
-            name: 'NostrService', category: LogCategory.relay);
-      }
-
-      _authStateController.add(Map.from(_relayAuthStates));
+    if (_relayPool == null) {
+      UnifiedLogger.error('RelayPool not initialized, cannot retry', name: 'NostrService');
       return;
     }
 
-    UnifiedLogger.info('Retrying embedded relay initialization...',
-        name: 'NostrService');
+    final beforeConnected = connectedRelays.length;
+    UnifiedLogger.info('📊 Before retry: $beforeConnected/${_configuredRelays.length} relays connected', name: 'NostrService');
 
-    try {
-      // Try to initialize embedded relay again
-      _embeddedRelay = embedded.EmbeddedNostrRelay();
-      await _embeddedRelay!.initialize(
-        logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-        enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
-      );
-      UnifiedLogger.info('Embedded relay initialized on retry',
-          name: 'NostrService');
-
-      // Reconnect all configured relays
-      for (final relayUrl in _configuredRelays) {
+    for (final relayUrl in _configuredRelays) {
+      if (_relays[relayUrl]?.relayStatus.connected != ClientConneccted.CONNECTED) {
         try {
-          await _embeddedRelay!.addExternalRelay(relayUrl);
-          _relayAuthStates[relayUrl] = true;
-          UnifiedLogger.info('Reconnected to relay: $relayUrl',
-              name: 'NostrService');
+          final connectStart = DateTime.now();
+          UnifiedLogger.info('🔌 Reconnecting to relay: $relayUrl', name: 'NostrService');
+
+          final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
+          _relays[relayUrl] = relay;
+
+          if (relayUrl.contains('vine.hol.is')) {
+            relay.relayStatus.alwaysAuth = true;
+          }
+
+          final success = await _relayPool!.add(relay);
+          final connectDuration = DateTime.now().difference(connectStart);
+
+          if (success && relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+            _relayAuthStates[relayUrl] = true;
+            UnifiedLogger.info('✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
+          } else {
+            UnifiedLogger.error('❌ Failed to reconnect relay: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
+          }
         } catch (e) {
-          UnifiedLogger.error('Failed to reconnect relay $relayUrl: $e',
-              name: 'NostrService');
+          UnifiedLogger.error('❌ Exception reconnecting relay $relayUrl: $e', name: 'NostrService');
         }
       }
-
-      // Notify auth state listeners
-      _authStateController.add(Map.from(_relayAuthStates));
-    } catch (e) {
-      UnifiedLogger.error('Embedded relay retry failed: $e',
-          name: 'NostrService');
     }
+
+    final afterConnected = connectedRelays.length;
+    UnifiedLogger.info('🎯 Retry complete: $afterConnected/${_configuredRelays.length} relays connected', name: 'NostrService');
+
+    if (afterConnected > beforeConnected) {
+      UnifiedLogger.info('✨ Successfully connected ${afterConnected - beforeConnected} additional relay(s)', name: 'NostrService');
+    } else if (afterConnected == 0) {
+      UnifiedLogger.error('⚠️ WARNING: Still no relays connected after retry!', name: 'NostrService');
+    }
+
+    _authStateController.add(Map.from(_relayAuthStates));
   }
 
   @override
   Future<void> removeRelay(String relayUrl) async {
     UnifiedLogger.info('🔌 removeRelay() called for: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
 
-    if (_embeddedRelay != null) {
+    if (_relayPool != null && _relays.containsKey(relayUrl)) {
       try {
-        await _embeddedRelay!.removeExternalRelay(relayUrl);
-        UnifiedLogger.info('🔗 Disconnected from embedded relay: $relayUrl', name: 'NostrService');
+        _relayPool!.remove(relayUrl);
+        _relays.remove(relayUrl);
+        UnifiedLogger.info('🔗 Disconnected from relay: $relayUrl', name: 'NostrService');
       } catch (e) {
-        UnifiedLogger.error('❌ Failed to remove relay from embedded relay: $e',
-            name: 'NostrService');
+        UnifiedLogger.error('❌ Failed to remove relay: $e', name: 'NostrService');
       }
     }
 
     _configuredRelays.remove(relayUrl);
     _relayAuthStates.remove(relayUrl);
     UnifiedLogger.info('✅ Removed relay from configuration: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
 
-    // Persist to SharedPreferences
     await _saveRelayConfig(_configuredRelays);
   }
 
   @override
   Map<String, bool> getRelayStatus() {
     final status = <String, bool>{};
-    final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
-
     for (final relayUrl in _configuredRelays) {
-      status[relayUrl] = connectedRelays.contains(relayUrl);
+      final relay = _relays[relayUrl];
+      status[relayUrl] = relay?.relayStatus.connected == ClientConneccted.CONNECTED;
     }
-
     return status;
   }
 
   @override
   Future<void> reconnectAll() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || _relayPool == null) return;
 
-    // Embedded relay doesn't need reconnection
-    // TODO: Reconnect external relays if needed
+    UnifiedLogger.info('🔄 Reconnecting all relays...', name: 'NostrService');
+    _relayPool!.reconnect();
   }
 
   @override
@@ -1131,8 +638,6 @@ class NostrService implements INostrService {
       }
     }
     _subscriptions.clear();
-
-    // TODO: Close embedded relay subscriptions
   }
 
   @override
@@ -1145,40 +650,45 @@ class NostrService implements INostrService {
   }) {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
-    if (_embeddedRelay == null) {
-      throw StateError('Embedded relay not initialized');
+    if (_relayPool == null) {
+      throw StateError('RelayPool not initialized');
     }
 
-    // Create filter for video events with NIP-50 search query using nostr.Filter
     final nostrFilter = nostr.Filter(
-      kinds: [34236, 34235, 22, 21, 6], // Video event kinds + repost (kind 6)
+      kinds: [34236, 34235, 22, 21, 6],
       authors: authors,
       since: since != null ? (since.millisecondsSinceEpoch ~/ 1000) : null,
       until: until != null ? (until.millisecondsSinceEpoch ~/ 1000) : null,
       limit: limit ?? 100,
-      search: query, // NIP-50 search parameter
+      search: query,
     );
-    final filter = _convertToEmbeddedFilter(nostrFilter);
 
-    // Query embedded relay - it will forward the NIP-50 search to external relays
     final controller = StreamController<Event>();
+    final seenEventIds = <String>{};
 
     () async {
       try {
-        final embeddedEvents = await _embeddedRelay!.queryEvents([filter]);
+        final subscriptionId = _relayPool!.subscribe(
+          [nostrFilter.toJson()],
+          (event) {
+            if (!seenEventIds.contains(event.id) && !controller.isClosed) {
+              seenEventIds.add(event.id);
+              controller.add(event);
+            }
+          },
+        );
 
-        // Add all matching events from relay (relay performs NIP-50 search)
-        for (final embeddedEvent in embeddedEvents) {
-          if (!controller.isClosed) {
-            final event = _convertFromEmbeddedEvent(embeddedEvent);
-            controller.add(event);
+        // Close after timeout
+        Timer(const Duration(seconds: 5), () async {
+          try {
+            _relayPool!.unsubscribe(subscriptionId);
+            if (!controller.isClosed) {
+              await controller.close();
+            }
+          } catch (e) {
+            UnifiedLogger.error('Error closing search subscription: $e', name: 'NostrService');
           }
-        }
-
-        // Close the stream when done
-        if (!controller.isClosed) {
-          await controller.close();
-        }
+        });
       } catch (e) {
         if (!controller.isClosed) {
           controller.addError(e);
@@ -1192,150 +702,38 @@ class NostrService implements INostrService {
 
   @override
   String get primaryRelay {
-    // The embedded relay is ALWAYS the primary relay in our architecture
-    // External relays are managed by the embedded relay and are secondary
-    if (!kIsWeb && _embeddedRelay != null && _embeddedRelay!.isInitialized) {
-      return 'ws://localhost:7447';
-    }
-    // Fallback for web or when embedded relay unavailable
     return _configuredRelays.isNotEmpty
         ? _configuredRelays.first
         : AppConstants.defaultRelayUrl;
   }
 
-  /// Get embedded relay statistics for performance monitoring
+  @override
   Future<Map<String, dynamic>?> getRelayStats() async {
-    if (!_isInitialized || _embeddedRelay == null) return null;
+    if (!_isInitialized || _relayPool == null) return null;
 
     try {
-      final stats = await _embeddedRelay!.getStats();
-      final subscriptionStats = _embeddedRelay!.getSubscriptionStats();
+      final stats = <String, dynamic>{};
+
+      for (final entry in _relays.entries) {
+        final relayUrl = entry.key;
+        final relay = entry.value;
+
+        stats[relayUrl] = {
+          'connected': relay.relayStatus.connected == ClientConneccted.CONNECTED,
+          'authenticated': relay.relayStatus.authed,
+          'read_access': relay.relayStatus.readAccess,
+          'write_access': relay.relayStatus.writeAccess,
+        };
+      }
 
       return {
-        'database': stats,
-        'subscriptions': subscriptionStats,
-        'external_relays': _configuredRelays.length,
-        'p2p_enabled': _p2pEnabled,
-        'p2p_peers': _p2pService?.peers.length ?? 0,
-        'p2p_connections': _p2pService?.connections.length ?? 0,
-        'p2p_advertising': _p2pService?.isAdvertising ?? false,
-        'p2p_discovering': _p2pService?.isDiscovering ?? false,
+        'relays': stats,
+        'total_configured': _configuredRelays.length,
+        'total_connected': connectedRelayCount,
+        'subscriptions': _subscriptions.length,
       };
     } catch (e) {
       return {'error': e.toString()};
-    }
-  }
-
-  // P2P Sync Methods
-
-  /// Start P2P discovery for nearby divine devices
-  Future<bool> startP2PDiscovery() async {
-    if (!_p2pEnabled) return false;
-
-    await _ensureP2PInitialized();
-    if (_p2pService == null) return false;
-
-    try {
-      await _p2pService!.startDiscovery();
-      return true;
-    } catch (e) {
-      UnifiedLogger.error('Failed to start P2P discovery: $e',
-          name: 'NostrService');
-      return false;
-    }
-  }
-
-  /// Stop P2P discovery
-  Future<void> stopP2PDiscovery() async {
-    if (_p2pService != null) {
-      await _p2pService!.stopDiscovery();
-    }
-  }
-
-  /// Start advertising this device for P2P connections
-  Future<bool> startP2PAdvertising() async {
-    if (!_p2pEnabled) return false;
-
-    await _ensureP2PInitialized();
-    if (_p2pService == null) return false;
-
-    try {
-      await _p2pService!.startAdvertising();
-      return true;
-    } catch (e) {
-      UnifiedLogger.error('Failed to start P2P advertising: $e',
-          name: 'NostrService');
-      return false;
-    }
-  }
-
-  /// Stop advertising this device
-  Future<void> stopP2PAdvertising() async {
-    if (_p2pService != null) {
-      await _p2pService!.stopAdvertising();
-    }
-  }
-
-  /// Get list of discovered P2P peers
-  List<P2PPeer> getP2PPeers() {
-    return _p2pService?.peers ?? [];
-  }
-
-  /// Connect to a P2P peer and start syncing video events
-  Future<bool> connectToP2PPeer(P2PPeer peer) async {
-    if (!_p2pEnabled) return false;
-
-    await _ensureP2PInitialized();
-    if (_p2pService == null) return false;
-
-    try {
-      final connection = await _p2pService!.connectToPeer(peer);
-      if (connection != null) {
-        // Setup event sync inline instead of separate method
-        connection.dataStream.listen(
-          (data) => _handleP2PMessage(connection.peer.id, data),
-          onError: (error) => UnifiedLogger.error(
-              'P2P: Data stream error from ${connection.peer.name}: $error',
-              name: 'NostrService'),
-        );
-        return true;
-      }
-    } catch (e) {
-      UnifiedLogger.error('Failed to connect to P2P peer ${peer.name}: $e',
-          name: 'NostrService');
-    }
-
-    return false;
-  }
-
-  /// Sync video events with all connected P2P peers
-  Future<void> syncWithP2PPeers() async {
-    if (!_p2pEnabled || _videoSyncService == null) return;
-
-    try {
-      await _videoSyncService!.syncWithAllPeers();
-      UnifiedLogger.info('P2P: Video sync completed with all peers',
-          name: 'NostrService');
-    } catch (e) {
-      UnifiedLogger.error('Failed to sync with P2P peers: $e',
-          name: 'NostrService');
-    }
-  }
-
-  /// Start automatic P2P video syncing
-  Future<void> startAutoP2PSync(
-      {Duration interval = const Duration(minutes: 5)}) async {
-    if (!_p2pEnabled || _videoSyncService == null) return;
-
-    await _videoSyncService!.startAutoSync(interval: interval);
-    UnifiedLogger.info('P2P: Auto video sync started', name: 'NostrService');
-  }
-
-  /// Stop automatic P2P video syncing
-  Future<void> stopAutoP2PSync() async {
-    if (_videoSyncService != null) {
-      _videoSyncService!.stopAutoSync();
-      UnifiedLogger.info('P2P: Auto video sync stopped', name: 'NostrService');
     }
   }
 
@@ -1343,66 +741,30 @@ class NostrService implements INostrService {
   Future<void> dispose() async {
     if (_isDisposed) return;
 
-    // Flush any remaining batched logs
     LogBatcher.flush();
-
     UnifiedLogger.info('Starting disposal...', name: 'NostrService');
 
-    // Close all active subscriptions
     await closeAllSubscriptions();
     await _authStateController.close();
 
-    // Note: No nostr_sdk client or WebSocket server to disconnect
-    // We use the embedded relay directly
-
-    // Shutdown embedded relay - only if we're truly disposing
-    // In production, we want to avoid shutting down the relay if the service is still needed
-    if (_embeddedRelay != null) {
+    if (_relayPool != null) {
       try {
-        // Check if the relay is still being used before shutting down
-        if (_embeddedRelay!.isInitialized) {
-          UnifiedLogger.info('Embedded relay is still initialized, checking if shutdown is safe',
-              name: 'NostrService');
-          
-          // For now, we'll skip shutdown to avoid the "cannot add events after close" error
-          // The relay will be cleaned up when the app terminates
-          UnifiedLogger.warning(
-              'Skipping embedded relay shutdown to prevent event publishing issues',
-              name: 'NostrService');
-          
-          // Optionally disconnect from external relays without shutting down the embedded relay
-          for (final relayUrl in _configuredRelays) {
-            try {
-              await _embeddedRelay!.removeExternalRelay(relayUrl);
-              UnifiedLogger.info('Removed external relay: $relayUrl',
-                  name: 'NostrService');
-            } catch (e) {
-              UnifiedLogger.warning('Failed to remove external relay $relayUrl: $e',
-                  name: 'NostrService');
-            }
-          }
-          _configuredRelays.clear();
-        }
+        _relayPool!.removeAll();
+        UnifiedLogger.info('Removed all relays from pool', name: 'NostrService');
       } catch (e) {
-        UnifiedLogger.error('Error during embedded relay cleanup: $e',
-            name: 'NostrService');
+        UnifiedLogger.error('Error removing relays: $e', name: 'NostrService');
       }
-      
-      // Don't null out the embedded relay reference to allow potential reuse
-      // _embeddedRelay = null;
     }
 
-    // Clean up P2P services
-    _p2pService?.dispose();
-    _videoSyncService?.dispose();
-    _p2pService = null;
-    _videoSyncService = null;
+    _relays.clear();
+    _configuredRelays.clear();
+    _relayPool = null;
+    _nostr = null;
 
     _isDisposed = true;
     UnifiedLogger.info('Disposal complete', name: 'NostrService');
   }
 
-  /// Get events from the embedded relay (which caches from external relays)
   @override
   Future<List<Event>> getEvents({
     required List<nostr.Filter> filters,
@@ -1410,32 +772,24 @@ class NostrService implements INostrService {
   }) async {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
-    if (_embeddedRelay == null) {
-      throw StateError('Embedded relay not initialized');
+    if (_nostr == null) {
+      throw StateError('Nostr not initialized');
     }
 
-    // Convert to embedded relay filters
-    final embeddedFilters = filters.map(_convertToEmbeddedFilter).toList();
+    final filterJsonList = filters.map((f) => f.toJson()).toList();
 
     // Apply limit to first filter if provided
-    if (limit != null && embeddedFilters.isNotEmpty) {
-      final firstFilter = embeddedFilters[0];
-      embeddedFilters[0] = embedded.Filter(
-        ids: firstFilter.ids,
-        authors: firstFilter.authors,
-        kinds: firstFilter.kinds,
-        tags: firstFilter.tags,
-        since: firstFilter.since,
-        until: firstFilter.until,
-        limit: limit,
-      );
+    if (limit != null && filterJsonList.isNotEmpty) {
+      filterJsonList[0]['limit'] = limit;
     }
 
-    // Query embedded relay directly
-    final embeddedEvents = await _embeddedRelay!.queryEvents(embeddedFilters);
-
-    // Convert back to nostr_sdk events
-    return embeddedEvents.map(_convertFromEmbeddedEvent).toList();
+    try {
+      final events = await _nostr!.queryEvents(filterJsonList);
+      return events;
+    } catch (e) {
+      UnifiedLogger.error('Error querying events: $e', name: 'NostrService');
+      return [];
+    }
   }
 
   @override
@@ -1449,63 +803,51 @@ class NostrService implements INostrService {
 
   // Private helper methods
 
-  /// Convert nostr_sdk Filter to embedded relay Filter
-  /// Generate a deterministic hash for a set of filters to prevent duplicate subscriptions
   String _generateFilterHash(List<nostr.Filter> filters) {
-    // Create a deterministic string representation of the filters
     final parts = <String>[];
 
     for (final filter in filters) {
       final filterParts = <String>[];
 
-      // Add kinds
       if (filter.kinds != null && filter.kinds!.isNotEmpty) {
         final sortedKinds = List<int>.from(filter.kinds!)..sort();
         filterParts.add('k:${sortedKinds.join(",")}');
       }
 
-      // Add authors
       if (filter.authors != null && filter.authors!.isNotEmpty) {
         final sortedAuthors = List<String>.from(filter.authors!)..sort();
         filterParts.add('a:${sortedAuthors.join(",")}');
       }
 
-      // Add ids
       if (filter.ids != null && filter.ids!.isNotEmpty) {
         final sortedIds = List<String>.from(filter.ids!)..sort();
         filterParts.add('i:${sortedIds.join(",")}');
       }
 
-      // Add since/until
       if (filter.since != null) filterParts.add('s:${filter.since}');
       if (filter.until != null) filterParts.add('u:${filter.until}');
-
-      // Add limit
       if (filter.limit != null) filterParts.add('l:${filter.limit}');
 
-      // Add tags
       if (filter.t != null && filter.t!.isNotEmpty) {
         final sortedTags = List<String>.from(filter.t!)..sort();
         filterParts.add('t:${sortedTags.join(",")}');
       }
 
-      // Add d tags
       if (filter.d != null && filter.d!.isNotEmpty) {
         final sortedD = List<String>.from(filter.d!)..sort();
         filterParts.add('d:${sortedD.join(",")}');
       }
 
-      // Add p and e tags if present
       if (filter.p != null && filter.p!.isNotEmpty) {
         final sortedP = List<String>.from(filter.p!)..sort();
         filterParts.add('p:${sortedP.join(",")}');
       }
+
       if (filter.e != null && filter.e!.isNotEmpty) {
         final sortedE = List<String>.from(filter.e!)..sort();
         filterParts.add('e:${sortedE.join(",")}');
       }
 
-      // Add group/h tag if used by client
       if (filter.h != null && filter.h!.isNotEmpty) {
         final sortedH = List<String>.from(filter.h!)..sort();
         filterParts.add('h:${sortedH.join(",")}');
@@ -1514,260 +856,22 @@ class NostrService implements INostrService {
       parts.add(filterParts.join('|'));
     }
 
-    // Create a hash from the filter string
     final filterString = parts.join('||');
-    // Use a simple hash function for the subscription ID
     var hash = 0;
     for (var i = 0; i < filterString.length; i++) {
       hash = ((hash << 5) - hash) + filterString.codeUnitAt(i);
-      hash = hash & 0xFFFFFFFF; // Convert to 32-bit integer
+      hash = hash & 0xFFFFFFFF;
     }
     return hash.abs().toString();
   }
 
-  embedded.Filter _convertToEmbeddedFilter(nostr.Filter filter) {
-    // DIVINE EXTENSIONS: Use filter.toJson() to preserve divine extensions (sort, int#filters, cursor)
-    // This allows VideoFilterBuilder's DivineFilter to pass server-side sorting to the relay
-    final filterJson = filter.toJson();
-
-    // Check if this filter has divine extensions
-    final hasDivineExtensions = filterJson.containsKey('sort') ||
-        filterJson.keys.any((key) => key.startsWith('int#')) ||
-        filterJson.containsKey('cursor');
-
-    if (hasDivineExtensions) {
-      Log.info('🎯 Converting filter with divine extensions:',
-          name: 'NostrService', category: LogCategory.relay);
-      if (filterJson.containsKey('sort')) {
-        Log.info('  - Sort: ${filterJson['sort']}',
-            name: 'NostrService', category: LogCategory.relay);
-      }
-      for (final key in filterJson.keys) {
-        if (key.startsWith('int#')) {
-          Log.info('  - Int filter $key: ${filterJson[key]}',
-              name: 'NostrService', category: LogCategory.relay);
-        }
-      }
-    }
-
-    // Use embedded.Filter.fromJson() to deserialize the full JSON including divine extensions
-    // The embedded relay's Filter.fromJson() will handle the JSON properly
-    return embedded.Filter.fromJson(filterJson);
-  }
-
-  /// Convert embedded relay NostrEvent to nostr_sdk Event
-  Event _convertFromEmbeddedEvent(embedded.NostrEvent embeddedEvent) {
-    return Event.fromJson({
-      'id': embeddedEvent.id,
-      'pubkey': embeddedEvent.pubkey,
-      'created_at': embeddedEvent.createdAt,
-      'kind': embeddedEvent.kind,
-      'tags': embeddedEvent.tags,
-      'content': embeddedEvent.content,
-      'sig': embeddedEvent.sig,
-    });
-  }
-
-  /// Convert nostr_sdk Event to embedded relay NostrEvent
-  embedded.NostrEvent _convertToEmbeddedEvent(Event event) {
-    return embedded.NostrEvent.fromJson({
-      'id': event.id,
-      'pubkey': event.pubkey,
-      'created_at': event.createdAt,
-      'kind': event.kind,
-      'tags': event.tags,
-      'content': event.content,
-      'sig': event.sig,
-    });
-  }
-
-  /// Initialize P2P sync functionality (lazy loaded)
-  Future<void> _ensureP2PInitialized() async {
-    if (_p2pService != null) return;
-
-    try {
-      _p2pService = P2PDiscoveryService();
-      final initialized = await _p2pService!.initialize();
-
-      if (initialized && _embeddedRelay != null) {
-        // Initialize video sync service
-        _videoSyncService = P2PVideoSyncService(_embeddedRelay!, _p2pService!);
-
-        UnifiedLogger.info('P2P: Sync initialized successfully',
-            name: 'NostrService');
-
-        // Auto-start advertising when P2P is enabled
-        await _p2pService!.startAdvertising();
-      } else {
-        UnifiedLogger.warning(
-            'P2P: Initialization failed - permissions not granted',
-            name: 'NostrService');
-        _p2pService = null;
-      }
-    } catch (e) {
-      UnifiedLogger.error('P2P: Initialization error: $e',
-          name: 'NostrService');
-      _p2pService = null;
-    }
-  }
-
-  /// Handle incoming P2P messages
-  Future<void> _handleP2PMessage(String peerId, List<int> data) async {
-    try {
-      final jsonString = utf8.decode(data);
-      final message = jsonDecode(jsonString) as Map<String, dynamic>;
-
-      // Delegate to video sync service
-      if (_videoSyncService != null) {
-        await _videoSyncService!.handleIncomingSync(peerId, message);
-      } else {
-        UnifiedLogger.warning('P2P: Video sync service not initialized',
-            name: 'NostrService');
-      }
-    } catch (e) {
-      UnifiedLogger.error('P2P: Failed to handle message from $peerId: $e',
-          name: 'NostrService');
-    }
-  }
-
-  // ==========================================================================
-  // NIP-65 Relay Discovery Methods
-  // ==========================================================================
-
-  /// Discover and add relays from a user's profile (kind 0 and kind 10002 events)
-  /// This implements NIP-65 relay list metadata
-  Future<void> discoverUserRelays(String pubkey) async {
-    if (_isDisposed) throw StateError('NostrService is disposed');
-    if (!_isInitialized) throw StateError('NostrService not initialized');
-
-    try {
-      // Query for kind 10002 (relay list metadata) - NIP-65
-      final relayListFilter = embedded.Filter(
-        kinds: [10002], // Relay list metadata
-        authors: [pubkey],
-        limit: 1,
-      );
-
-      final relayListEvents =
-          await _embeddedRelay!.queryEvents([relayListFilter]);
-
-      if (relayListEvents.isNotEmpty) {
-        final relayListEvent = relayListEvents.first;
-        // Parse relay list from tags
-        for (final tag in relayListEvent.tags) {
-          if (tag.isNotEmpty && tag[0] == 'r' && tag.length > 1) {
-            final relayUrl = tag[1];
-            if (!_configuredRelays.contains(relayUrl)) {
-              // Check for read/write markers if present
-              final isWrite = tag.length > 2 && tag[2] == 'write';
-              final isRead = tag.length > 2 && tag[2] == 'read';
-
-              await addRelay(relayUrl);
-              UnifiedLogger.debug(
-                  'Discovered relay from NIP-65: $relayUrl (write: $isWrite, read: $isRead)',
-                  name: 'NostrService');
-            }
-          }
-        }
-      }
-
-      // Also check for kind 3 (contact list) which sometimes includes relay hints
-      final contactListFilter = embedded.Filter(
-        kinds: [3], // Contact list
-        authors: [pubkey],
-        limit: 1,
-      );
-
-      final contactListEvents =
-          await _embeddedRelay!.queryEvents([contactListFilter]);
-
-      if (contactListEvents.isNotEmpty) {
-        final contactEvent = contactListEvents.first;
-        // Some clients store relay URLs in the content field as JSON
-        try {
-          final content = contactEvent.content;
-          if (content.isNotEmpty) {
-            final relayPattern = RegExp(r'wss?://[^\s,"\}]+');
-            final matches = relayPattern.allMatches(content);
-
-            for (final match in matches) {
-              final relayUrl = match.group(0);
-              if (relayUrl != null && !_configuredRelays.contains(relayUrl)) {
-                await addRelay(relayUrl);
-                UnifiedLogger.debug(
-                    'Discovered relay from contact list: $relayUrl',
-                    name: 'NostrService');
-              }
-            }
-          }
-        } catch (e) {
-          UnifiedLogger.error('Error parsing contact list for relays: $e',
-              name: 'NostrService');
-        }
-      }
-    } catch (e) {
-      UnifiedLogger.error('Error discovering user relays: $e',
-          name: 'NostrService');
-    }
-  }
-
-  /// Add relays that are commonly used by a user based on their event history
-  Future<void> discoverRelaysFromEventHints(String pubkey) async {
-    if (_isDisposed) throw StateError('NostrService is disposed');
-    if (!_isInitialized) throw StateError('NostrService not initialized');
-
-    try {
-      // Get recent events from the user
-      final userEventsFilter = embedded.Filter(
-        authors: [pubkey],
-        limit: 20, // Check last 20 events for relay hints
-      );
-
-      final userEvents = await _embeddedRelay!.queryEvents([userEventsFilter]);
-
-      final discoveredRelays = <String>{};
-
-      for (final event in userEvents) {
-        // Check for relay hints in tags
-        for (final tag in event.tags) {
-          if (tag.length >= 3 && (tag[0] == 'e' || tag[0] == 'p')) {
-            // NIP-01: ["e", <event-id>, <relay-url>] or ["p", <pubkey>, <relay-url>]
-            final relayHint = tag.length > 2 ? tag[2] : null;
-            if (relayHint != null && relayHint.startsWith('wss://')) {
-              discoveredRelays.add(relayHint);
-            }
-          }
-        }
-      }
-
-      // Add discovered relays
-      for (final relayUrl in discoveredRelays) {
-        if (!_configuredRelays.contains(relayUrl)) {
-          await addRelay(relayUrl);
-          UnifiedLogger.debug('Discovered relay from event hints: $relayUrl',
-              name: 'NostrService');
-        }
-      }
-    } catch (e) {
-      UnifiedLogger.error('Error discovering relays from event hints: $e',
-          name: 'NostrService');
-    }
-  }
-
-  // ==========================================================================
-  // Relay Configuration Persistence
-  // ==========================================================================
-
-  /// Save relay configuration to SharedPreferences
   Future<void> _saveRelayConfig(List<String> relays) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_relayConfigKey, relays);
-      Log.debug('💾 Saved ${relays.length} relay(s) to SharedPreferences',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.debug('💾 Saved ${relays.length} relay(s) to SharedPreferences', name: 'NostrService');
     } catch (e) {
-      Log.error('Failed to save relay config to SharedPreferences: $e',
-          name: 'NostrService', category: LogCategory.relay);
+      UnifiedLogger.error('Failed to save relay config: $e', name: 'NostrService');
     }
   }
 }

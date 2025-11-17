@@ -256,14 +256,23 @@ INostrService nostrService(Ref ref) {
 
   // Initialize the service asynchronously (relay connections happen here)
   // This is safe because the provider is keepAlive - it won't be disposed during async work
-  Future.microtask(() async {
-    try {
-      await (service as dynamic).initialize(enableP2P: false);
-      UnifiedLogger.info('NostrService initialized with relay connections', name: 'AppProviders');
-    } catch (e) {
-      UnifiedLogger.error('Failed to initialize NostrService: $e', name: 'AppProviders');
-    }
+  UnifiedLogger.info('🚀 About to schedule NostrService initialization', name: 'AppProviders');
+
+  // Use ref.onCancel callback to ensure initialization happens
+  ref.onCancel(() {
+    UnifiedLogger.info('🔴 NostrService provider canceled', name: 'AppProviders');
   });
+
+  // Schedule initialization immediately
+  (() async {
+    try {
+      UnifiedLogger.info('🔧 Starting NostrService initialization...', name: 'AppProviders');
+      await (service as dynamic).initialize(enableP2P: false);
+      UnifiedLogger.info('✅ NostrService initialized with relay connections', name: 'AppProviders');
+    } catch (e, stackTrace) {
+      UnifiedLogger.error('❌ Failed to initialize NostrService: $e\n$stackTrace', name: 'AppProviders');
+    }
+  })();
 
   // Cleanup on disposal - but only in production, not during development hot reloads
   ref.onDispose(() {

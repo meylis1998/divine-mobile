@@ -1117,15 +1117,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         // Refresh the appropriate provider based on tab
         if (tabName == 'Lists') {
           // Refresh list providers
+          Log.info('🔄 ExploreScreen: Invalidating list providers', category: LogCategory.video);
           ref.invalidate(userListsProvider);
           ref.invalidate(curatedListsProvider);
         } else if (tabName == "New Videos") {
-          // Refresh popular now feed - call refresh() to force new subscription
+          // New Videos tab uses popularNowFeedProvider (newest videos first)
+          Log.info('🔄 ExploreScreen: Calling popularNowFeedProvider.refresh()', category: LogCategory.video);
           await ref.read(popularNowFeedProvider.notifier).refresh();
+        } else if (tabName == "Popular Videos") {
+          // Popular Videos tab uses videoEventsProvider (sorted by loop count)
+          Log.info('🔄 ExploreScreen: Refreshing discovery videos', category: LogCategory.video);
+          final videoEventService = ref.read(videoEventServiceProvider);
+          await videoEventService.refreshVideoFeed();
+          Log.info('🔄 ExploreScreen: Discovery videos refreshed', category: LogCategory.video);
         } else {
-          // For Trending tab, refresh video events
-          ref.invalidate(videoEventsProvider);
-          await ref.read(videoEventsProvider.future);
+          Log.error('🔄 ExploreScreen: Unknown tab name: $tabName', category: LogCategory.video);
         }
       },
       emptyBuilder: () => Center(

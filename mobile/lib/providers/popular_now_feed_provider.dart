@@ -1,6 +1,10 @@
 // ABOUTME: PopularNow feed provider showing newest videos using VideoFeedBuilder helper
 // ABOUTME: Subscribes to SubscriptionType.popularNow and sorts by timestamp (newest first)
 
+import 'dart:async';
+
+import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/helpers/video_feed_builder.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -163,14 +167,18 @@ class PopularNowFeed extends _$PopularNowFeed {
   }
 
   /// Refresh the feed
+  /// Delegate to VideoEventService's refresh logic which waits for EOSE
   Future<void> refresh() async {
     Log.info(
-      '🆕 PopularNowFeed: Refreshing feed',
+      '🆕 PopularNowFeed: Refreshing feed via VideoEventService',
       name: 'PopularNowFeedProvider',
       category: LogCategory.video,
     );
 
     final videoEventService = ref.read(videoEventServiceProvider);
+
+    // Close existing subscription
+    await videoEventService.unsubscribeFromVideoFeed();
 
     // Force new subscription to get fresh data from relay
     await videoEventService.subscribeToVideoFeed(
@@ -182,6 +190,12 @@ class PopularNowFeed extends _$PopularNowFeed {
 
     // Invalidate self to rebuild with fresh data
     ref.invalidateSelf();
+
+    Log.info(
+      '🆕 PopularNowFeed: Refresh complete',
+      name: 'PopularNowFeedProvider',
+      category: LogCategory.video,
+    );
   }
 }
 

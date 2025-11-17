@@ -2023,22 +2023,91 @@ class VideoEventService extends ChangeNotifier {
   }
 
   /// Refresh video feed by fetching recent events with expanded timeframe
+  /// Waits for EOSE signal to ensure new events have been fetched
   Future<void> refreshVideoFeed() async {
-    Log.verbose(
-        'Refresh requested - restarting subscription with expanded timeframe',
+    Log.info(
+        '🔄 Refresh requested - restarting subscription and waiting for EOSE',
         name: 'VideoEventService',
         category: LogCategory.video);
 
     // Close existing subscriptions and create new ones with expanded timeframe
     await unsubscribeFromVideoFeed();
 
+    // Create a completer to wait for EOSE
+    final eoseCompleter = Completer<void>();
+
+    // Track the count before refresh
+    final countBefore = getEventCount(SubscriptionType.discovery);
+
     Log.verbose('Creating new subscription with expanded timeframe...',
         name: 'VideoEventService', category: LogCategory.video);
-    // Preserve the current reposts setting when refreshing
-    return subscribeToVideoFeed(
-      subscriptionType: SubscriptionType.discovery,
-      includeReposts: false,
-      force: true, // Force refresh to get fresh data from relay
+
+    // Subscribe with proper filter
+    final filters = <Filter>[
+      Filter(
+        kinds: NIP71VideoKinds.getAllVideoKinds(),
+        limit: 100,
+      ),
+    ];
+
+    int newEventCount = 0;
+
+    final eventStream = _nostrService.subscribeToEvents(
+      filters: filters,
+      onEose: () {
+        final countAfter = getEventCount(SubscriptionType.discovery);
+        final newEvents = countAfter - countBefore;
+        Log.info(
+          '✅ Refresh EOSE: received $newEventCount events ($newEvents new)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+
+        if (!eoseCompleter.isCompleted) {
+          eoseCompleter.complete();
+        }
+      },
+    );
+
+    // Process events from stream
+    eventStream.listen(
+      (eventData) {
+        newEventCount++;
+        _handleNewVideoEvent(eventData, SubscriptionType.discovery);
+      },
+      onError: (error) {
+        Log.error('Refresh subscription error: $error',
+            name: 'VideoEventService', category: LogCategory.video);
+        if (!eoseCompleter.isCompleted) {
+          eoseCompleter.completeError(error);
+        }
+      },
+    );
+
+    // Note: Subscription management is handled by NostrService
+
+    // Wait for EOSE with a timeout
+    try {
+      await eoseCompleter.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          Log.warning(
+            '⏰ Refresh timeout after 10s - received $newEventCount events so far',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+        },
+      );
+    } catch (e) {
+      Log.error('Refresh failed: $e',
+          name: 'VideoEventService', category: LogCategory.video);
+      // Don't rethrow - partial refresh is better than no refresh
+    }
+
+    Log.info(
+      '🔄 Refresh complete: ${getEventCount(SubscriptionType.discovery)} total events',
+      name: 'VideoEventService',
+      category: LogCategory.video,
     );
   }
 

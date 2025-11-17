@@ -16,7 +16,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git push:*)",
-      "Bash(adb uninstall:*)"
+      "Bash(adb uninstall:*)",
+      "Bash(git pull:*)",
+      "Bash(/home/raven/flutter/bin/flutter analyze:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
