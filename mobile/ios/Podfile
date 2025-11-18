@@ -154,4 +154,24 @@ post_install do |installer|
       end
     end
   end
+
+  # Strip bitcode from Zendesk frameworks (Apple deprecated bitcode in Xcode 14+)
+  # These frameworks contain embedded bitcode that causes App Store validation failures
+  zendesk_frameworks = [
+    'CommonUISDK',
+    'MessagingAPI',
+    'MessagingSDK',
+    'SDKConfigurations',
+    'SupportProvidersSDK',
+    'SupportSDK',
+    'ZendeskCoreSDK'
+  ]
+
+  zendesk_frameworks.each do |framework_name|
+    framework_path = "#{installer.sandbox.root}/#{framework_name}/#{framework_name}.framework/#{framework_name}"
+    if File.exist?(framework_path)
+      puts "Stripping bitcode from #{framework_name}..."
+      `xcrun bitcode_strip -r "#{framework_path}" -o "#{framework_path}"`
+    end
+  end
 end
