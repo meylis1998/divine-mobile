@@ -9,6 +9,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/connection_status_service.dart';
+import 'package:openvine/services/custom_profile_fetcher.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
@@ -434,50 +435,40 @@ class UserProfileService extends ChangeNotifier {
     _pendingRequests.addAll(pubkeysToFetch);
 
     try {
-      // Create filter for kind 0 events from these users
-      final filter = Filter(
-        kinds: [0],
-        authors: pubkeysToFetch,
-        limit: math.min(
-            pubkeysToFetch.length, 100), // Smaller batches for immediate fetch
-      );
-
-      // Track which profiles we're fetching in this batch
-      final thisBatchPubkeys = Set<String>.from(pubkeysToFetch);
-
-      // Subscribe to profile events using SubscriptionManager with highest priority
+      // Mark prefetch as active
       _prefetchActive = true;
 
-      // Add safety timeout to reset flag if subscription never completes
-      Timer(const Duration(seconds: 10), () {
-        if (_prefetchActive) {
-          Log.warning('⏰ Prefetch timeout - forcing reset of _prefetchActive flag',
-              name: 'UserProfileService', category: LogCategory.system);
-          _prefetchActive = false;
-          _lastPrefetchAt = DateTime.now();
-          _pendingRequests.removeAll(pubkeysToFetch);
-        }
-      });
-
-      await _subscriptionManager.createSubscription(
-        name: 'profile_prefetch_${DateTime.now().millisecondsSinceEpoch}',
-        filters: [filter],
-        onEvent: _handleProfileEvent,
-        onError: (error) {
-          Log.error('Prefetch profile error: $error',
-              name: 'UserProfileService', category: LogCategory.system);
-          // Reset flag on error
-          _prefetchActive = false;
-          _lastPrefetchAt = DateTime.now();
-        },
-        onComplete: () => _completePrefetch(thisBatchPubkeys),
-        priority: 0, // Highest priority for immediate prefetch
+      // Use custom WebSocket fetcher for profiles
+      final profiles = await CustomProfileFetcher.fetchProfiles(
+        authorPubkeys: pubkeysToFetch,
+        limit: math.min(pubkeysToFetch.length, 100),
       );
 
+      // Process fetched profiles
+      for (final profile in profiles.values) {
+        // Cache the profile in memory
+        _profileCache[profile.pubkey] = profile;
+
+        // Save to persistent cache
+        if (_persistentCache?.isInitialized == true) {
+          await _persistentCache!.cacheProfile(profile);
+        }
+
+        // Remove from pending
+        _pendingRequests.remove(profile.pubkey);
+      }
+
+      // Notify listeners that profiles were updated
+      notifyListeners();
+
       Log.info(
-          '⚡ Sent immediate prefetch request for ${pubkeysToFetch.length} profiles',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '⚡ Prefetch completed: ${profiles.length}/${pubkeysToFetch.length} profiles fetched',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
+
+      // Complete prefetch cleanup
+      _completePrefetch(pubkeysToFetch.toSet());
     } catch (e) {
       Log.error('Failed to prefetch profiles: $e',
           name: 'UserProfileService', category: LogCategory.system);
@@ -576,7 +567,7 @@ class UserProfileService extends ChangeNotifier {
         Timer(const Duration(milliseconds: 50), _executeBatchFetch);
   }
 
-  /// Execute the actual batch fetch
+  /// Execute the actual batch fetch using custom WebSocket fetcher
   Future<void> _executeBatchFetch() async {
     if (_pendingBatchPubkeys.isEmpty) return;
 
@@ -587,35 +578,48 @@ class UserProfileService extends ChangeNotifier {
     Log.debug('🔄 Executing batch fetch for ${batchPubkeys.length} profiles...',
         name: 'UserProfileService', category: LogCategory.system);
     Log.debug(
-        '📋 Sample pubkeys: ${batchPubkeys.take(3).map((p) => p).join(", ")}...',
+        '📋 Sample pubkeys: ${batchPubkeys.take(3).map((p) => p.substring(0, 16)).join(", ")}...',
         name: 'UserProfileService',
         category: LogCategory.system);
 
     try {
-      // Create filter for kind 0 events from these users
-      final filter = Filter(
-        kinds: [0],
-        authors: batchPubkeys,
-        limit: math.min(
-            batchPubkeys.length, 500), // Nostr protocol recommended limit
+      // Use custom WebSocket fetcher to bypass nostr_sdk and ensure authors filter works
+      final profiles = await CustomProfileFetcher.fetchProfiles(
+        authorPubkeys: batchPubkeys,
+        limit: math.min(batchPubkeys.length, 500),
       );
 
-      // Track which profiles we're fetching in this batch
-      final thisBatchPubkeys = Set<String>.from(batchPubkeys);
+      // Process fetched profiles
+      for (final profile in profiles.values) {
+        // Cache the profile in memory
+        _profileCache[profile.pubkey] = profile;
 
-      // Subscribe to profile events using SubscriptionManager
-      final subscriptionId = await _subscriptionManager.createSubscription(
-        name: 'profile_batch_${DateTime.now().millisecondsSinceEpoch}',
-        filters: [filter],
-        onEvent: _handleProfileEvent,
-        onError: (error) => Log.error('Batch profile fetch error: $error',
-            name: 'UserProfileService', category: LogCategory.system),
-        onComplete: () => _completeBatchFetch(thisBatchPubkeys),
-        priority: 1, // High priority for profile fetches
+        // Save to persistent cache
+        if (_persistentCache?.isInitialized == true) {
+          await _persistentCache!.cacheProfile(profile);
+        }
+
+        // Complete any waiting fetches for this profile
+        final completer = _profileFetchCompleters.remove(profile.pubkey);
+        if (completer != null && !completer.isCompleted) {
+          completer.complete(profile);
+        }
+
+        // Remove from pending
+        _pendingRequests.remove(profile.pubkey);
+      }
+
+      // Notify listeners that profiles were updated
+      notifyListeners();
+
+      Log.info(
+        '✅ Batch fetch completed: ${profiles.length}/${batchPubkeys.length} profiles fetched',
+        name: 'UserProfileService',
+        category: LogCategory.system,
       );
 
-      // Store subscription ID for cleanup
-      _batchSubscriptionId = subscriptionId;
+      // Complete batch fetch cleanup
+      _completeBatchFetch(batchPubkeys.toSet());
     } catch (e) {
       Log.error('Failed to batch fetch profiles: $e',
           name: 'UserProfileService', category: LogCategory.system);
