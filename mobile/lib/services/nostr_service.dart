@@ -683,7 +683,22 @@ class NostrService implements INostrService, BackgroundAwareService {
     final beforeConnected = connectedRelays.length;
     UnifiedLogger.info('📊 Before retry: $beforeConnected/${_configuredRelays.length} relays connected', name: 'NostrService');
 
-    // Use SDK's built-in reconnect() which calls relay.connect() on all relays
+    // CRITICAL: First disconnect all relays to force clean reconnection
+    // After backgrounding, WebSockets may be dead but SDK thinks they're still connected
+    UnifiedLogger.info('🔌 Disconnecting all relays to force clean reconnection...', name: 'NostrService');
+    for (final relay in _relays.values) {
+      try {
+        await relay.disconnect();
+      } catch (e) {
+        UnifiedLogger.debug('Error disconnecting relay: $e', name: 'NostrService');
+      }
+    }
+
+    // Small delay to let disconnections complete
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Now use SDK's built-in reconnect() which calls relay.connect() on all relays
+    UnifiedLogger.info('🔌 Reconnecting all relays...', name: 'NostrService');
     _relayPool!.reconnect();
 
     // Poll for connection establishment with exponential backoff
