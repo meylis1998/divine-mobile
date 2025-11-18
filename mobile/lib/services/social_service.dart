@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
@@ -551,38 +552,8 @@ class SocialService {
           name: 'SocialService',
           category: LogCategory.system);
 
-      // Subscribe to current user's reactions (Kind 7) using SubscriptionManager
-      _userLikesSubscriptionId = await _subscriptionManager.createSubscription(
-        name: 'user_likes_$currentUserPubkey',
-        filters: [
-          Filter(
-            authors: [currentUserPubkey],
-            kinds: [7],
-          ),
-        ],
-        onEvent: (event) {
-          // Only process '+' reactions as likes
-          if (event.content.trim() == '+') {
-            // Extract the liked event ID from 'e' tags
-            for (final tag in event.tags) {
-              if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-                final likedEventId = tag[1];
-                _likedEventIds.add(likedEventId);
-                // Store the reaction event ID for future deletion
-                _likeEventIdToReactionId[likedEventId] = event.id;
-                Log.debug(
-                    '📱 Cached user like: $likedEventId (reaction: ${event.id})',
-                    name: 'SocialService',
-                    category: LogCategory.system);
-                break;
-              }
-            }
-          }
-        },
-        onError: (error) => Log.error('Error loading user likes: $error',
-            name: 'SocialService', category: LogCategory.system),
-        priority: 3, // Lower priority for historical data
-      );
+      // Use custom WebSocket query since nostr_sdk subscriptions don't work reliably
+      await _queryUserLikesViaWebSocket(currentUserPubkey);
     } catch (e) {
       Log.error('Error loading user liked events: $e',
           name: 'SocialService', category: LogCategory.system);
@@ -1605,39 +1576,8 @@ class SocialService {
         name: 'SocialService',
         category: LogCategory.system);
 
-    // Use queryEventsWithCustomJson instead of subscribe
-    // subscribe() doesn't work properly with nostr_sdk RelayPool
-    _nostrService.queryEventsWithCustomJson(
-      filtersJson: [filterJson],
-    ).then((events) {
-      Log.info(
-          '💬 [FETCH] ✅ Query returned ${events.length} comment events',
-          name: 'SocialService',
-          category: LogCategory.system);
-
-      // Add all events to the stream controller
-      for (final event in events) {
-        Log.info(
-            '💬 [FETCH] Adding comment: ${event.id} - "${event.content}"',
-            name: 'SocialService',
-            category: LogCategory.system);
-        if (!controller.isClosed) {
-          controller.add(event);
-        }
-      }
-
-      // Close the controller after adding all events
-      if (!controller.isClosed) {
-        controller.close();
-      }
-    }).catchError((error) {
-      Log.error('Failed to query comments: $error',
-          name: 'SocialService', category: LogCategory.system);
-      if (!controller.isClosed) {
-        controller.addError(error);
-        controller.close();
-      }
-    });
+    // Use custom WebSocket-based Nostr query since nostr_sdk doesn't support #a tag filters
+    _queryCommentsViaWebSocket(rootAddressable, filterJson, controller);
 
     return controller.stream;
   }
@@ -2036,6 +1976,492 @@ class SocialService {
           return;
         }
       }
+    }
+  }
+
+  /// Custom WebSocket-based Nostr query for comments with #a tag filter
+  /// Bypasses nostr_sdk which doesn't support tag-based filtering
+  Future<void> _queryCommentsViaWebSocket(
+    String rootAddressable,
+    Map<String, dynamic> filterJson,
+    StreamController<Event> controller,
+  ) async {
+    final relay = _nostrService.primaryRelay;
+
+    Log.info(
+        '💬 [WS] Connecting to $relay for comment query',
+        name: 'SocialService',
+        category: LogCategory.system);
+
+    try {
+      // Connect to WebSocket
+      final wsUrl = relay.startsWith('wss://') ? relay : 'wss://$relay';
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      // Generate subscription ID
+      final subId = 'comments_ws_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Send REQ message with #a tag filter
+      final reqMessage = ['REQ', subId, filterJson];
+      final reqJson = jsonEncode(reqMessage);
+
+      Log.info(
+          '💬 [WS] Sending REQ: $reqJson',
+          name: 'SocialService',
+          category: LogCategory.system);
+
+      channel.sink.add(reqJson);
+
+      // Listen for responses
+      var receivedCount = 0;
+      Timer? timeoutTimer;
+      StreamSubscription? subscription;
+
+      subscription = channel.stream.listen(
+        (message) {
+          try {
+            final decoded = jsonDecode(message as String) as List;
+            final messageType = decoded[0] as String;
+
+            if (messageType == 'EVENT' && decoded[1] == subId) {
+              final eventJson = decoded[2] as Map<String, dynamic>;
+
+              // Convert JSON to Event using nostr_sdk
+              final event = Event.fromJson(eventJson);
+
+              receivedCount++;
+              Log.info(
+                  '💬 [WS] ✅ Received comment ${event.id}: "${event.content}"',
+                  name: 'SocialService',
+                  category: LogCategory.system);
+
+              if (!controller.isClosed) {
+                controller.add(event);
+              }
+            } else if (messageType == 'EOSE' && decoded[1] == subId) {
+              Log.info(
+                  '💬 [WS] ✅ EOSE received, got $receivedCount comments',
+                  name: 'SocialService',
+                  category: LogCategory.system);
+
+              // Cancel timeout since we got EOSE
+              timeoutTimer?.cancel();
+
+              // Send CLOSE message
+              channel.sink.add(jsonEncode(['CLOSE', subId]));
+
+              // Close the controller and WebSocket
+              subscription?.cancel();
+              if (!controller.isClosed) {
+                controller.close();
+              }
+              channel.sink.close();
+            }
+          } catch (e) {
+            Log.error('💬 [WS] Error parsing message: $e',
+                name: 'SocialService', category: LogCategory.system);
+          }
+        },
+        onError: (error) {
+          timeoutTimer?.cancel();
+          Log.error('💬 [WS] WebSocket error: $error',
+              name: 'SocialService', category: LogCategory.system);
+          if (!controller.isClosed) {
+            controller.addError(error);
+            controller.close();
+          }
+          channel.sink.close();
+        },
+        onDone: () {
+          timeoutTimer?.cancel();
+          Log.info('💬 [WS] WebSocket connection closed',
+              name: 'SocialService', category: LogCategory.system);
+          if (!controller.isClosed) {
+            controller.close();
+          }
+        },
+      );
+
+      // Set timeout to close connection if no EOSE received
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        if (!controller.isClosed) {
+          Log.info(
+              '💬 [WS] Timeout reached, received $receivedCount comments',
+              name: 'SocialService',
+              category: LogCategory.system);
+          subscription?.cancel();
+          channel.sink.close();
+          controller.close();
+        }
+      });
+    } catch (e, stackTrace) {
+      Log.error('💬 [WS] Failed to query via WebSocket: $e\n$stackTrace',
+          name: 'SocialService', category: LogCategory.system);
+      if (!controller.isClosed) {
+        controller.addError(e);
+        controller.close();
+      }
+    }
+  }
+
+  /// Custom WebSocket-based Nostr query for user likes
+  /// Bypasses nostr_sdk which doesn't support reliable subscriptions
+  Future<void> _queryUserLikesViaWebSocket(String userPubkey) async {
+    final relay = _nostrService.primaryRelay;
+
+    Log.info(
+        '❤️  [WS] Connecting to $relay to query user likes for: $userPubkey',
+        name: 'SocialService',
+        category: LogCategory.system);
+
+    try {
+      // Connect to WebSocket
+      final wsUrl = relay.startsWith('wss://') ? relay : 'wss://$relay';
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      // Generate subscription ID
+      final subId = 'user_likes_ws_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Send REQ message for Kind 7 reactions by this user
+      final filterJson = {
+        'kinds': [7],
+        'authors': [userPubkey],
+      };
+      final reqMessage = ['REQ', subId, filterJson];
+      final reqJson = jsonEncode(reqMessage);
+
+      Log.info(
+          '❤️  [WS] Sending REQ: $reqJson',
+          name: 'SocialService',
+          category: LogCategory.system);
+
+      channel.sink.add(reqJson);
+
+      // Listen for responses
+      var receivedCount = 0;
+      Timer? timeoutTimer;
+      StreamSubscription? subscription;
+
+      subscription = channel.stream.listen(
+        (message) {
+          try {
+            final decoded = jsonDecode(message as String) as List;
+            final messageType = decoded[0] as String;
+
+            if (messageType == 'EVENT' && decoded[1] == subId) {
+              final eventJson = decoded[2] as Map<String, dynamic>;
+
+              // Convert JSON to Event using nostr_sdk
+              final event = Event.fromJson(eventJson);
+
+              // Only process '+' reactions as likes
+              if (event.content.trim() == '+') {
+                receivedCount++;
+
+                // Save event to PersonalEventCache for persistence across app restarts
+                _personalEventCache?.cacheUserEvent(event);
+
+                // Extract the liked event ID from 'e' tags
+                for (final tag in event.tags) {
+                  if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
+                    final likedEventId = tag[1];
+                    _likedEventIds.add(likedEventId);
+                    // Store the reaction event ID for future deletion
+                    _likeEventIdToReactionId[likedEventId] = event.id;
+
+                    Log.info(
+                        '❤️  [WS] ✅ Cached user like: $likedEventId (reaction: ${event.id})',
+                        name: 'SocialService',
+                        category: LogCategory.system);
+                    break;
+                  }
+                }
+              }
+            } else if (messageType == 'EOSE' && decoded[1] == subId) {
+              Log.info(
+                  '❤️  [WS] ✅ EOSE received, got $receivedCount likes',
+                  name: 'SocialService',
+                  category: LogCategory.system);
+
+              // Cancel timeout since we got EOSE
+              timeoutTimer?.cancel();
+
+              // Send CLOSE message
+              channel.sink.add(jsonEncode(['CLOSE', subId]));
+
+              // Close the WebSocket
+              subscription?.cancel();
+              channel.sink.close();
+            }
+          } catch (e) {
+            Log.error('❤️  [WS] Error parsing message: $e',
+                name: 'SocialService', category: LogCategory.system);
+          }
+        },
+        onError: (error) {
+          timeoutTimer?.cancel();
+          Log.error('❤️  [WS] WebSocket error: $error',
+              name: 'SocialService', category: LogCategory.system);
+          channel.sink.close();
+        },
+        onDone: () {
+          timeoutTimer?.cancel();
+          Log.info('❤️  [WS] WebSocket connection closed',
+              name: 'SocialService', category: LogCategory.system);
+        },
+      );
+
+      // Set timeout to close connection if no EOSE received
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        Log.info(
+            '❤️  [WS] Timeout reached, received $receivedCount likes',
+            name: 'SocialService',
+            category: LogCategory.system);
+        subscription?.cancel();
+        channel.sink.close();
+      });
+    } catch (e, stackTrace) {
+      Log.error('❤️  [WS] Failed to query user likes via WebSocket: $e\n$stackTrace',
+          name: 'SocialService', category: LogCategory.system);
+    }
+  }
+
+  /// Fetches like count for a video using WebSocket
+  /// Returns the number of Kind 7 '+' reactions for the given event
+  Future<int> getLikeCount(String eventId) async {
+    final relay = _nostrService.primaryRelay;
+
+    Log.info(
+        '❤️  [COUNT] Fetching like count for event: $eventId from $relay',
+        name: 'SocialService',
+        category: LogCategory.system);
+
+    try {
+      // Connect to WebSocket
+      final wsUrl = relay.startsWith('wss://') ? relay : 'wss://$relay';
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      // Generate subscription ID
+      final subId = 'like_count_ws_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Send REQ message for Kind 7 reactions to this event
+      final filterJson = {
+        'kinds': [7],
+        '#e': [eventId], // Reactions that reference this event
+      };
+      final reqMessage = ['REQ', subId, filterJson];
+      final reqJson = jsonEncode(reqMessage);
+
+      Log.info(
+          '❤️  [COUNT] Sending REQ: $reqJson',
+          name: 'SocialService',
+          category: LogCategory.system);
+
+      channel.sink.add(reqJson);
+
+      // Listen for responses
+      var likeCount = 0;
+      final completer = Completer<int>();
+      Timer? timeoutTimer;
+      StreamSubscription? subscription;
+
+      subscription = channel.stream.listen(
+        (message) {
+          try {
+            final decoded = jsonDecode(message as String) as List;
+            final messageType = decoded[0] as String;
+
+            if (messageType == 'EVENT' && decoded[1] == subId) {
+              final eventJson = decoded[2] as Map<String, dynamic>;
+              final event = Event.fromJson(eventJson);
+
+              // Only count '+' reactions as likes
+              if (event.content.trim() == '+') {
+                likeCount++;
+              }
+            } else if (messageType == 'EOSE' && decoded[1] == subId) {
+              Log.info(
+                  '❤️  [COUNT] ✅ EOSE received, like count: $likeCount',
+                  name: 'SocialService',
+                  category: LogCategory.system);
+
+              // Cancel timeout since we got EOSE
+              timeoutTimer?.cancel();
+
+              // Send CLOSE message
+              channel.sink.add(jsonEncode(['CLOSE', subId]));
+
+              // Complete and close
+              subscription?.cancel();
+              channel.sink.close();
+              if (!completer.isCompleted) {
+                completer.complete(likeCount);
+              }
+            }
+          } catch (e) {
+            Log.error('❤️  [COUNT] Error parsing message: $e',
+                name: 'SocialService', category: LogCategory.system);
+          }
+        },
+        onError: (error) {
+          timeoutTimer?.cancel();
+          Log.error('❤️  [COUNT] WebSocket error: $error',
+              name: 'SocialService', category: LogCategory.system);
+          channel.sink.close();
+          if (!completer.isCompleted) {
+            completer.complete(likeCount);
+          }
+        },
+        onDone: () {
+          timeoutTimer?.cancel();
+          Log.info('❤️  [COUNT] WebSocket connection closed',
+              name: 'SocialService', category: LogCategory.system);
+          if (!completer.isCompleted) {
+            completer.complete(likeCount);
+          }
+        },
+      );
+
+      // Set timeout to close connection if no EOSE received
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        Log.info(
+            '❤️  [COUNT] Timeout reached, like count: $likeCount',
+            name: 'SocialService',
+            category: LogCategory.system);
+        subscription?.cancel();
+        channel.sink.close();
+        if (!completer.isCompleted) {
+          completer.complete(likeCount);
+        }
+      });
+
+      return await completer.future;
+    } catch (e, stackTrace) {
+      Log.error('❤️  [COUNT] Failed to fetch like count via WebSocket: $e\n$stackTrace',
+          name: 'SocialService', category: LogCategory.system);
+      return 0;
+    }
+  }
+
+  /// Fetches comment count for a video using WebSocket
+  /// Returns the number of Kind 1111 comments for the given event
+  ///
+  /// For addressable events (Kind 34236), comments reference them using:
+  /// - #A tag: {kind}:{author_pubkey}:{d-tag}
+  /// Example: #A ["34236", "author_pubkey", "d-tag_value"]
+  Future<int> getCommentCountForVideo(
+    String eventId,
+    String authorPubkey,
+    String dTag,
+  ) async {
+    final relay = _nostrService.primaryRelay;
+
+    Log.info(
+        '💬 [COUNT] Fetching comment count for video: $eventId (author: $authorPubkey, d: $dTag) from $relay',
+        name: 'SocialService',
+        category: LogCategory.system);
+
+    try {
+      // Connect to WebSocket
+      final wsUrl = relay.startsWith('wss://') ? relay : 'wss://$relay';
+      final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      // Generate subscription ID
+      final subId = 'comment_count_ws_${DateTime.now().millisecondsSinceEpoch}';
+
+      // For addressable events, comments use #A tag: {kind}:{pubkey}:{d-tag}
+      final aTag = '34236:$authorPubkey:$dTag';
+
+      // Send REQ message for Kind 1111 comments
+      final filterJson = {
+        'kinds': [1111], // NIP-22 comments
+        '#A': [aTag], // Addressable event reference
+      };
+      final reqMessage = ['REQ', subId, filterJson];
+      final reqJson = jsonEncode(reqMessage);
+
+      Log.info(
+          '💬 [COUNT] Sending REQ: $reqJson',
+          name: 'SocialService',
+          category: LogCategory.system);
+
+      channel.sink.add(reqJson);
+
+      // Listen for responses
+      var commentCount = 0;
+      final completer = Completer<int>();
+      Timer? timeoutTimer;
+      StreamSubscription? subscription;
+
+      subscription = channel.stream.listen(
+        (message) {
+          try {
+            final decoded = jsonDecode(message as String) as List;
+            final messageType = decoded[0] as String;
+
+            if (messageType == 'EVENT' && decoded[1] == subId) {
+              commentCount++;
+            } else if (messageType == 'EOSE' && decoded[1] == subId) {
+              Log.info(
+                  '💬 [COUNT] ✅ EOSE received, comment count: $commentCount',
+                  name: 'SocialService',
+                  category: LogCategory.system);
+
+              // Cancel timeout since we got EOSE
+              timeoutTimer?.cancel();
+
+              // Send CLOSE message
+              channel.sink.add(jsonEncode(['CLOSE', subId]));
+
+              // Complete and close
+              subscription?.cancel();
+              channel.sink.close();
+              if (!completer.isCompleted) {
+                completer.complete(commentCount);
+              }
+            }
+          } catch (e) {
+            Log.error('💬 [COUNT] Error parsing message: $e',
+                name: 'SocialService', category: LogCategory.system);
+          }
+        },
+        onError: (error) {
+          timeoutTimer?.cancel();
+          Log.error('💬 [COUNT] WebSocket error: $error',
+              name: 'SocialService', category: LogCategory.system);
+          channel.sink.close();
+          if (!completer.isCompleted) {
+            completer.complete(commentCount);
+          }
+        },
+        onDone: () {
+          timeoutTimer?.cancel();
+          Log.info('💬 [COUNT] WebSocket connection closed',
+              name: 'SocialService', category: LogCategory.system);
+          if (!completer.isCompleted) {
+            completer.complete(commentCount);
+          }
+        },
+      );
+
+      // Set timeout to close connection if no EOSE received
+      timeoutTimer = Timer(const Duration(seconds: 10), () {
+        Log.info(
+            '💬 [COUNT] Timeout reached, comment count: $commentCount',
+            name: 'SocialService',
+            category: LogCategory.system);
+        subscription?.cancel();
+        channel.sink.close();
+        if (!completer.isCompleted) {
+          completer.complete(commentCount);
+        }
+      });
+
+      return await completer.future;
+    } catch (e, stackTrace) {
+      Log.error('💬 [COUNT] Failed to fetch comment count via WebSocket: $e\n$stackTrace',
+          name: 'SocialService', category: LogCategory.system);
+      return 0;
     }
   }
 }

@@ -49,9 +49,11 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
             print('[HASHTAG] 🔄 Building HashtagFeedScreen for #${widget.hashtag}');
             final videoService = ref.watch(videoEventServiceProvider);
             final hashtagService = ref.watch(hashtagServiceProvider);
-            final videos = List<VideoEvent>.from(
-              hashtagService.getVideosByHashtags([widget.hashtag]),
-            )..sort(VideoEvent.compareByLoopsThenTime);
+
+            // Get videos from the hashtag subscription
+            // The relay filters events with #t parameter, we trust that filtering
+            final videos = videoService.getVideos(SubscriptionType.hashtag)
+              ..sort(VideoEvent.compareByLoopsThenTime);
 
             print('[HASHTAG] 📊 Found ${videos.length} videos for #${widget.hashtag}');
             if (videos.isNotEmpty) {

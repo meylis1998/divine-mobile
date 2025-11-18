@@ -1422,27 +1422,36 @@ class VideoEventService extends ChangeNotifier {
           // If we reach here: either not replaceable, first time seeing it, or newer version
           // For newer versions, _handleReplaceableVideoEvent already removed the old event
 
-          // Check hashtag filter if active
-          if (_activeHashtagFilters[subscriptionType] != null &&
+          // NOTE: We do NOT client-side filter hashtags for SubscriptionType.hashtag
+          // because the relay already filtered them with #t parameter.
+          // The relay sends us ONLY events matching the hashtag, so we trust that.
+          // Client-side filtering would reject events if hashtags fail to parse from the event.
+          if (subscriptionType != SubscriptionType.hashtag &&
+              _activeHashtagFilters[subscriptionType] != null &&
               _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
-            // Check if video has any of the required hashtags (case-insensitive)
+            // For non-hashtag subscriptions: Check if video has any of the required hashtags (case-insensitive)
             final requiredHashtagsLower = _activeHashtagFilters[subscriptionType]!
                 .map((tag) => tag.toLowerCase())
                 .toList();
             final videoHashtagsLower = videoEvent.hashtags
                 .map((tag) => tag.toLowerCase())
                 .toList();
-            
+
             final hasRequiredHashtag = requiredHashtagsLower.any(
               videoHashtagsLower.contains,
             );
 
             if (!hasRequiredHashtag) {
               Log.warning(
-                  '⏩ Skipping video without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
+                  '⏩ Skipping video without required hashtags. Required: ${_activeHashtagFilters[subscriptionType]}, Video has: ${videoEvent.hashtags}',
                   name: 'VideoEventService',
                   category: LogCategory.video);
               return;
+            } else {
+              Log.info(
+                  '✅ Video matches hashtag filter. Required: ${_activeHashtagFilters[subscriptionType]}, Video has: ${videoEvent.hashtags}',
+                  name: 'VideoEventService',
+                  category: LogCategory.video);
             }
           }
 

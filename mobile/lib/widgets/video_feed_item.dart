@@ -569,6 +569,16 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
 
         if (isVisible) {
           tracker.onVisible(video.id, fractionVisible: info.visibleFraction);
+
+          // Fetch like and comment counts when video becomes visible
+          final dTag = video.vineId ?? video.id;
+          Future.microtask(() {
+            ref.read(socialProvider.notifier).fetchCountsForVideo(
+              video.id,
+              video.pubkey,
+              dTag,
+            );
+          });
         } else {
           tracker.onInvisible(video.id);
         }
@@ -604,6 +614,7 @@ class VideoOverlayActions extends ConsumerWidget {
     final isLiked = socialState.isLiked(video.id);
     final isLikeInProgress = socialState.isLikeInProgress(video.id);
     final likeCount = socialState.likeCounts[video.id] ?? 0;
+    final commentCount = socialState.commentCounts[video.id] ?? 0;
 
     // Check if there's meaningful text content to display
     final hasTextContent = video.content.isNotEmpty ||
@@ -922,11 +933,11 @@ class VideoOverlayActions extends ConsumerWidget {
                   size: 32,
                 ),
               ),
-              // Show original comment count if available
-              if (video.originalComments != null && video.originalComments! > 0) ...[
+              // Show total comment count: new comments + original Vine comments
+              if (commentCount > 0 || (video.originalComments != null && video.originalComments! > 0)) ...[
                 const SizedBox(height: 0),
                 Text(
-                  StringUtils.formatCompactNumber(video.originalComments!),
+                  StringUtils.formatCompactNumber(commentCount + (video.originalComments ?? 0)),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,

@@ -395,11 +395,8 @@ class CommentsNotifier extends _$CommentsNotifier {
         replyToAuthorPubkey: replyToAuthorPubkey,
       );
 
-      // Check if provider is still mounted after async operation
-      if (!ref.mounted) return;
-
-      // Reload comments to get the real event ID
-      await _loadComments();
+      // Optimistic comment stays visible - real event will arrive via WebSocket stream
+      // and update the comment tree with the actual event ID
     } catch (e) {
       Log.error('Error posting comment: $e',
           name: 'CommentsNotifier', category: LogCategory.ui);

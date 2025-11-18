@@ -105,6 +105,17 @@ class ComposableVideoGrid extends ConsumerWidget {
     int index,
     List<VideoEvent> displayedVideos,
   ) {
+    // Fetch like and comment counts when tile is built
+    // This runs once per video and caches the result
+    final dTag = video.vineId ?? video.id;
+    Future.microtask(() {
+      ref.read(socialProvider.notifier).fetchCountsForVideo(
+        video.id,
+        video.pubkey,
+        dTag,
+      );
+    });
+
     return GestureDetector(
       onTap: () => onVideoTap(displayedVideos, index),
       onLongPress: () => _showVideoContextMenu(context, ref, video),
@@ -220,10 +231,13 @@ class ComposableVideoGrid extends ConsumerWidget {
                       builder: (context, ref, _) {
                         final socialState = ref.watch(socialProvider);
                         final newLikeCount = socialState.likeCounts[video.id] ?? 0;
+                        final newCommentCount = socialState.commentCounts[video.id] ?? 0;
                         final totalLikes = newLikeCount + (video.originalLikes ?? 0);
+                        final totalComments = newCommentCount + (video.originalComments ?? 0);
 
                         return Row(
                           children: [
+                            // Like count
                             Icon(
                               Icons.favorite,
                               size: 11,
@@ -237,6 +251,24 @@ class ComposableVideoGrid extends ConsumerWidget {
                                 fontSize: 10,
                               ),
                             ),
+                            // Comment count
+                            if (totalComments > 0) ...[
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.comment,
+                                size: 11,
+                                color: Colors.white70,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                StringUtils.formatCompactNumber(totalComments),
+                                style: TextStyle(
+                                  color: VineTheme.secondaryText,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                            // Loop count
                             if (video.originalLoops != null) ...[
                               const SizedBox(width: 8),
                               Icon(
@@ -271,6 +303,14 @@ class ComposableVideoGrid extends ConsumerWidget {
   Widget _buildCreatorName(WidgetRef ref, VideoEvent video) {
     final profileService = ref.watch(userProfileServiceProvider);
     final profile = profileService.getCachedProfile(video.pubkey);
+
+    // If profile not cached and not known missing, fetch it
+    if (profile == null && !profileService.shouldSkipProfileFetch(video.pubkey)) {
+      Future.microtask(() {
+        profileService.fetchProfile(video.pubkey);
+      });
+    }
+
     final displayName = profile?.bestDisplayName ?? 'Loading...';
 
     return Text(
