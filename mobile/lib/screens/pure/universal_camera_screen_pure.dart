@@ -527,7 +527,7 @@ class _UniversalCameraScreenPureState
             children: [
               // Camera preview - full screen without extra wrappers
               if (recordingState.isInitialized)
-                Container(
+                KeyedSubtree(
                   key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
                   child: ref.read(vineRecordingProvider.notifier).previewWidget,
                 )
