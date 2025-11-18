@@ -3,14 +3,11 @@
 
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/custom_home_feed_fetcher.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -39,7 +36,6 @@ class HomeFeed extends _$HomeFeed {
   Timer? _autoRefreshTimer;
   static int _buildCounter = 0;
   static DateTime? _lastBuildTime;
-  static List<String>? _lastFollowingPubkeys;
 
   @override
   Future<VideoFeedState> build() async {
@@ -188,9 +184,6 @@ class HomeFeed extends _$HomeFeed {
         lastUpdated: null,
       );
     }
-
-    // Track last following list for conditional clearing on next build
-    _lastFollowingPubkeys = List.from(followingPubkeys);
 
     Log.info(
       '🏠 HomeFeed: Server-side filtered to ${followingVideos.length} videos from following',
