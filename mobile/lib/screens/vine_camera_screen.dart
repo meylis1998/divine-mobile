@@ -18,6 +18,9 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
   bool _isInitialized = false;
   bool _isRecording = false;
   String? _errorMessage;
+  FlashMode _flashMode = FlashMode.off;
+  List<CameraDescription> _availableCameras = [];
+  int _currentCameraIndex = 0;
 
   @override
   void initState() {
@@ -34,8 +37,8 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
   Future<void> _initializeCamera() async {
     try {
       // Get available cameras
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      _availableCameras = await availableCameras();
+      if (_availableCameras.isEmpty) {
         setState(() {
           _errorMessage = 'No cameras found';
         });
@@ -43,7 +46,8 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
       }
 
       // Use the first camera (usually back camera)
-      final camera = cameras.first;
+      _currentCameraIndex = 0;
+      final camera = _availableCameras[_currentCameraIndex];
 
       // Initialize camera controller
       _controller = CameraController(
@@ -56,6 +60,9 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
 
       // Lock camera orientation to portrait
       await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
+
+      // Set initial flash mode
+      await _controller!.setFlashMode(_flashMode);
 
       if (mounted) {
         setState(() {
@@ -117,6 +124,55 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
 
   bool get _canRecord => _controller != null && _controller!.value.isInitialized && !_isRecording;
 
+  // Toggle flash mode: off → torch → off
+  Future<void> _toggleFlash() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      final newMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+      await _controller!.setFlashMode(newMode);
+      setState(() {
+        _flashMode = newMode;
+      });
+    } catch (e) {
+      // Flash might not be available on this camera
+    }
+  }
+
+  // Switch between front and back cameras
+  Future<void> _switchCamera() async {
+    if (_availableCameras.length <= 1) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      // Dispose old controller first
+      await _controller!.dispose();
+
+      // Switch to next camera
+      _currentCameraIndex = (_currentCameraIndex + 1) % _availableCameras.length;
+      final camera = _availableCameras[_currentCameraIndex];
+
+      // Initialize new camera
+      _controller = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: true,
+      );
+
+      await _controller!.initialize();
+      await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      await _controller!.setFlashMode(_flashMode);
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to switch camera: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_errorMessage != null) {
@@ -175,6 +231,49 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
               onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+
+          // Camera controls (Flash, Switch Camera) at top-right
+          Positioned(
+            top: 60,
+            right: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Flash button
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      _flashMode == FlashMode.torch ? Icons.flash_on : Icons.flash_off,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: _toggleFlash,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Switch camera button
+                if (_availableCameras.length > 1)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.flip_camera_ios,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      onPressed: _switchCamera,
+                    ),
+                  ),
+              ],
             ),
           ),
 
@@ -250,6 +349,44 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
                 ),
               ),
             ),
+
+          // Bottom control bar with gradient
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.8),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Cancel button (X)
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    // Center space for recording button (mobile) or info
+                    const SizedBox(width: 80),
+                    // Placeholder for future Publish button
+                    const SizedBox(width: 48),
+                  ],
+                ),
+              ),
+            ),
+          ),
           ],
         ), // End of Stack
       ), // End of GestureDetector
