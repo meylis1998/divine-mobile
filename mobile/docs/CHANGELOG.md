@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Relay Health Indicator (2025-11-18)
+
+#### Features
+- **Added relay health monitoring with visual indicators** - Users can now see real-time relay connection status
+  - Hamburger menu icon changes color based on relay health (white=healthy, yellow=problems, red=disconnected)
+  - Status message in navigation drawer explains connection state with friendly language
+  - Threshold-based health detection (3 empty feeds → problems, 2 timeouts → disconnected)
+  - Automatic recovery when relay responds successfully
+  - Non-intrusive monitoring that doesn't interrupt user experience
+
+#### Technical Details
+- Created `lib/services/relay_health_service.dart`:
+  - ChangeNotifier-based service for reactive UI updates
+  - Enum-based status levels (healthy, problems, disconnected)
+  - Failure threshold tracking with smart reset on success
+  - User-friendly status messages instead of technical error text
+- Created `test/unit/services/relay_health_service_test.dart`:
+  - 9 comprehensive unit tests for state transitions and thresholds
+  - Tests listener notifications and message content
+  - All tests passing
+- Modified `lib/providers/app_providers.dart`:
+  - Added `relayHealthServiceProvider` for dependency injection
+  - Wired into VideoEventService for automatic health reporting
+- Modified `lib/router/app_shell.dart`:
+  - Hamburger icon color dynamically reflects relay health status
+  - Uses reactive `ref.watch()` for automatic UI updates
+- Modified `lib/widgets/vine_drawer.dart`:
+  - Added relay status message container in drawer header
+  - Displays friendly status messages with appropriate emoji
+- Modified `lib/services/video_event_service.dart`:
+  - Reports empty feeds (line 3390), timeouts (line 3479), and successes (line 2240)
+  - Integrates seamlessly with existing error handling
+
+#### User Experience
+- Visual feedback when relay is slow or unresponsive
+- Clear communication about what's happening with network
+- Reassurance that cached content is still available
+- No disruptive error dialogs or blocking states
+- Cute, friendly messaging maintains app's personality
+
 ### Added - Seed Data Preloading (2025-11-11)
 
 #### Features
