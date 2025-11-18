@@ -12,6 +12,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blurhash_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/video_cache_manager.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -496,6 +497,33 @@ class VideoEventPublisher {
             Log.warning('Failed to add published video to cache: $e',
                 name: 'VideoEventPublisher', category: LogCategory.video);
           }
+        }
+
+        // Cache the local video file for instant playback while CDN processes
+        // This solves the race condition where user taps their just-published video
+        // before the Blossom CDN has finished processing
+        try {
+          final videoCache = openVineVideoCache;
+          final localFile = File(upload.localVideoPath);
+
+          if (localFile.existsSync()) {
+            Log.info('🎬 Caching local video file for instant playback: ${event.id}',
+                name: 'VideoEventPublisher', category: LogCategory.video);
+
+            // Cache the local file using the event ID as the key
+            // VideoCacheManager will copy the file to its managed cache directory
+            await videoCache.cacheVideo(upload.localVideoPath, event.id);
+
+            Log.info('✅ Local video cached successfully - instant playback ready',
+                name: 'VideoEventPublisher', category: LogCategory.video);
+          } else {
+            Log.warning('⚠️ Local video file not found at ${upload.localVideoPath}, skipping cache',
+                name: 'VideoEventPublisher', category: LogCategory.video);
+          }
+        } catch (e) {
+          Log.error('❌ Failed to cache local video file: $e',
+              name: 'VideoEventPublisher', category: LogCategory.video);
+          // Don't fail the publish if caching fails - it's an optimization
         }
 
         Log.info('Successfully published direct upload: ${event.id}',
