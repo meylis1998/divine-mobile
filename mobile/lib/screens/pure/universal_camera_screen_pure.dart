@@ -413,51 +413,6 @@ class _UniversalCameraScreenPureState
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: VineTheme.vineGreen,
-        elevation: 0,
-        leading: IconButton(
-          key: const Key('back-button'),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Record Video',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          // Drafts button - moved to right end of app bar with proper vertical alignment
-          Consumer(
-            builder: (context, ref, child) {
-              final recordingState = ref.watch(vineRecordingProvider);
-              if (recordingState.isRecording) {
-                return const SizedBox.shrink();
-              }
-              return Center(
-                child: TextButton(
-                  key: const Key('drafts-button'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const VineDraftsScreen(),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    minimumSize: const Size(0, 48), // Match IconButton height
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Drafts',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
       body: Consumer(
         builder: (context, ref, child) {
           final recordingState = ref.watch(vineRecordingProvider);
