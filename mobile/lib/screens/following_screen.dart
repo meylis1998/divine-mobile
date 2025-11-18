@@ -75,6 +75,17 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
   Future<void> _fetchFollowingFromNostr(String pubkey) async {
     final nostrService = ref.read(nostrServiceProvider);
 
+    // Check if we have any connected relays before subscribing
+    if (nostrService.connectedRelayCount == 0) {
+      Log.warning('No relays connected when fetching following',
+          name: 'FollowingScreen', category: LogCategory.relay);
+      setError('Not connected to any relays. Please check your connection and try again.');
+      return;
+    }
+
+    // Track if we've received any events
+    bool hasReceivedEvents = false;
+
     // Subscribe to the user's kind 3 contact list events
     final subscription = nostrService.subscribeToEvents(
       filters: [
@@ -84,25 +95,19 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
           limit: 1, // Get most recent only
         ),
       ],
-    );
-
-    // Apply timeout to detect relay connection issues
-    final timeoutSubscription = subscription.timeout(
-      const Duration(seconds: 5),
-      onTimeout: (sink) {
-        // No data received within 5 seconds - likely connection issue
-        if (mounted && _following.isEmpty) {
-          setError('Failed to connect to relay server. Please check your connection and try again.');
-        } else {
+      onEose: () {
+        // EOSE fired - subscription is complete
+        if (mounted) {
           completeLoading();
         }
-        sink.close();
       },
     );
 
     // Process events immediately as they arrive for real-time updates
-    timeoutSubscription.listen(
+    subscription.listen(
       (event) {
+        hasReceivedEvents = true;
+
         // Extract followed pubkeys from 'p' tags
         final newFollowing = <String>[];
         for (final tag in event.tags) {
@@ -125,7 +130,10 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
       onError: (error) {
         Log.error('Error in following subscription: $error',
             name: 'FollowingScreen', category: LogCategory.relay);
-        setError('Failed to connect to relay server. Please check your connection and try again.');
+        // Only show connection error if we haven't received any events yet
+        if (!hasReceivedEvents && mounted) {
+          setError('Error loading following list. Please try again.');
+        }
       },
       onDone: () {
         // Stream completed naturally

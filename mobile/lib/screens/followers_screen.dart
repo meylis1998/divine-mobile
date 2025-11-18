@@ -55,6 +55,17 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
   Future<void> fetchList() async {
     final nostrService = ref.read(nostrServiceProvider);
 
+    // Check if we have any connected relays before subscribing
+    if (nostrService.connectedRelayCount == 0) {
+      Log.warning('No relays connected when fetching followers',
+          name: 'FollowersScreen', category: LogCategory.relay);
+      setError('Not connected to any relays. Please check your connection and try again.');
+      return;
+    }
+
+    // Track if we've received any events to distinguish "no followers" from "connection issue"
+    bool hasReceivedEvents = false;
+
     // Subscribe to kind 3 events that mention this pubkey in p tags
     final subscription = nostrService.subscribeToEvents(
       filters: [
@@ -63,25 +74,19 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
           p: [widget.pubkey], // Events that mention this pubkey
         ),
       ],
-    );
-
-    // Apply timeout to detect relay connection issues
-    final timeoutSubscription = subscription.timeout(
-      const Duration(seconds: 5),
-      onTimeout: (sink) {
-        // No data received within 5 seconds - likely connection issue
-        if (mounted && _followers.isEmpty) {
-          setError('Failed to connect to relay server. Please check your connection and try again.');
-        } else {
+      onEose: () {
+        // EOSE fired - subscription is complete
+        if (mounted) {
           completeLoading();
         }
-        sink.close();
       },
     );
 
     // Process events immediately as they arrive for real-time updates
-    timeoutSubscription.listen(
+    subscription.listen(
       (event) {
+        hasReceivedEvents = true;
+
         // Each author who has this pubkey in their contact list is a follower
         if (!_followers.contains(event.pubkey)) {
           if (mounted) {
@@ -95,7 +100,10 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
       onError: (error) {
         Log.error('Error in followers subscription: $error',
             name: 'FollowersScreen', category: LogCategory.relay);
-        setError('Failed to connect to relay server. Please check your connection and try again.');
+        // Only show connection error if we haven't received any events yet
+        if (!hasReceivedEvents && mounted) {
+          setError('Error loading followers. Please try again.');
+        }
       },
       onDone: () {
         // Stream completed naturally
