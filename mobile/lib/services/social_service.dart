@@ -1002,12 +1002,28 @@ class SocialService {
         config: config,
         onEvent: (event) {
           // Each unique author who has this pubkey in their contact list is a follower
+          final isNew = !followerPubkeys.contains(event.pubkey);
           followerPubkeys.add(event.pubkey);
+
+          // Debug logging to track follower events
+          Log.debug(
+            '📊 Follower event: author=${event.pubkey.substring(0, 8)}, '
+            'eventId=${event.id.substring(0, 8)}, '
+            'isNew=$isNew, '
+            'totalUnique=${followerPubkeys.length}',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         },
         onComplete: (result) {
           followersCount = followerPubkeys.length;
+          Log.info(
+            '✅ Followers query completed: $followersCount followers for ${pubkey.substring(0, 8)}',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           Log.debug(
-            '✅ Followers query completed: $followersCount followers for $pubkey',
+            '📋 Follower pubkeys: ${followerPubkeys.map((p) => p.substring(0, 8)).join(", ")}',
             name: 'SocialService',
             category: LogCategory.system,
           );
