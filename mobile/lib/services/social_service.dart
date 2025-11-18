@@ -913,17 +913,20 @@ class SocialService {
 
   /// Get follower and following counts for a specific pubkey
   Future<Map<String, int>> getFollowerStats(String pubkey) async {
-    Log.debug('Fetching follower stats for: $pubkey',
+    Log.info('🔍 getFollowerStats CALLED for pubkey: $pubkey',
         name: 'SocialService', category: LogCategory.system);
 
     try {
       // Check cache first
       final cachedStats = _followerStats[pubkey];
       if (cachedStats != null) {
-        Log.debug('📱 Using cached follower stats: $cachedStats',
+        Log.info('📱 Using cached follower stats: $cachedStats',
             name: 'SocialService', category: LogCategory.system);
         return cachedStats;
       }
+
+      Log.info('🔍 No cached stats found - fetching from network...',
+          name: 'SocialService', category: LogCategory.system);
 
       // Fetch from network
       final stats = await _fetchFollowerStats(pubkey);
@@ -931,11 +934,11 @@ class SocialService {
       // Cache the result
       _followerStats[pubkey] = stats;
 
-      Log.debug('Follower stats fetched: $stats',
+      Log.info('✅ Follower stats fetched and cached: $stats',
           name: 'SocialService', category: LogCategory.system);
       return stats;
     } catch (e) {
-      Log.error('Error fetching follower stats: $e',
+      Log.error('❌ Error fetching follower stats: $e',
           name: 'SocialService', category: LogCategory.system);
       return {'followers': 0, 'following': 0};
     }
@@ -943,10 +946,16 @@ class SocialService {
 
   /// Fetch follower stats from the network
   Future<Map<String, int>> _fetchFollowerStats(String pubkey) async {
+    Log.info('🔍 _fetchFollowerStats STARTED for pubkey: $pubkey',
+        name: 'SocialService', category: LogCategory.system);
+
     try {
       // ✅ Use immediate completion for both queries
       var followingCount = 0;
       var followersCount = 0;
+
+      Log.info('🔍 Subscribing to kind 3 events for following count...',
+          name: 'SocialService', category: LogCategory.system);
 
       // 1. ✅ Get following count with immediate completion
       final followingEventStream = _nostrService.subscribeToEvents(
@@ -959,6 +968,9 @@ class SocialService {
         ],
       );
 
+      Log.info('🔍 Waiting for contact list completion...',
+          name: 'SocialService', category: LogCategory.system);
+
       final followingEvent = await ContactListCompletionHelper.queryContactList(
         eventStream: followingEventStream,
         pubkey: pubkey,
@@ -969,8 +981,14 @@ class SocialService {
         followingCount = followingEvent.tags
             .where((tag) => tag.isNotEmpty && tag[0] == 'p')
             .length;
-        Log.debug(
-          '✅ Following count received immediately: $followingCount for $pubkey',
+        Log.info(
+          '✅ Following count received: $followingCount for $pubkey',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
+      } else {
+        Log.warning(
+          '⚠️ No contact list event received for $pubkey - following count = 0',
           name: 'SocialService',
           category: LogCategory.system,
         );

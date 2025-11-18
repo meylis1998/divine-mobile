@@ -86,9 +86,14 @@ Future<void> clearAllProfileStatsCache() async {
 /// Async provider for loading profile statistics
 @riverpod
 Future<ProfileStats> fetchProfileStats(Ref ref, String pubkey) async {
+  Log.info('📊 fetchProfileStats called for pubkey: $pubkey',
+      name: 'ProfileStatsProvider', category: LogCategory.system);
+
   // Check cache first
   final cached = await _getCachedProfileStats(pubkey);
   if (cached != null) {
+    Log.info('📊 Using cached stats: followers=${cached.followers}, following=${cached.following}',
+        name: 'ProfileStatsProvider', category: LogCategory.system);
     return cached;
   }
 
@@ -103,8 +108,14 @@ Future<ProfileStats> fetchProfileStats(Ref ref, String pubkey) async {
     // This will backfill from existing videos in other subscription types
     await videoEventService.subscribeToUserVideos(pubkey, limit: 100);
 
+    Log.info('📊 Fetching follower stats from SocialService...',
+        name: 'ProfileStatsProvider', category: LogCategory.system);
+
     // Get follower stats - use cache if available, otherwise fetch from network
     final followerStats = await socialService.getFollowerStats(pubkey);
+
+    Log.info('📊 Follower stats received: followers=${followerStats['followers']}, following=${followerStats['following']}',
+        name: 'ProfileStatsProvider', category: LogCategory.system);
 
     // Get videos from VideoEventService (now populated via subscription)
     final videos = videoEventService.authorVideos(pubkey);

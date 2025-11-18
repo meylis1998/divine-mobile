@@ -85,6 +85,25 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     }
   }
 
+  /// Refresh profile data (pull-to-refresh)
+  Future<void> _refreshProfile(String userIdHex) async {
+    Log.info('🔄 Refreshing profile for: $userIdHex',
+        name: 'ProfileScreenRouter', category: LogCategory.ui);
+
+    // 1. Invalidate profile stats cache to force fresh fetch
+    ref.invalidate(fetchProfileStatsProvider(userIdHex));
+
+    // 2. Force profile info refresh
+    final userProfileService = ref.read(userProfileServiceProvider);
+    await userProfileService.fetchProfile(userIdHex);
+
+    // 3. Invalidate profile feed to refresh videos
+    ref.invalidate(profileFeedProvider(userIdHex));
+
+    Log.info('✅ Profile refresh complete',
+        name: 'ProfileScreenRouter', category: LogCategory.ui);
+  }
+
   void _navigateToFollowers(BuildContext context, String pubkey, String displayName) {
     // Navigate using root navigator to escape shell route
     Navigator.of(context, rootNavigator: true).push(
@@ -323,9 +342,13 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               children: [
                 DefaultTabController(
                   length: 3,
-                  child: NestedScrollView(
-                    controller: _scrollController,
-                    headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  child: RefreshIndicator(
+                    onRefresh: () => _refreshProfile(userIdHex),
+                    color: VineTheme.vineGreen,
+                    backgroundColor: VineTheme.cardBackground,
+                    child: NestedScrollView(
+                      controller: _scrollController,
+                      headerSliverBuilder: (context, innerBoxIsScrolled) => [
                       // Profile Header
                       SliverToBoxAdapter(
                         child: Align(
@@ -396,6 +419,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                         _buildLikedGrid(socialService),
                         _buildRepostsGrid(userIdHex),
                       ],
+                    ),
                     ),
                   ),
                 ),

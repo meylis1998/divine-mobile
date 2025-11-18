@@ -78,6 +78,20 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
           onData: (state) {
             final videos = state.videos;
 
+            // DEBUG: Log which feed we're using
+            Log.info(
+              '🏠🎬 HomeScreenRouter: Using ${videos.length} videos from feed',
+              name: 'HomeScreenRouter',
+              category: LogCategory.video,
+            );
+            if (videos.isNotEmpty) {
+              Log.info(
+                '🏠🎬 First video author: ${videos[0].pubkey.substring(0, 16)}..., title: ${videos[0].title ?? 'no title'}',
+                name: 'HomeScreenRouter',
+                category: LogCategory.video,
+              );
+            }
+
             if (videos.isEmpty) {
               // Handle empty videos case - no clamp needed
               urlIndex = 0;

@@ -948,15 +948,26 @@ class VideoEventService extends ChangeNotifier {
         // Phase 3.3: Cache-first strategy - load cached events BEFORE relay subscription
         // This provides instant UI feedback while relay fetches fresh data
         // Now FAST with proper database indexes on kind, created_at, and composite indexes!
-        List<Event> cachedEvents = await _loadCachedEvents(
-          kinds: NIP71VideoKinds.getAllVideoKinds(),
-          authors: authors,
-          hashtags: lowercaseHashtags,
-          since: effectiveSince,
-          until: effectiveUntil,
-          limit: limit,
-          sortBy: sortBy,
-        );
+        // IMPORTANT: Skip cache loading for homeFeed to prevent showing videos from wrong authors
+        // (cached videos from Discovery feed would pollute homeFeed with videos from people user doesn't follow)
+        List<Event> cachedEvents = [];
+        if (subscriptionType != SubscriptionType.homeFeed) {
+          cachedEvents = await _loadCachedEvents(
+            kinds: NIP71VideoKinds.getAllVideoKinds(),
+            authors: authors,
+            hashtags: lowercaseHashtags,
+            since: effectiveSince,
+            until: effectiveUntil,
+            limit: limit,
+            sortBy: sortBy,
+          );
+        } else {
+          Log.info(
+            '🏠 Skipping cache load for homeFeed to prevent cross-author pollution',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+        }
 
         // 🎯 CACHE DEBUG: Log cached event details
         if (cachedEvents.isNotEmpty && subscriptionType == SubscriptionType.discovery) {
@@ -2659,6 +2670,21 @@ class VideoEventService extends ChangeNotifier {
   void clearVideoEvents() {
     for (final events in _eventLists.values) {
       events.clear();
+    }
+  }
+
+  /// Clear events for a specific subscription type
+  void clearEventsForSubscription(SubscriptionType type) {
+    final events = _eventLists[type];
+    if (events != null) {
+      final count = events.length; // Get count BEFORE clearing
+      events.clear();
+      Log.info(
+        'Cleared $count events for subscription type: $type',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      notifyListeners();
     }
   }
 

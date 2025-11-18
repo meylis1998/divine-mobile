@@ -3,10 +3,12 @@
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/services/custom_home_feed_fetcher.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/state/video_feed_state.dart';
@@ -37,6 +39,7 @@ class HomeFeed extends _$HomeFeed {
   Timer? _autoRefreshTimer;
   static int _buildCounter = 0;
   static DateTime? _lastBuildTime;
+  static List<String>? _lastFollowingPubkeys;
 
   @override
   Future<VideoFeedState> build() async {
@@ -121,12 +124,15 @@ class HomeFeed extends _$HomeFeed {
     final socialData = ref.read(social.socialProvider);
     final followingPubkeys = socialData.followingPubkeys;
 
-    // Listen to social provider and invalidate ONLY when following list changes
+    // Listen to social provider and invalidate when following list changes OR when it initializes
     ref.listen(social.socialProvider, (prev, next) {
-      // Only invalidate if the following list actually changed
-      if (prev?.followingPubkeys != next.followingPubkeys) {
+      // Invalidate if following list changed OR if provider just initialized
+      final followingListChanged = prev?.followingPubkeys != next.followingPubkeys;
+      final justInitialized = (prev?.isInitialized == false && next.isInitialized);
+
+      if (followingListChanged || justInitialized) {
         Log.info(
-          '🏠 HomeFeed: Following list changed (${prev?.followingPubkeys.length ?? 0} → ${next.followingPubkeys.length}), invalidating...',
+          '🏠 HomeFeed: Social state changed (following: ${prev?.followingPubkeys.length ?? 0} → ${next.followingPubkeys.length}, initialized: ${prev?.isInitialized} → ${next.isInitialized}), invalidating...',
           name: 'HomeFeedProvider',
           category: LogCategory.video,
         );
@@ -136,6 +142,13 @@ class HomeFeed extends _$HomeFeed {
 
     Log.info(
       '🏠 HomeFeed: BUILD #$buildId - User is following ${followingPubkeys.length} people',
+      name: 'HomeFeedProvider',
+      category: LogCategory.video,
+    );
+
+    // DEBUG: Log the actual pubkeys we're following
+    Log.info(
+      '🏠 HomeFeed: Following pubkeys (${followingPubkeys.length}): ${followingPubkeys.isEmpty ? "EMPTY" : followingPubkeys.map((p) => p.substring(0, 16)).join(", ")}',
       name: 'HomeFeedProvider',
       category: LogCategory.video,
     );
@@ -152,56 +165,17 @@ class HomeFeed extends _$HomeFeed {
       );
     }
 
-    // Get video event service and subscribe to following feed
-    final videoEventService = ref.watch(videoEventServiceProvider);
-
-    // Subscribe to home feed videos from followed authors using dedicated subscription type
-    // NostrService now handles deduplication automatically
-    // Request server-side sorting by created_at (newest first) if relay supports it
-    await videoEventService.subscribeToHomeFeed(
-      followingPubkeys,
-      limit: 100,
-      sortBy: VideoSortField.createdAt, // Newest videos first (timeline order)
+    Log.info(
+      '🏠 HomeFeed: Fetching home feed videos from ${followingPubkeys.length} authors: ${followingPubkeys.map((p) => p.substring(0, 16)).join(", ")}',
+      name: 'HomeFeedProvider',
+      category: LogCategory.video,
     );
 
-    // Wait for initial batch of videos to arrive from relay
-    // Videos arrive in rapid succession, so we wait for the count to stabilize
-    final completer = Completer<void>();
-    int stableCount = 0;
-    Timer? stabilityTimer;
-
-    void checkStability() {
-      final currentCount = videoEventService.homeFeedVideos.length;
-      if (currentCount != stableCount) {
-        // Count changed, reset stability timer
-        stableCount = currentCount;
-        stabilityTimer?.cancel();
-        stabilityTimer = Timer(const Duration(milliseconds: 300), () {
-          // Count stable for 300ms, we're done
-          if (!completer.isCompleted) {
-            completer.complete();
-          }
-        });
-      }
-    }
-
-    videoEventService.addListener(checkStability);
-
-    // Also set a maximum wait time
-    Timer(const Duration(seconds: 3), () {
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
-    });
-
-    // Trigger initial check
-    checkStability();
-
-    await completer.future;
-
-    // Clean up
-    videoEventService.removeListener(checkStability);
-    stabilityTimer?.cancel();
+    // Use custom WebSocket fetcher to bypass nostr_sdk and ensure authors filter works
+    var followingVideos = await CustomHomeFeedFetcher.fetchHomeFeedVideos(
+      authorPubkeys: followingPubkeys,
+      limit: 100,
+    );
 
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
@@ -215,9 +189,8 @@ class HomeFeed extends _$HomeFeed {
       );
     }
 
-    // Get videos from the dedicated home feed list (server-side filtered to only following)
-    var followingVideos =
-        List<VideoEvent>.from(videoEventService.homeFeedVideos);
+    // Track last following list for conditional clearing on next build
+    _lastFollowingPubkeys = List.from(followingPubkeys);
 
     Log.info(
       '🏠 HomeFeed: Server-side filtered to ${followingVideos.length} videos from following',
@@ -235,9 +208,6 @@ class HomeFeed extends _$HomeFeed {
         category: LogCategory.video,
       );
     }
-
-    // DEBUG: Dump all events with cdn.divine.video thumbnails
-    videoEventService.debugDumpCdnDivineVideoThumbnails();
 
     // Sort by creation time (newest first) with stable secondary sort by ID
     // This prevents videos with identical timestamps from jumping around
@@ -332,84 +302,14 @@ class HomeFeed extends _$HomeFeed {
   }
 
   /// Load more historical events from followed authors
+  /// Note: Currently disabled since we fetch all 100 videos at once via custom WebSocket
   Future<void> loadMore() async {
-    final currentState = await future;
-
-    // Check if provider is still mounted after async gap
-    if (!ref.mounted) return;
-
-    Log.info(
-      'HomeFeed: loadMore() called - isLoadingMore: ${currentState.isLoadingMore}',
+    Log.debug(
+      'HomeFeed: loadMore() called - pagination not yet implemented for custom WebSocket fetcher',
       name: 'HomeFeedProvider',
       category: LogCategory.video,
     );
-
-    if (currentState.isLoadingMore) {
-      return;
-    }
-
-    // Update state to show loading
-    state = AsyncData(currentState.copyWith(isLoadingMore: true));
-
-    try {
-      final videoEventService = ref.read(videoEventServiceProvider);
-      final socialData = ref.read(social.socialProvider);
-      final followingPubkeys = socialData.followingPubkeys;
-
-      if (followingPubkeys.isEmpty) {
-        // No one to load more from
-        if (!ref.mounted) return;
-        state = AsyncData(currentState.copyWith(
-          isLoadingMore: false,
-          hasMoreContent: false,
-        ));
-        return;
-      }
-
-      final eventCountBefore =
-          videoEventService.getEventCount(SubscriptionType.homeFeed);
-
-      // Load more events for home feed subscription type
-      await videoEventService.loadMoreEvents(SubscriptionType.homeFeed,
-          limit: 50);
-
-      // Check if provider is still mounted after async gap
-      if (!ref.mounted) return;
-
-      final eventCountAfter =
-          videoEventService.getEventCount(SubscriptionType.homeFeed);
-      final newEventsLoaded = eventCountAfter - eventCountBefore;
-
-      Log.info(
-        'HomeFeed: Loaded $newEventsLoaded new events from following (total: $eventCountAfter)',
-        name: 'HomeFeedProvider',
-        category: LogCategory.video,
-      );
-
-      // Reset loading state - state will auto-update via dependencies
-      final newState = await future;
-      if (!ref.mounted) return;
-      state = AsyncData(newState.copyWith(
-        isLoadingMore: false,
-        hasMoreContent: newEventsLoaded > 0,
-      ));
-    } catch (e) {
-      Log.error(
-        'HomeFeed: Error loading more: $e',
-        name: 'HomeFeedProvider',
-        category: LogCategory.video,
-      );
-
-      if (!ref.mounted) return;
-      final currentState = await future;
-      if (!ref.mounted) return;
-      state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
-      );
-    }
+    // TODO: Implement pagination for custom WebSocket fetcher if needed
   }
 
   /// Refresh the home feed
@@ -420,22 +320,7 @@ class HomeFeed extends _$HomeFeed {
       category: LogCategory.video,
     );
 
-    // Get video event service and force a fresh subscription
-    final videoEventService = ref.read(videoEventServiceProvider);
-    final socialData = ref.read(social.socialProvider);
-    final followingPubkeys = socialData.followingPubkeys;
-
-    if (followingPubkeys.isNotEmpty) {
-      // Force new subscription to get fresh data from relay
-      await videoEventService.subscribeToHomeFeed(
-        followingPubkeys,
-        limit: 100,
-        sortBy: VideoSortField.createdAt,
-        force: true, // Force refresh bypasses duplicate detection
-      );
-    }
-
-    // Invalidate self to rebuild with fresh data
+    // Invalidate self to rebuild with fresh data from custom WebSocket fetcher
     ref.invalidateSelf();
   }
 }
