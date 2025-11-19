@@ -73,18 +73,26 @@ if [ "$1" = "release" ]; then
     if [ $? -eq 0 ]; then
         echo "✅ Archive created successfully!"
         echo "📱 Archive location: $ORGANIZER_PATH/$ARCHIVE_NAME"
-        
+
+        # Strip bitcode from Zendesk frameworks (required for App Store)
+        echo ""
+        echo "🔧 Stripping bitcode from Zendesk frameworks..."
+        cd ..
+        ./strip_bitcode_from_archive.sh "$ORGANIZER_PATH/$ARCHIVE_NAME"
+        cd ios
+        echo ""
+
         # Refresh Xcode Organizer if Xcode is running
         if pgrep -x "Xcode" > /dev/null; then
             echo "🔄 Refreshing Xcode Organizer..."
             osascript -e 'tell application "Xcode" to activate' 2>/dev/null || true
         fi
-        
+
         echo "🚀 Archive is now available in Xcode Organizer for distribution!"
         echo "   • Open Xcode → Window → Organizer"
         echo "   • Select your archive and click 'Distribute App'"
         echo "   • Choose distribution method (App Store, Ad Hoc, etc.)"
-        
+
         # Ask user if they want to export to IPA
         echo ""
         read -p "📦 Would you like to export to IPA for App Store distribution? (y/N): " -n 1 -r
