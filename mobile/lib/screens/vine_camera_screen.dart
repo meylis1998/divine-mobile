@@ -419,6 +419,15 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
         _isSwitchingCamera = true;
       });
 
+      // Wait for next frame to ensure loading indicator is shown
+      await Future.delayed(const Duration(milliseconds: 16)); // One frame at 60fps
+
+      if (!mounted) {
+        Log.warning('📹 Widget unmounted before disposing',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        return;
+      }
+
       Log.info('📹 Disposing old camera controller...',
           name: 'VineCameraScreen', category: LogCategory.system);
 
@@ -564,6 +573,15 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
         _isSwitchingCamera = true;
       });
 
+      // Wait for next frame to ensure loading indicator is shown
+      await Future.delayed(const Duration(milliseconds: 16)); // One frame at 60fps
+
+      if (!mounted) {
+        Log.warning('📹 Widget unmounted before disposing',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        return;
+      }
+
       Log.info('📹 Disposing old camera controller...',
           name: 'VineCameraScreen', category: LogCategory.system);
 
@@ -699,7 +717,7 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
       );
     }
 
-    if (!_isInitialized || _controller == null) {
+    if (!_isInitialized || _controller == null || _isSwitchingCamera) {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
