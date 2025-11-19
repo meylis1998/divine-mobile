@@ -21,7 +21,12 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
   String? _errorMessage;
   FlashMode _flashMode = FlashMode.off;
   List<CameraDescription> _availableCameras = [];
-  int _currentCameraIndex = 0;
+
+  // Separate camera lists for front/back
+  List<CameraDescription> _rearCameras = [];
+  CameraDescription? _frontCamera;
+  int _currentRearCameraIndex = 0;
+  bool _isFrontCamera = false;
 
   // Focus indicator state
   Offset? _focusPoint;
@@ -71,9 +76,21 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
         return;
       }
 
-      // Use the first camera (usually back camera)
-      _currentCameraIndex = 0;
-      final camera = _availableCameras[_currentCameraIndex];
+      // Categorize cameras into rear and front
+      _rearCameras = _availableCameras
+          .where((cam) => cam.lensDirection == CameraLensDirection.back)
+          .toList();
+      _frontCamera = _availableCameras
+          .firstWhere((cam) => cam.lensDirection == CameraLensDirection.front,
+              orElse: () => _availableCameras.first);
+
+      Log.info('📹 Categorized cameras: ${_rearCameras.length} rear, ${_frontCamera != null ? '1' : '0'} front',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      // Start with first rear camera (default is back camera)
+      _currentRearCameraIndex = 0;
+      _isFrontCamera = false;
+      final camera = _rearCameras.isNotEmpty ? _rearCameras[0] : _availableCameras[0];
 
       Log.info('📹 Initializing camera: ${camera.name} (${camera.lensDirection})',
           name: 'VineCameraScreen', category: LogCategory.system);
@@ -345,13 +362,14 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
     }
   }
 
-  // Switch between front and back cameras
+  // Switch between front and back cameras (toggles between front and current rear camera)
   Future<void> _switchCamera() async {
-    Log.info('📹 _switchCamera() called',
+    Log.info('📹 _switchCamera() called - toggling front/back',
         name: 'VineCameraScreen', category: LogCategory.system);
 
-    if (_availableCameras.length <= 1) {
-      Log.debug('📹 Only one camera available, cannot switch',
+    // Need at least one rear camera and one front camera
+    if (_rearCameras.isEmpty || _frontCamera == null) {
+      Log.debug('📹 Missing front or rear camera, cannot switch',
           name: 'VineCameraScreen', category: LogCategory.system);
       return;
     }
@@ -376,7 +394,6 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
 
     try {
       // If recording, stop it first before switching cameras
-      // Disposing the controller will stop recording, so we track this state
       final wasRecording = _isRecording;
 
       if (wasRecording) {
@@ -407,9 +424,11 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
         return;
       }
 
-      // Switch to next camera
-      _currentCameraIndex = (_currentCameraIndex + 1) % _availableCameras.length;
-      final camera = _availableCameras[_currentCameraIndex];
+      // Toggle between front and back
+      _isFrontCamera = !_isFrontCamera;
+      final camera = _isFrontCamera
+          ? _frontCamera!
+          : _rearCameras[_currentRearCameraIndex];
 
       Log.info('📹 Switching to camera: ${camera.name} (${camera.lensDirection})',
           name: 'VineCameraScreen', category: LogCategory.system);
@@ -479,6 +498,174 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
         });
       }
     }
+  }
+
+  // Switch zoom level (cycles through rear cameras only)
+  Future<void> _switchZoom() async {
+    Log.info('📹 _switchZoom() called',
+        name: 'VineCameraScreen', category: LogCategory.system);
+
+    // Only works on rear cameras
+    if (_isFrontCamera) {
+      Log.debug('📹 Front camera active, zoom switching disabled',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      return;
+    }
+
+    // Need at least 2 rear cameras to switch zoom
+    if (_rearCameras.length <= 1) {
+      Log.debug('📹 Only ${_rearCameras.length} rear camera(s), cannot switch zoom',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      return;
+    }
+
+    if (_controller == null || !_controller!.value.isInitialized) {
+      Log.warning('📹 Cannot switch zoom - controller not initialized',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      return;
+    }
+
+    if (_isSwitchingCamera) {
+      Log.warning('📹 Camera switch already in progress',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      return;
+    }
+
+    if (!mounted) {
+      Log.warning('📹 Cannot switch zoom - widget not mounted',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      return;
+    }
+
+    try {
+      // If recording, stop it first before switching zoom
+      final wasRecording = _isRecording;
+
+      if (wasRecording) {
+        Log.info('📹 Stopping recording before zoom switch...',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        try {
+          await _controller!.stopVideoRecording();
+        } catch (e) {
+          Log.warning('📹 Recording already stopped during zoom switch: $e',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        }
+        _isRecording = false;
+      }
+
+      setState(() {
+        _isSwitchingCamera = true;
+      });
+
+      Log.info('📹 Disposing old camera controller...',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      // Dispose old controller first
+      await _controller!.dispose();
+
+      if (!mounted) {
+        Log.warning('📹 Widget unmounted during zoom switch',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        return;
+      }
+
+      // Cycle to next rear camera
+      _currentRearCameraIndex = (_currentRearCameraIndex + 1) % _rearCameras.length;
+      final camera = _rearCameras[_currentRearCameraIndex];
+
+      Log.info('📹 Switching to rear camera ${_currentRearCameraIndex + 1}/${_rearCameras.length}: ${camera.name}',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      // Initialize new camera
+      _controller = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: true,
+      );
+
+      Log.info('📹 Initializing new camera controller...',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      await _controller!.initialize();
+
+      if (!mounted) {
+        Log.warning('📹 Widget unmounted during new camera init',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        _controller?.dispose();
+        return;
+      }
+
+      Log.info('📹 Locking new camera to portrait orientation...',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
+
+      if (!mounted) {
+        Log.warning('📹 Widget unmounted during orientation lock',
+            name: 'VineCameraScreen', category: LogCategory.system);
+        _controller?.dispose();
+        return;
+      }
+
+      Log.info('📹 Setting flash mode on new camera...',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      await _controller!.setFlashMode(_flashMode);
+
+      if (mounted) {
+        setState(() {
+          _isSwitchingCamera = false;
+        });
+        Log.info('📹 ✅ Zoom switch complete!',
+            name: 'VineCameraScreen', category: LogCategory.system);
+
+        // Warm up recording pipeline in background (non-blocking)
+        _controller!.prepareForVideoRecording().then((_) {
+          Log.info('📹 Recording pipeline warm-up complete (after zoom switch)',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        }).catchError((e) {
+          Log.warning('📹 Recording pipeline warm-up failed (non-critical): $e',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        });
+      }
+    } catch (e, stackTrace) {
+      Log.error('📹 ❌ Failed to switch zoom: $e',
+          name: 'VineCameraScreen', category: LogCategory.system);
+      Log.debug('Stack trace: $stackTrace',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      if (mounted) {
+        setState(() {
+          _isSwitchingCamera = false;
+          _errorMessage = 'Failed to switch zoom: $e';
+        });
+      }
+    }
+  }
+
+  // Get zoom level display text (e.g., "1x", "0.5x", "3x")
+  String get _zoomLevelText {
+    if (_isFrontCamera || _rearCameras.isEmpty) {
+      return '1x';
+    }
+
+    // Try to extract zoom info from camera name
+    final camera = _rearCameras[_currentRearCameraIndex];
+    final name = camera.name.toLowerCase();
+
+    // Common patterns for camera names
+    if (name.contains('ultra') || name.contains('0.5')) {
+      return '0.5x';
+    } else if (name.contains('telephoto') || name.contains('tele') || name.contains('3x')) {
+      return '3x';
+    } else if (name.contains('5x')) {
+      return '5x';
+    } else if (name.contains('wide') || name.contains('main') || name.contains('back')) {
+      return '1x';
+    }
+
+    // Default to camera index + 1 if we can't determine
+    return '${_currentRearCameraIndex + 1}x';
   }
 
   @override
@@ -615,6 +802,38 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
               ),
             ),
           ),
+
+          // Zoom button (above record button, only visible for rear camera with multiple lenses)
+          if (!_isFrontCamera && _rearCameras.length > 1)
+            Positioned(
+              bottom: 140, // 100px above record button (40 + 80 + 20)
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: _switchZoom,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _zoomLevelText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Focus indicator
           if (_showFocusIndicator && _focusPoint != null)
