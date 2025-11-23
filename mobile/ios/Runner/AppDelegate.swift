@@ -303,52 +303,63 @@ import SupportProvidersSDK
           return
         }
 
+        // Only query actual physical camera sensors, not virtual multi-camera devices
         let discoverySession = AVCaptureDevice.DiscoverySession(
           deviceTypes: [
             .builtInWideAngleCamera,
             .builtInUltraWideCamera,
-            .builtInTelephotoCamera,
-            .builtInDualCamera,
-            .builtInDualWideCamera,
-            .builtInTripleCamera
+            .builtInTelephotoCamera
           ].compactMap { $0 },
           mediaType: .video,
-          position: .unspecified
+          position: .back  // Only back cameras for recording
         )
+
+        // First, get the multi-camera virtual device to query zoom switchover points
+        var telephotoZoomFactor: Double = 2.0  // Default fallback
+
+        if #available(iOS 13.0, *) {
+          // Query multi-camera device to get actual zoom switchover factors
+          let multiCamSession = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera].compactMap { $0 },
+            mediaType: .video,
+            position: .back
+          )
+
+          if let multiCamDevice = multiCamSession.devices.first {
+            let switchFactors = multiCamDevice.virtualDeviceSwitchOverVideoZoomFactors.map { $0.doubleValue }
+            NSLog("📷 Multi-camera device internal switchover factors: \(switchFactors)")
+
+            // CRITICAL: Apple uses ultra-wide as baseline (internal factor 1 = 0.5x display)
+            // iPhone 13 Pro Max returns [2, 6] which means:
+            //   - Factor 2 = Wide camera (1x display) = 2 / 2 = 1.0x
+            //   - Factor 6 = Telephoto camera (3x display) = 6 / 2 = 3.0x
+            // Conversion: Display zoom = Internal factor / 2
+            if let maxInternalZoom = switchFactors.max(), maxInternalZoom > 1.0 {
+              telephotoZoomFactor = maxInternalZoom / 2.0
+              NSLog("📷 Telephoto display zoom factor: \(telephotoZoomFactor)x (from internal \(maxInternalZoom))")
+            }
+          }
+        }
 
         var cameras: [[String: Any]] = []
 
         for device in discoverySession.devices {
-          let isBackCamera = device.position == .back
-          let isFrontCamera = device.position == .front
-
           // Determine camera type based on device type
           var cameraType = "wide"
           if device.deviceType == .builtInUltraWideCamera {
             cameraType = "ultrawide"
           } else if device.deviceType == .builtInTelephotoCamera {
             cameraType = "telephoto"
-          } else if isFrontCamera {
-            cameraType = "front"
           }
 
-          // Get zoom factor - for multi-camera devices, this is relative to wide camera
-          // Wide camera = 1.0x, Ultrawide ≈ 0.5x, Telephoto = 2x or 3x or 5x depending on device
+          // Get zoom factor relative to wide camera (1.0x baseline)
           let zoomFactor: Double
           if device.deviceType == .builtInUltraWideCamera {
-            // Ultrawide is typically 0.5x on all iPhones
+            // Ultrawide is typically 0.5x on all iPhones (13mm vs 26mm)
             zoomFactor = 0.5
           } else if device.deviceType == .builtInTelephotoCamera {
-            // Query the actual zoom factor from the device
-            // Use minAvailableVideoZoomFactor as baseline for telephoto
-            if #available(iOS 13.0, *) {
-              // On iOS 13+, telephoto cameras report their actual optical zoom
-              // iPhone 13 Pro: 3.0x, iPhone 15 Pro Max: 5.0x, older: 2.0x
-              zoomFactor = device.minAvailableVideoZoomFactor
-            } else {
-              // Fallback for older iOS versions
-              zoomFactor = 2.0
-            }
+            // Use the zoom factor from multi-camera switchover points
+            zoomFactor = telephotoZoomFactor
           } else {
             // Wide angle camera is the baseline (1.0x)
             zoomFactor = 1.0
