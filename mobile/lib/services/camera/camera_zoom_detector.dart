@@ -1,8 +1,9 @@
 // ABOUTME: Native platform channel to detect physical camera zoom factors dynamically
-// ABOUTME: Queries iOS AVCaptureDevice to get actual zoom values (not hardcoded)
+// ABOUTME: iOS: Queries AVCaptureDevice for exact zoom values. Android: Uses CamerAwesome API
 
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Information about a physical camera sensor
@@ -28,17 +29,9 @@ class CameraZoomDetector {
   static const MethodChannel _channel = MethodChannel('com.openvine/camera_zoom_detector');
 
   /// Get all available physical cameras with their actual zoom factors
-  /// Returns empty list if detection fails or platform doesn't support it
+  /// iOS: Uses AVCaptureDevice to get exact zoom factors from device
+  /// Android: Uses CamerAwesome API with calculated standard zoom factors
   static Future<List<PhysicalCameraSensor>> getPhysicalCameras() async {
-    if (!Platform.isIOS) {
-      Log.info(
-        'Camera zoom detection only supported on iOS',
-        name: 'CameraZoomDetector',
-        category: LogCategory.system,
-      );
-      return [];
-    }
-
     try {
       Log.info(
         'Detecting physical cameras and zoom factors...',
@@ -46,34 +39,81 @@ class CameraZoomDetector {
         category: LogCategory.system,
       );
 
-      final List<dynamic>? result = await _channel.invokeListMethod('getPhysicalCameras');
+      if (Platform.isIOS) {
+        // iOS: Use custom method channel for exact zoom factors
+        final List<dynamic>? result = await _channel.invokeListMethod('getPhysicalCameras');
 
-      if (result == null || result.isEmpty) {
-        Log.warning(
-          'No physical cameras detected from native side',
+        if (result == null || result.isEmpty) {
+          Log.warning(
+            'No physical cameras detected from iOS native side',
+            name: 'CameraZoomDetector',
+            category: LogCategory.system,
+          );
+          return [];
+        }
+
+        final cameras = result.map((dynamic item) {
+          final map = Map<String, dynamic>.from(item as Map);
+          return PhysicalCameraSensor(
+            type: map['type'] as String,
+            zoomFactor: (map['zoomFactor'] as num).toDouble(),
+            deviceId: map['deviceId'] as String,
+            displayName: map['displayName'] as String,
+          );
+        }).toList();
+
+        Log.info(
+          'Detected ${cameras.length} physical cameras: ${cameras.map((c) => '${c.displayName} (${c.zoomFactor}x)').join(', ')}',
           name: 'CameraZoomDetector',
           category: LogCategory.system,
         );
-        return [];
+
+        return cameras;
+      } else if (Platform.isAndroid) {
+        // Android: Use CamerAwesome getSensors API
+        final sensorData = await CameraAwesomePlugin.getSensors();
+        final cameras = <PhysicalCameraSensor>[];
+
+        // Add ultrawide if available
+        if (sensorData.ultraWideAngle != null) {
+          cameras.add(PhysicalCameraSensor(
+            type: 'ultrawide',
+            zoomFactor: 0.5,
+            deviceId: sensorData.ultraWideAngle!.uid,
+            displayName: sensorData.ultraWideAngle!.name,
+          ));
+        }
+
+        // Add wide angle if available
+        if (sensorData.wideAngle != null) {
+          cameras.add(PhysicalCameraSensor(
+            type: 'wide',
+            zoomFactor: 1.0,
+            deviceId: sensorData.wideAngle!.uid,
+            displayName: sensorData.wideAngle!.name,
+          ));
+        }
+
+        // Add telephoto if available (use 3.0x as standard zoom for Android telephoto)
+        if (sensorData.telephoto != null) {
+          cameras.add(PhysicalCameraSensor(
+            type: 'telephoto',
+            zoomFactor: 3.0,
+            deviceId: sensorData.telephoto!.uid,
+            displayName: sensorData.telephoto!.name,
+          ));
+        }
+
+        Log.info(
+          'Detected ${cameras.length} physical cameras: ${cameras.map((c) => '${c.displayName} (${c.zoomFactor}x)').join(', ')}',
+          name: 'CameraZoomDetector',
+          category: LogCategory.system,
+        );
+
+        return cameras;
       }
 
-      final cameras = result.map((dynamic item) {
-        final map = Map<String, dynamic>.from(item as Map);
-        return PhysicalCameraSensor(
-          type: map['type'] as String,
-          zoomFactor: (map['zoomFactor'] as num).toDouble(),
-          deviceId: map['deviceId'] as String,
-          displayName: map['displayName'] as String,
-        );
-      }).toList();
-
-      Log.info(
-        'Detected ${cameras.length} physical cameras: ${cameras.map((c) => '${c.displayName} (${c.zoomFactor}x)').join(', ')}',
-        name: 'CameraZoomDetector',
-        category: LogCategory.system,
-      );
-
-      return cameras;
+      return [];
     } catch (e) {
       Log.error(
         'Failed to detect physical cameras: $e',

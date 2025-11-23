@@ -38,20 +38,21 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
           name: 'CamerAwesomeCamera', category: LogCategory.system);
 
       // Detect available physical cameras and their zoom factors
-      if (Platform.isIOS) {
-        _availableSensors = await CameraZoomDetector.getSortedBackCameras();
-        Log.info(
-          'Detected ${_availableSensors.length} physical cameras: ${_availableSensors.map((s) => '${s.displayName} (${s.zoomFactor}x)').join(', ')}',
-          name: 'CamerAwesomeCamera',
-          category: LogCategory.system,
-        );
+      _availableSensors = await CameraZoomDetector.getSortedBackCameras();
+      Log.info(
+        'Detected ${_availableSensors.length} physical cameras: ${_availableSensors.map((s) => '${s.displayName} (${s.zoomFactor}x)').join(', ')}',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
-        // CamerAwesome defaults to wide-angle camera (1.0x), so set current index to match
-        // Sorted list: [0.5x ultrawide, 1.0x wide, 3.0x telephoto]
-        _currentSensorIndex = _availableSensors.indexWhere((s) => s.zoomFactor == 1.0);
-        if (_currentSensorIndex == -1) {
-          _currentSensorIndex = 0; // Fallback to first camera if 1.0x not found
-        }
+      // CamerAwesome defaults to wide-angle camera (1.0x), so set current index to match
+      // Sorted list: [0.5x ultrawide, 1.0x wide, 3.0x telephoto]
+      _currentSensorIndex = _availableSensors.indexWhere((s) => s.zoomFactor == 1.0);
+      if (_currentSensorIndex == -1) {
+        _currentSensorIndex = 0; // Fallback to first camera if 1.0x not found
+      }
+
+      if (_availableSensors.isNotEmpty) {
         Log.info(
           'Initial camera: ${_availableSensors[_currentSensorIndex].displayName} (${_availableSensors[_currentSensorIndex].zoomFactor}x)',
           name: 'CamerAwesomeCamera',
