@@ -138,4 +138,19 @@ class CameraZoomDetector {
     backCameras.sort((a, b) => a.zoomFactor.compareTo(b.zoomFactor));
     return backCameras;
   }
+
+  /// Get front-facing camera
+  static Future<PhysicalCameraSensor?> getFrontCamera() async {
+    final allCameras = await getPhysicalCameras();
+    try {
+      return allCameras.firstWhere((c) => c.type == 'front');
+    } catch (e) {
+      Log.warning(
+        'No front camera found',
+        name: 'CameraZoomDetector',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
 }

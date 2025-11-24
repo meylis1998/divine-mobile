@@ -303,15 +303,24 @@ import SupportProvidersSDK
           return
         }
 
-        // Only query actual physical camera sensors, not virtual multi-camera devices
-        let discoverySession = AVCaptureDevice.DiscoverySession(
+        // Query back cameras
+        let backDiscoverySession = AVCaptureDevice.DiscoverySession(
           deviceTypes: [
             .builtInWideAngleCamera,
             .builtInUltraWideCamera,
             .builtInTelephotoCamera
           ].compactMap { $0 },
           mediaType: .video,
-          position: .back  // Only back cameras for recording
+          position: .back
+        )
+
+        // Query front cameras
+        let frontDiscoverySession = AVCaptureDevice.DiscoverySession(
+          deviceTypes: [
+            .builtInWideAngleCamera
+          ].compactMap { $0 },
+          mediaType: .video,
+          position: .front
         )
 
         // First, get the multi-camera virtual device to query zoom switchover points
@@ -343,7 +352,8 @@ import SupportProvidersSDK
 
         var cameras: [[String: Any]] = []
 
-        for device in discoverySession.devices {
+        // Process back cameras
+        for device in backDiscoverySession.devices {
           // Determine camera type based on device type
           var cameraType = "wide"
           if device.deviceType == .builtInUltraWideCamera {
@@ -372,10 +382,22 @@ import SupportProvidersSDK
             "displayName": device.localizedName
           ])
 
-          NSLog("📷 Found camera: \(device.localizedName) - \(cameraType) - \(zoomFactor)x")
+          NSLog("📷 Found back camera: \(device.localizedName) - \(cameraType) - \(zoomFactor)x")
         }
 
-        NSLog("📷 CameraZoomDetector: Found \(cameras.count) cameras")
+        // Process front cameras
+        for device in frontDiscoverySession.devices {
+          cameras.append([
+            "type": "front",
+            "zoomFactor": 1.0,  // Front cameras are always 1.0x
+            "deviceId": device.uniqueID,
+            "displayName": device.localizedName
+          ])
+
+          NSLog("📷 Found front camera: \(device.localizedName) - front - 1.0x")
+        }
+
+        NSLog("📷 CameraZoomDetector: Found \(cameras.count) cameras total")
         result(cameras)
 
       default:

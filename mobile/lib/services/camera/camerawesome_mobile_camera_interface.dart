@@ -18,8 +18,13 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   String? _currentRecordingPath;
 
   // Physical camera sensors detected on device
-  List<PhysicalCameraSensor> _availableSensors = [];
+  List<PhysicalCameraSensor> _availableSensors = []; // Rear cameras only
   int _currentSensorIndex = 0;
+
+  // Front camera and flip state
+  PhysicalCameraSensor? _frontCamera;
+  bool _isFrontCamera = false;
+  int _lastRearCameraIndex = 0; // Remember which rear camera was active before flip
 
   // Stream controller for camera state updates
   final _stateController = StreamController<CameraState>.broadcast();
@@ -72,6 +77,16 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       if (_availableSensors.isNotEmpty) {
         Log.info(
           'Initial camera: ${_availableSensors[_currentSensorIndex].displayName} (${_availableSensors[_currentSensorIndex].zoomFactor}x)',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
+      }
+
+      // Detect front camera for flip functionality
+      _frontCamera = await CameraZoomDetector.getFrontCamera();
+      if (_frontCamera != null) {
+        Log.info(
+          'Front camera detected: ${_frontCamera!.displayName}',
           name: 'CamerAwesomeCamera',
           category: LogCategory.system,
         );
@@ -188,8 +203,8 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
 
   @override
   Future<void> switchCamera() async {
-    if (_availableSensors.isEmpty) {
-      Log.warning('No physical sensors available for switching',
+    if (_frontCamera == null) {
+      Log.warning('No front camera available for flipping',
           name: 'CamerAwesomeCamera', category: LogCategory.system);
       return;
     }
@@ -199,35 +214,61 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     }
 
     try {
-      // Cycle to next sensor
-      _currentSensorIndex = (_currentSensorIndex + 1) % _availableSensors.length;
-      final nextSensor = _availableSensors[_currentSensorIndex];
+      if (_isFrontCamera) {
+        // Currently on front camera - switch back to last rear camera
+        Log.info(
+          'Flipping from front to rear camera (index: $_lastRearCameraIndex)',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
 
-      Log.info(
-        'Switching to sensor: ${nextSensor.displayName} (${nextSensor.zoomFactor}x)${nextSensor.isDigital ? ' [digital zoom]' : ''}',
-        name: 'CamerAwesomeCamera',
-        category: LogCategory.system,
-      );
+        _isFrontCamera = false;
+        _currentSensorIndex = _lastRearCameraIndex;
+        final rearSensor = _availableSensors[_currentSensorIndex];
 
-      if (nextSensor.isDigital) {
-        // Digital zoom - apply zoom to current physical sensor
-        final normalizedZoom = (nextSensor.zoomFactor - 1.0) / 3.0;
-        await _cameraState!.sensorConfig.setZoom(normalizedZoom.clamp(0.0, 1.0));
-        Log.info('Applied digital zoom: ${nextSensor.zoomFactor}x',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.info(
+          'Switching to rear: ${rearSensor.displayName} (${rearSensor.zoomFactor}x)',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
+
+        if (rearSensor.isDigital) {
+          // Digital zoom
+          final normalizedZoom = (rearSensor.zoomFactor - 1.0) / 3.0;
+          await _cameraState!.sensorConfig.setZoom(normalizedZoom.clamp(0.0, 1.0));
+        } else {
+          // Physical sensor switch
+          final sensorType = _mapToSensorType(rearSensor.type);
+          _cameraState!.setSensorType(0, sensorType, rearSensor.deviceId);
+          await _cameraState!.sensorConfig.setZoom(0.0);
+        }
       } else {
-        // Physical sensor switch
-        final sensorType = _mapToSensorType(nextSensor.type);
-        _cameraState!.setSensorType(0, sensorType, nextSensor.deviceId);
+        // Currently on rear camera - switch to front camera
+        Log.info(
+          'Flipping from rear to front camera (saving rear index: $_currentSensorIndex)',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
 
-        // Reset zoom to 1x when switching physical sensors
+        _lastRearCameraIndex = _currentSensorIndex; // Remember current rear camera
+        _isFrontCamera = true;
+
+        Log.info(
+          'Switching to front: ${_frontCamera!.displayName}',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
+
+        // Switch to front camera
+        final sensorType = _mapToSensorType(_frontCamera!.type);
+        _cameraState!.setSensorType(0, sensorType, _frontCamera!.deviceId);
         await _cameraState!.sensorConfig.setZoom(0.0);
       }
 
-      Log.info('Sensor switched successfully',
+      Log.info('Camera flip completed successfully',
           name: 'CamerAwesomeCamera', category: LogCategory.system);
     } catch (e) {
-      Log.error('Failed to switch camera: $e',
+      Log.error('Failed to flip camera: $e',
           name: 'CamerAwesomeCamera', category: LogCategory.system);
       rethrow;
     }
@@ -252,13 +293,24 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       return;
     }
 
-    if (sensorIndex == _currentSensorIndex) {
+    // If on front camera, switch back to rear camera first
+    if (_isFrontCamera) {
+      Log.info(
+        'Switching from front to rear camera due to zoom selection',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
+      _isFrontCamera = false;
+    }
+
+    if (sensorIndex == _currentSensorIndex && !_isFrontCamera) {
       Log.debug('Already on sensor: ${_availableSensors[sensorIndex].displayName}',
           name: 'CamerAwesomeCamera', category: LogCategory.system);
       return;
     }
 
     _currentSensorIndex = sensorIndex;
+    _lastRearCameraIndex = sensorIndex; // Update last rear camera
     final sensor = _availableSensors[_currentSensorIndex];
 
     Log.info(

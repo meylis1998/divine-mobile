@@ -124,7 +124,7 @@ class _ZoomButton extends StatelessWidget {
           child: Text(
             '${displayName}x',
             style: TextStyle(
-              color: isSelected ? VineTheme.vineGreen : Colors.white,
+              color: Colors.white,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               fontSize: isSelected ? 15 : 13,
             ),
