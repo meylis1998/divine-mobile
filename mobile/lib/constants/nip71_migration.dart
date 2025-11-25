@@ -9,8 +9,8 @@ class NIP71VideoKinds {
   static const int addressableShortVideo = 34236; // Addressable short videos
   static const int addressableNormalVideo = 34235; // Addressable normal videos
 
-  // Repost kinds (unchanged)
-  static const int repost = 6; // NIP-18 reposts
+  // Repost kinds
+  static const int repost = 16; // NIP-18 generic reposts
 
   /// Get all NIP-71 video kinds that OpenVine subscribes to
   /// OpenVine only uses kind 34236 (addressable short videos)
