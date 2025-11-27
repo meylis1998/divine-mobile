@@ -463,6 +463,23 @@ class _UniversalCameraScreenPureState
             return _buildErrorScreen(recordingState.errorMessage);
           }
 
+          // Show processing overlay if processing (even if camera not initialized)
+          if (_isProcessing) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: VineTheme.vineGreen),
+                  SizedBox(height: 16),
+                  Text(
+                    'Processing video...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (!recordingState.isInitialized) {
             return const Center(
               child: Column(
