@@ -507,6 +507,14 @@ class _UniversalCameraScreenPureState
                   isRecording: recordingState.isRecording,
                 ),
 
+              // Top progress bar - Vine-style full width at top
+              Positioned(
+                top: MediaQuery.of(context).padding.top,
+                left: 0,
+                right: 0,
+                child: _buildTopProgressBar(recordingState),
+              ),
+
               // Tap-anywhere-to-record gesture detector
               Positioned.fill(
                 child: GestureDetector(
@@ -753,6 +761,45 @@ class _UniversalCameraScreenPureState
                 label: const Text('Retry'),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Vine-style progress bar at top of screen showing recording progress
+  Widget _buildTopProgressBar(VineRecordingUIState recordingState) {
+    // Calculate progress (0.0 to 1.0)
+    final progress = recordingState.progress;
+
+    return Container(
+      height: 24, // Extra thick bar for maximum visibility
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.3), width: 1),
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 50),
+          width: double.infinity,
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: VineTheme.vineGreen,
+                boxShadow: [
+                  BoxShadow(
+                    color: VineTheme.vineGreen.withValues(alpha: 0.5),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
