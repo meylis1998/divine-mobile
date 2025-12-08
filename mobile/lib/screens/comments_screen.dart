@@ -53,8 +53,10 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
     try {
       // Use the provider's postComment for optimistic UI updates
       final commentsNotifier = ref.read(
-        commentsProvider(widget.videoEvent.id, widget.videoEvent.pubkey)
-            .notifier,
+        commentsProvider(
+          widget.videoEvent.id,
+          widget.videoEvent.pubkey,
+        ).notifier,
       );
       await commentsNotifier.postComment(
         content: controller.text.trim(),
