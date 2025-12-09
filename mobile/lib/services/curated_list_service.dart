@@ -257,12 +257,38 @@ class CuratedListService {
     String? thumbnailEventId,
     PlayOrder playOrder = PlayOrder.chronological,
   }) async {
+    return _createList(
+      name: name,
+      description: description,
+      imageUrl: imageUrl,
+      isPublic: isPublic,
+      tags: tags,
+      isCollaborative: isCollaborative,
+      allowedCollaborators: allowedCollaborators,
+      thumbnailEventId: thumbnailEventId,
+      playOrder: playOrder,
+    );
+  }
+
+  /// Internal method to create a list with optional explicit ID
+  Future<CuratedList?> _createList({
+    required String name,
+    String? id,
+    String? description,
+    String? imageUrl,
+    bool isPublic = true,
+    List<String> tags = const [],
+    bool isCollaborative = false,
+    List<String> allowedCollaborators = const [],
+    String? thumbnailEventId,
+    PlayOrder playOrder = PlayOrder.chronological,
+  }) async {
     try {
       final now = DateTime.now();
-      final id = 'list_${now.millisecondsSinceEpoch}';
+      final listId = id ?? 'list_${now.millisecondsSinceEpoch}';
 
       final newList = CuratedList(
-        id: id,
+        id: listId,
         name: name,
         description: description,
         imageUrl: imageUrl,
@@ -286,7 +312,7 @@ class CuratedListService {
       }
 
       Log.info(
-        'Created new curated list: $name ($id)',
+        'Created new curated list: $name ($listId)',
         name: 'CuratedListService',
         category: LogCategory.system,
       );
@@ -890,24 +916,12 @@ class CuratedListService {
 
   /// Create the default "My List" for quick access
   Future<void> _createDefaultList() async {
-    final list = await createList(
+    await _createList(
+      id: defaultListId,
       name: 'My List',
       description: 'My favorite vines and videos',
       isPublic: true,
     );
-
-    if (list != null) {
-      final index = _lists.indexWhere((l) => l.id == list.id);
-
-      if (index != -1) {
-        // Update the list ID to the default ID, save to local storage and
-        // publish to Nostr
-        final update = list.copyWith(id: defaultListId);
-        _lists[index] = update;
-        await _saveLists();
-        await _publishListToNostr(update);
-      }
-    }
   }
 
   /// Publish list to Nostr as NIP-51 kind 30005 event
