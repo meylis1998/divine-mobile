@@ -68,7 +68,7 @@ definitions:
           --dart-define=ZENDESK_URL=$ZENDESK_URL || true
 
         # Build with xcodebuild using Codemagic's recommended approach
-        # Using -destination with x86_64 simulator to work around ffmpeg_kit arm64-simulator issue
+        # Using -destination to work around ffmpeg_kit arm64-simulator issue
         # See: https://github.com/sk3llo/ffmpeg_kit_flutter/issues/106
         xcodebuild build \
           -workspace ios/Runner.xcworkspace \
