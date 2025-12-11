@@ -25,6 +25,9 @@ definitions:
     - &install_flutterfire
       name: Install FlutterFire CLI
       script: dart pub global activate flutterfire_cli
+    - &flutter_pub_get
+      name: Get Flutter dependencies
+      script: flutter pub get
     - &pod_install
       name: Run pod install
       script: find . -name "Podfile" -execdir pod install \;
@@ -143,6 +146,7 @@ workflows:
       events: []
     scripts:
       - *install_flutterfire
+      - *flutter_pub_get
       - *pod_install
       - *build_ios_simulator
       - *copy_simulator_app
