@@ -16,6 +16,9 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
   int _currentCameraIndex = 0;
   bool _isRecording = false;
 
+  @override
+  VoidCallback? onStateChanged;
+
   // Zoom and focus tracking
   double _currentZoomLevel = 1.0;
   double _minZoomLevel = 1.0;
@@ -128,6 +131,9 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
         name: 'EnhancedMobileCamera',
         category: LogCategory.system,
       );
+
+      // Notify that camera is now ready
+      onStateChanged?.call();
     } catch (e) {
       Log.error(
         'Camera controller initialization failed: $e',
@@ -407,6 +413,9 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
 
   @override
   bool get canSwitchCamera => _availableCameras.length > 1;
+
+  @override
+  bool get isReady => _controller != null && _controller!.value.isInitialized;
 
   /// Check if currently using front camera
   bool get isFrontCamera {

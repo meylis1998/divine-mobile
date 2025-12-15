@@ -17,6 +17,10 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   // Hold reference to CaptureRequest to prevent garbage collection
   CaptureRequest? _currentCaptureRequest;
 
+  @override
+  /// Callback invoked when camera state changes.
+  VoidCallback? onStateChanged;
+
   // Use a static to ensure the pathBuilder closure can access the current path
   // This is needed because CameraAwesomeBuilder captures the closure at build time
   static String? _pendingRecordingPath;
@@ -500,9 +504,15 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       previewFit: CameraPreviewFit.contain,
       builder: (state, preview) {
         // CameraLayoutBuilder signature: (CameraState, AnalysisPreview)
-        // Store camera state for use in other methods
+        // Track if this is the first time camera becomes ready
+        final wasReady = _cameraState != null;
         _cameraState = state;
         _stateController.add(state);
+
+        // Notify when camera becomes ready for the first time
+        if (!wasReady && _cameraState != null && onStateChanged != null) {
+          onStateChanged?.call();
+        }
 
         // Return empty container - preview is shown automatically
         return const SizedBox.shrink();
@@ -513,6 +523,9 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   @override
   bool get canSwitchCamera =>
       _availableSensors.length > 1 || _frontCamera != null;
+
+  @override
+  bool get isReady => _cameraState != null;
 
   /// Get available physical sensors for zoom UI
   List<PhysicalCameraSensor> get availableSensors => _availableSensors;
