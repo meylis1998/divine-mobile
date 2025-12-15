@@ -510,8 +510,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
         _stateController.add(state);
 
         // Notify when camera becomes ready for the first time
+        // Use addPostFrameCallback to defer callback to after widget build completes
         if (!wasReady && _cameraState != null && onStateChanged != null) {
-          onStateChanged?.call();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onStateChanged?.call();
+          });
         }
 
         // Return empty container - preview is shown automatically
