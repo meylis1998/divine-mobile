@@ -10,6 +10,7 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
+import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/state/social_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -511,6 +512,16 @@ class SocialNotifier extends _$SocialNotifier {
 
       // Trigger home feed refresh to show videos from newly followed user
       _refreshHomeFeed();
+      // Invalidate profile status so follower/following counts refresh
+      final currentUserPubkey = ref
+          .read(authServiceProvider)
+          .currentPublicKeyHex;
+      if (currentUserPubkey != null) {
+        await clearProfileStatsCache(currentUserPubkey);
+        ref.invalidate(fetchProfileStatsProvider(currentUserPubkey));
+      }
+      await clearProfileStatsCache(pubkeyToFollow);
+      ref.invalidate(fetchProfileStatsProvider(pubkeyToFollow));
     } catch (e) {
       Log.error(
         'Error following user: $e',
@@ -607,6 +618,14 @@ class SocialNotifier extends _$SocialNotifier {
 
       // Trigger home feed refresh to update feed
       _refreshHomeFeed();
+      // Invalidate profile stats so follower/following counts refresh
+      final currentUserPubkey = authService.currentPublicKeyHex;
+      if (currentUserPubkey != null) {
+        await clearProfileStatsCache(currentUserPubkey);
+        ref.invalidate(fetchProfileStatsProvider(currentUserPubkey));
+      }
+      await clearProfileStatsCache(pubkeyToUnfollow);
+      ref.invalidate(fetchProfileStatsProvider(pubkeyToUnfollow));
     } catch (e) {
       Log.error(
         'Error unfollowing user: $e',

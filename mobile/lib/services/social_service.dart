@@ -6,15 +6,15 @@ import 'dart:convert';
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/constants/nip71_migration.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Represents a follow set (NIP-51 Kind 30000)
 class FollowSet {
@@ -1084,6 +1084,69 @@ class SocialService {
         category: LogCategory.system,
       );
       return {'followers': 0, 'following': 0};
+    }
+  }
+
+  /// Get following list for any user (current user uses cache, others fetch from Nostr)
+  /// Returns a stream that emits the list of pubkeys the user follows
+  Stream<List<String>> getFollowingListForUser(String pubkey) async* {
+    // For current user, return cached data immediately
+    if (pubkey == _authService.currentPublicKeyHex) {
+      yield _followingPubkeys;
+      return;
+    }
+
+    // For other users, fetch from Nostr
+    final subscription = _nostrService.subscribeToEvents(
+      filters: [
+        Filter(
+          authors: [pubkey],
+          kinds: [3], // Contact lists (NIP-02)
+          limit: 1,
+        ),
+      ],
+    );
+
+    var hasYielded = false;
+
+    await for (final event
+        in subscription
+            .timeout(
+              const Duration(seconds: 5),
+              onTimeout: (sink) {
+                Log.warning(
+                  'Timeout fetching following list for $pubkey',
+                  name: 'SocialService',
+                  category: LogCategory.relay,
+                );
+                sink.close();
+              },
+            )
+            .handleError((error) {
+              Log.error(
+                'Error fetching following list for $pubkey: $error',
+                name: 'SocialService',
+                category: LogCategory.relay,
+              );
+              // Rethrow so caller can handle it
+              throw error;
+            })) {
+      final following = <String>[];
+      for (final tag in event.tags) {
+        if (tag.isNotEmpty && tag[0] == 'p' && tag.length > 1) {
+          final followedPubkey = tag[1];
+          if (!following.contains(followedPubkey)) {
+            following.add(followedPubkey);
+          }
+        }
+      }
+      hasYielded = true;
+      yield following;
+    }
+
+    // If stream completed without yielding, user follows nobody
+    if (!hasYielded) {
+      yield [];
     }
   }
 

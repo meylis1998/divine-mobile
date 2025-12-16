@@ -798,6 +798,14 @@ class MockSocialService extends _i1.Mock implements _i13.SocialService {
           as _i6.Future<Map<String, int>>);
 
   @override
+  _i6.Stream<List<String>> getFollowingListForUser(String? pubkey) =>
+      (super.noSuchMethod(
+            Invocation.method(#getFollowingListForUser, [pubkey]),
+            returnValue: _i6.Stream<List<String>>.empty(),
+          )
+          as _i6.Stream<List<String>>);
+
+  @override
   _i6.Future<_i13.FollowSet?> createFollowSet({
     required String? name,
     String? description,
