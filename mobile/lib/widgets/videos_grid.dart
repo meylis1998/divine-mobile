@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/providers/profile_feed_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -13,16 +12,22 @@ class VideosGrid extends ConsumerWidget {
     super.key,
     required this.videos,
     required this.userIdHex,
+    this.badgeIcon,
+    required this.noVideoIcon,
     required this.noVideosTitle,
     required this.noVideosMessage,
     required this.logContext,
+    this.onRefresh,
   });
 
   final List<VideoEvent> videos;
   final String userIdHex;
+  final IconData? badgeIcon;
+  final IconData noVideoIcon;
   final String noVideosTitle;
   final String noVideosMessage;
   final String logContext;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +36,7 @@ class VideosGrid extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.videocam_outlined, color: Colors.grey, size: 64),
+            Icon(noVideoIcon, color: Colors.grey, size: 64),
             const SizedBox(height: 16),
             Text(
               noVideosTitle,
@@ -47,17 +52,16 @@ class VideosGrid extends ConsumerWidget {
               style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 32),
-            IconButton(
-              onPressed: () {
-                ref.read(profileFeedProvider(userIdHex).notifier).loadMore();
-              },
-              icon: const Icon(
-                Icons.refresh,
-                color: VineTheme.vineGreen,
-                size: 28,
+            if (onRefresh != null)
+              IconButton(
+                onPressed: onRefresh,
+                icon: const Icon(
+                  Icons.refresh,
+                  color: VineTheme.vineGreen,
+                  size: 28,
+                ),
+                tooltip: 'Refresh',
               ),
-              tooltip: 'Refresh',
-            ),
           ],
         ),
       );
@@ -196,6 +200,23 @@ class VideosGrid extends ConsumerWidget {
                           size: 32,
                         ),
                       ),
+                      if (badgeIcon != null)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(
+                              badgeIcon,
+                              color: VineTheme.vineGreen,
+                              size: 16,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

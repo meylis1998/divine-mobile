@@ -3,7 +3,6 @@
 
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +14,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/optimistic_follow_provider.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
+import 'package:openvine/providers/profile_liked_provider.dart';
 import 'package:openvine/providers/profile_reposts_provider.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -424,9 +424,12 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                     body: TabBarView(
                       controller: _tabController,
                       children: [
-                        ProfileVideosGrid(videos: videos, userIdHex: userIdHex),
-                        _buildLikedGrid(socialService),
-                        _buildRepostsGrid(userIdHex),
+                        _ProfileVideosGrid(
+                          videos: videos,
+                          userIdHex: userIdHex,
+                        ),
+                        _LikedVideosGrid(userIdHex: userIdHex),
+                        _RepostsVideosGrid(userIdHex: userIdHex),
                       ],
                     ),
                   ),
@@ -935,229 +938,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     ),
   );
 
-  Widget _buildLikedGrid(SocialService socialService) {
-    return CustomScrollView(
-      slivers: [
-        SliverFillRemaining(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.favorite_border, color: Colors.grey, size: 64),
-                SizedBox(height: 16),
-                Text(
-                  'No Liked Videos Yet',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Videos you like will appear here',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRepostsGrid(String userIdHex) {
-    // Watch the reposts provider
-    final repostsAsync = ref.watch(profileRepostsProvider(userIdHex));
-
-    return repostsAsync.when(
-      data: (reposts) {
-        if (reposts.isEmpty) {
-          return CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.repeat, color: Colors.grey, size: 64),
-                      SizedBox(height: 16),
-                      Text(
-                        'No Reposts Yet',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Videos you repost will appear here',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-
-        // Show reposts in a grid (same format as videos grid)
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(2),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                  childAspectRatio: 1,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  if (index >= reposts.length) {
-                    return const SizedBox.shrink();
-                  }
-
-                  final videoEvent = reposts[index];
-                  return GestureDetector(
-                    onTap: () {
-                      final npub = NostrKeyUtils.encodePubKey(userIdHex);
-                      Log.info(
-                        '🎯 ProfileScreenRouter REPOSTS TAB TAP: gridIndex=$index, '
-                        'npub=$npub, videoId=${videoEvent.id}',
-                        category: LogCategory.video,
-                      );
-                      // Navigate to fullscreen video mode using GoRouter
-                      context.goProfile(npub, index);
-                    },
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: VineTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child:
-                                  videoEvent.thumbnailUrl != null &&
-                                      videoEvent.thumbnailUrl!.isNotEmpty
-                                  ? CachedNetworkImage(
-                                      imageUrl: videoEvent.thumbnailUrl!,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) =>
-                                          DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  VineTheme.vineGreen
-                                                      .withValues(alpha: 0.3),
-                                                  Colors.blue.withValues(
-                                                    alpha: 0.3,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            child: const Center(
-                                              child: CircularProgressIndicator(
-                                                color: VineTheme.whiteText,
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                          ),
-                                      errorWidget: (context, url, error) =>
-                                          DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  VineTheme.vineGreen
-                                                      .withValues(alpha: 0.3),
-                                                  Colors.blue.withValues(
-                                                    alpha: 0.3,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.play_circle_outline,
-                                                color: VineTheme.whiteText,
-                                                size: 24,
-                                              ),
-                                            ),
-                                          ),
-                                    )
-                                  : DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(4),
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            VineTheme.vineGreen.withValues(
-                                              alpha: 0.3,
-                                            ),
-                                            Colors.blue.withValues(alpha: 0.3),
-                                          ],
-                                        ),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.play_circle_outline,
-                                          color: VineTheme.whiteText,
-                                          size: 24,
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const Center(
-                            child: Icon(
-                              Icons.play_circle_filled,
-                              color: Colors.white70,
-                              size: 32,
-                            ),
-                          ),
-                          // Repost indicator badge
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Icon(
-                                Icons.repeat,
-                                color: VineTheme.vineGreen,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }, childCount: reposts.length),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
-      error: (error, stack) =>
-          Center(child: Text('Error loading reposts: $error')),
-    );
-  }
-
   // Action methods
 
   Future<void> _setupProfile() async {
@@ -1424,12 +1204,8 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   }
 }
 
-class ProfileVideosGrid extends ConsumerWidget {
-  const ProfileVideosGrid({
-    super.key,
-    required this.videos,
-    required this.userIdHex,
-  });
+class _ProfileVideosGrid extends ConsumerWidget {
+  const _ProfileVideosGrid({required this.videos, required this.userIdHex});
 
   final List<VideoEvent> videos;
   final String userIdHex;
@@ -1438,12 +1214,74 @@ class ProfileVideosGrid extends ConsumerWidget {
     return VideosGrid(
       videos: videos,
       userIdHex: userIdHex,
+      noVideoIcon: Icons.videocam_outlined,
       noVideosTitle: 'No Videos Yet',
       noVideosMessage:
           (ref.read(authServiceProvider).currentPublicKeyHex == userIdHex
           ? 'Share your first video to see it here'
           : "This user hasn't shared any videos yet"),
       logContext: 'ProfileScreenRouter',
+      onRefresh: () {
+        ref.read(profileFeedProvider(userIdHex).notifier).loadMore();
+      },
+    );
+  }
+}
+
+class _LikedVideosGrid extends ConsumerWidget {
+  const _LikedVideosGrid({required this.userIdHex});
+
+  final String userIdHex;
+
+  Widget build(BuildContext context, WidgetRef ref) {
+    final likedVideosAsync = ref.watch(profileLikedVideosProvider(userIdHex));
+
+    return likedVideosAsync.when(
+      data: (likedVideos) {
+        return VideosGrid(
+          videos: likedVideos,
+          userIdHex: userIdHex,
+          badgeIcon: Icons.favorite_border,
+          noVideoIcon: Icons.favorite_border,
+          noVideosTitle: 'No Liked Videos Yet',
+          noVideosMessage: 'Videos you like will appear here',
+          logContext: 'ProfileScreenRouter LIKES',
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+      ),
+      error: (error, stack) =>
+          Center(child: Text('Error loading liked videos: $error')),
+    );
+  }
+}
+
+class _RepostsVideosGrid extends ConsumerWidget {
+  const _RepostsVideosGrid({required this.userIdHex});
+
+  final String userIdHex;
+
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repostsAsync = ref.watch(profileRepostsProvider(userIdHex));
+
+    return repostsAsync.when(
+      data: (repostedVideos) {
+        return VideosGrid(
+          videos: repostedVideos,
+          userIdHex: userIdHex,
+          badgeIcon: Icons.repeat,
+          noVideoIcon: Icons.repeat,
+          noVideosTitle: 'No Reposts Yet',
+          noVideosMessage: 'Videos you repost will appear here',
+          logContext: 'ProfileScreenRouter REPOSTS',
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+      ),
+      error: (error, stack) =>
+          Center(child: Text('Error loading reposts: $error')),
     );
   }
 }
