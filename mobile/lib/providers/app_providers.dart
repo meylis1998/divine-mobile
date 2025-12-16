@@ -27,6 +27,7 @@ import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
+import 'package:openvine/repositories/username_repository.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 // NostrService now includes embedded relay functionality
@@ -251,6 +252,13 @@ ContentBlocklistService contentBlocklistService(Ref ref) {
 @riverpod
 Nip05Service nip05Service(Ref ref) {
   return Nip05Service();
+}
+
+/// Username repository for availability checking and registration
+@riverpod
+UsernameRepository usernameRepository(Ref ref) {
+  final nip05Service = ref.watch(nip05ServiceProvider);
+  return UsernameRepository(nip05Service);
 }
 
 /// Draft storage service for persisting vine drafts
