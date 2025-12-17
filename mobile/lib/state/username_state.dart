@@ -64,13 +64,12 @@ class UsernameState extends Equatable {
     String? username,
     UsernameCheckStatus? status,
     String? errorMessage,
-  }) =>
-      UsernameState(
-        username: username ?? this.username,
-        status: status ?? this.status,
-        // Allow clearing errorMessage by not using ?? operator
-        errorMessage: errorMessage,
-      );
+  }) => UsernameState(
+    username: username ?? this.username,
+    status: status ?? this.status,
+    // Allow clearing errorMessage by not using ?? operator
+    errorMessage: errorMessage,
+  );
 
   @override
   List<Object?> get props => [username, status, errorMessage];

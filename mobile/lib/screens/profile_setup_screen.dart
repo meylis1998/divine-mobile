@@ -870,8 +870,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               );
 
           if (registrationResult.isSuccess) {
-            final nip05Identifier =
-                '${usernameState.username}@divine.video';
+            final nip05Identifier = '${usernameState.username}@divine.video';
             profileData['nip05'] = nip05Identifier;
             Log.info(
               '✅ Registered NIP-05: $nip05Identifier',

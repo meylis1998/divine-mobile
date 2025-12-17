@@ -12,9 +12,7 @@ void main() {
     Widget buildStatusIndicator(UsernameState state) {
       return MaterialApp(
         theme: VineTheme.theme,
-        home: Scaffold(
-          body: _buildUsernameStatusIndicator(state),
-        ),
+        home: Scaffold(body: _buildUsernameStatusIndicator(state)),
       );
     }
 
@@ -22,10 +20,9 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: '',
-          status: UsernameCheckStatus.idle,
-        )),
+        buildStatusIndicator(
+          const UsernameState(username: '', status: UsernameCheckStatus.idle),
+        ),
       );
 
       expect(find.text('Checking availability...'), findsNothing);
@@ -36,10 +33,12 @@ void main() {
 
     testWidgets('should show checking indicator with spinner', (tester) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: 'testuser',
-          status: UsernameCheckStatus.checking,
-        )),
+        buildStatusIndicator(
+          const UsernameState(
+            username: 'testuser',
+            status: UsernameCheckStatus.checking,
+          ),
+        ),
       );
 
       expect(find.text('Checking availability...'), findsOneWidget);
@@ -50,10 +49,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: 'availableuser',
-          status: UsernameCheckStatus.available,
-        )),
+        buildStatusIndicator(
+          const UsernameState(
+            username: 'availableuser',
+            status: UsernameCheckStatus.available,
+          ),
+        ),
       );
 
       expect(find.text('Username available!'), findsOneWidget);
@@ -62,10 +63,12 @@ void main() {
 
     testWidgets('should show taken indicator with cancel icon', (tester) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: 'takenuser',
-          status: UsernameCheckStatus.taken,
-        )),
+        buildStatusIndicator(
+          const UsernameState(
+            username: 'takenuser',
+            status: UsernameCheckStatus.taken,
+          ),
+        ),
       );
 
       expect(find.text('Username already taken'), findsOneWidget);
@@ -76,10 +79,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: 'reserveduser',
-          status: UsernameCheckStatus.reserved,
-        )),
+        buildStatusIndicator(
+          const UsernameState(
+            username: 'reserveduser',
+            status: UsernameCheckStatus.reserved,
+          ),
+        ),
       );
 
       expect(find.text('Username is reserved'), findsOneWidget);
@@ -88,11 +93,13 @@ void main() {
 
     testWidgets('should show error indicator', (tester) async {
       await tester.pumpWidget(
-        buildStatusIndicator(const UsernameState(
-          username: 'erroruser',
-          status: UsernameCheckStatus.error,
-          errorMessage: 'Network error',
-        )),
+        buildStatusIndicator(
+          const UsernameState(
+            username: 'erroruser',
+            status: UsernameCheckStatus.error,
+            errorMessage: 'Network error',
+          ),
+        ),
       );
 
       expect(find.text('Network error'), findsOneWidget);
@@ -186,11 +193,7 @@ Widget _buildUsernameStatusIndicator(UsernameState usernameState) {
       padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle,
-            color: VineTheme.vineGreen,
-            size: 16,
-          ),
+          const Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 16),
           const SizedBox(width: 8),
           Text(
             'Username available!',
@@ -236,10 +239,7 @@ Widget _buildUsernameStatusIndicator(UsernameState usernameState) {
             ],
           ),
           const SizedBox(height: 4),
-          TextButton(
-            onPressed: () {},
-            child: const Text('Contact Support'),
-          ),
+          TextButton(onPressed: () {}, child: const Text('Contact Support')),
         ],
       ),
     );

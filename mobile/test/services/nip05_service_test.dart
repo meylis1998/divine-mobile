@@ -187,14 +187,20 @@ void main() {
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           [],
         );
-        expect(result.status, UsernameRegistrationStatus.invalidPubkey); // too short (63 chars)
+        expect(
+          result.status,
+          UsernameRegistrationStatus.invalidPubkey,
+        ); // too short (63 chars)
 
         result = await service.registerUsername(
           'user',
           'gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg',
           [],
         );
-        expect(result.status, UsernameRegistrationStatus.invalidPubkey); // non-hex
+        expect(
+          result.status,
+          UsernameRegistrationStatus.invalidPubkey,
+        ); // non-hex
 
         // Check error message is set
         expect(service.error, contains('Invalid public key format'));

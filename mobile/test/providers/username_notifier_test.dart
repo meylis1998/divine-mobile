@@ -36,9 +36,7 @@ void main() {
         final container = createContainer();
 
         // Act
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('');
+        container.read(usernameProvider.notifier).onUsernameChanged('');
 
         // Assert
         final state = container.read(usernameProvider);
@@ -50,9 +48,7 @@ void main() {
         final container = createContainer();
 
         // Act
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('ab');
+        container.read(usernameProvider.notifier).onUsernameChanged('ab');
 
         // Assert
         final state = container.read(usernameProvider);
@@ -117,10 +113,7 @@ void main() {
           ).thenAnswer((_) async => UsernameAvailability.available);
 
           // Keep a listener active to prevent auto-dispose
-          final sub = container.listen(
-            usernameProvider,
-            (_, __) {},
-          );
+          final sub = container.listen(usernameProvider, (_, __) {});
 
           // Act - trigger onUsernameChanged which starts debounce timer
           container
@@ -187,8 +180,9 @@ void main() {
         expect(state.status, UsernameCheckStatus.available);
         expect(state.isAvailable, true);
         expect(state.canRegister, true);
-        verify(() => usernameRepository.checkAvailability('validuser'))
-            .called(1);
+        verify(
+          () => usernameRepository.checkAvailability('validuser'),
+        ).called(1);
       });
 
       test('updates state to taken when username is taken', () async {
@@ -250,14 +244,10 @@ void main() {
         ).thenAnswer((_) async => UsernameAvailability.available);
 
         // Set up state for 'olduser'
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('olduser');
+        container.read(usernameProvider.notifier).onUsernameChanged('olduser');
 
         // Change to different username before check completes
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('newuser');
+        container.read(usernameProvider.notifier).onUsernameChanged('newuser');
 
         // Act - check for old username
         await container
@@ -308,9 +298,7 @@ void main() {
         );
 
         // Get to available state
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('newuser');
+        container.read(usernameProvider.notifier).onUsernameChanged('newuser');
         await container
             .read(usernameProvider.notifier)
             .checkAvailability('newuser');
@@ -334,46 +322,48 @@ void main() {
         ).called(1);
       });
 
-      test('updates state to reserved when registration returns reserved',
-          () async {
-        final container = createContainer();
+      test(
+        'updates state to reserved when registration returns reserved',
+        () async {
+          final container = createContainer();
 
-        // Arrange
-        when(
-          () => usernameRepository.checkAvailability('reserved'),
-        ).thenAnswer((_) async => UsernameAvailability.available);
-        when(
-          () => usernameRepository.register(
-            username: 'reserved',
-            pubkey: validPubkey,
-            relays: relays,
-          ),
-        ).thenAnswer(
-          (_) async => const UsernameRegistrationResult(
-            status: UsernameRegistrationStatus.reserved,
-            errorMessage: 'Username is reserved',
-          ),
-        );
+          // Arrange
+          when(
+            () => usernameRepository.checkAvailability('reserved'),
+          ).thenAnswer((_) async => UsernameAvailability.available);
+          when(
+            () => usernameRepository.register(
+              username: 'reserved',
+              pubkey: validPubkey,
+              relays: relays,
+            ),
+          ).thenAnswer(
+            (_) async => const UsernameRegistrationResult(
+              status: UsernameRegistrationStatus.reserved,
+              errorMessage: 'Username is reserved',
+            ),
+          );
 
-        // Get to available state
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('reserved');
-        await container
-            .read(usernameProvider.notifier)
-            .checkAvailability('reserved');
+          // Get to available state
+          container
+              .read(usernameProvider.notifier)
+              .onUsernameChanged('reserved');
+          await container
+              .read(usernameProvider.notifier)
+              .checkAvailability('reserved');
 
-        // Act
-        final result = await container
-            .read(usernameProvider.notifier)
-            .registerUsername(pubkey: validPubkey, relays: relays);
+          // Act
+          final result = await container
+              .read(usernameProvider.notifier)
+              .registerUsername(pubkey: validPubkey, relays: relays);
 
-        // Assert
-        expect(result.isReserved, true);
-        final state = container.read(usernameProvider);
-        expect(state.isReserved, true);
-        expect(state.status, UsernameCheckStatus.reserved);
-      });
+          // Assert
+          expect(result.isReserved, true);
+          final state = container.read(usernameProvider);
+          expect(state.isReserved, true);
+          expect(state.status, UsernameCheckStatus.reserved);
+        },
+      );
 
       test('updates state to taken when registration returns taken', () async {
         final container = createContainer();
@@ -425,9 +415,7 @@ void main() {
           () => usernameRepository.checkAvailability('testuser'),
         ).thenAnswer((_) async => UsernameAvailability.available);
 
-        container
-            .read(usernameProvider.notifier)
-            .onUsernameChanged('testuser');
+        container.read(usernameProvider.notifier).onUsernameChanged('testuser');
         await container
             .read(usernameProvider.notifier)
             .checkAvailability('testuser');
@@ -449,5 +437,4 @@ void main() {
       });
     });
   });
-
 }

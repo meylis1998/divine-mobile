@@ -22,8 +22,9 @@ class UsernameRepository {
   /// [UsernameAvailability.error] if the check failed.
   Future<UsernameAvailability> checkAvailability(String username) async {
     try {
-      final isAvailable =
-          await _nip05Service.checkUsernameAvailability(username);
+      final isAvailable = await _nip05Service.checkUsernameAvailability(
+        username,
+      );
       return isAvailable
           ? UsernameAvailability.available
           : UsernameAvailability.taken;

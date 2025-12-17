@@ -66,10 +66,7 @@ class UsernameNotifier extends _$UsernameNotifier {
     );
 
     // Debounce the actual API call
-    _debounceTimer = Timer(
-      _debounceDuration,
-      () => checkAvailability(trimmed),
-    );
+    _debounceTimer = Timer(_debounceDuration, () => checkAvailability(trimmed));
   }
 
   /// Check username availability via UsernameRepository
