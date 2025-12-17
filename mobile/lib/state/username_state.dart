@@ -1,6 +1,8 @@
 // ABOUTME: State class for username availability checking and registration
 // ABOUTME: Used by UsernameController to track check/register status
 
+import 'package:equatable/equatable.dart';
+
 /// Status of username availability check
 enum UsernameCheckStatus {
   /// No username entered or cleared
@@ -23,7 +25,7 @@ enum UsernameCheckStatus {
 }
 
 /// Immutable state for username availability checking and registration
-class UsernameState {
+class UsernameState extends Equatable {
   const UsernameState({
     this.username = '',
     this.status = UsernameCheckStatus.idle,
@@ -71,18 +73,5 @@ class UsernameState {
       );
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is UsernameState &&
-          runtimeType == other.runtimeType &&
-          username == other.username &&
-          status == other.status &&
-          errorMessage == other.errorMessage;
-
-  @override
-  int get hashCode => Object.hash(username, status, errorMessage);
-
-  @override
-  String toString() =>
-      'UsernameState(username: $username, status: $status, errorMessage: $errorMessage)';
+  List<Object?> get props => [username, status, errorMessage];
 }

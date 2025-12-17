@@ -441,7 +441,7 @@ void main() {
       expect(copied.errorMessage, isNull);
     });
 
-    test('equality works correctly', () {
+    test('equality works correctly (via Equatable)', () {
       const state1 = UsernameState(
         username: 'test',
         status: UsernameCheckStatus.available,
@@ -457,6 +457,63 @@ void main() {
 
       expect(state1, equals(state2));
       expect(state1, isNot(equals(state3)));
+    });
+
+    test('isReserved returns true only for reserved status', () {
+      const reserved = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.reserved,
+      );
+      const taken = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.taken,
+      );
+
+      expect(reserved.isReserved, true);
+      expect(taken.isReserved, false);
+    });
+
+    test('isTaken returns true only for taken status', () {
+      const taken = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.taken,
+      );
+      const available = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.available,
+      );
+
+      expect(taken.isTaken, true);
+      expect(available.isTaken, false);
+    });
+
+    test('isChecking returns true only for checking status', () {
+      const checking = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.checking,
+      );
+      const idle = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.idle,
+      );
+
+      expect(checking.isChecking, true);
+      expect(idle.isChecking, false);
+    });
+
+    test('hasError returns true only for error status', () {
+      const error = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.error,
+        errorMessage: 'Something went wrong',
+      );
+      const available = UsernameState(
+        username: 'test',
+        status: UsernameCheckStatus.available,
+      );
+
+      expect(error.hasError, true);
+      expect(available.hasError, false);
     });
   });
 }
