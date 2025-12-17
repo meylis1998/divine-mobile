@@ -224,9 +224,10 @@ class Nip05Service {
       return;
     }
 
-    // Extract username from identifier
+    // Extract username from identifier (support both domains)
     final parts = nip05Identifier.split('@');
-    if (parts.length == 2 && parts[1] == 'openvine.co') {
+    if (parts.length == 2 &&
+        (parts[1] == 'divine.video' || parts[1] == 'openvine.co')) {
       _currentUsername = parts[0];
       _isVerified = true;
     } else {

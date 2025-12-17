@@ -373,11 +373,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             if (!regex.hasMatch(value)) {
                               return 'Username can only contain letters, numbers, dash, underscore, and dot';
                             }
-                            if (value.length < 3) {
-                              return 'Username must be at least 3 characters';
+                            if (value.length < kMinUsernameLength) {
+                              return 'Username must be at least $kMinUsernameLength characters';
                             }
-                            if (value.length > 20) {
-                              return 'Username must be 20 characters or less';
+                            if (value.length > kMaxUsernameLength) {
+                              return 'Username must be $kMaxUsernameLength characters or less';
                             }
                             // Show error from controller state if taken
                             if (usernameState.isTaken) {
@@ -387,7 +387,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           },
                         ),
                         // Username status indicators
-                        _buildUsernameStatusIndicator(usernameState),
+                        UsernameStatusIndicator(state: usernameState),
                         const SizedBox(height: 16),
 
                         // Profile Picture Section
@@ -1577,101 +1577,120 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
     }
   }
+}
 
-  /// Build username status indicator based on controller state
-  Widget _buildUsernameStatusIndicator(UsernameState usernameState) {
-    // Don't show anything if idle or username is empty
-    if (usernameState.status == UsernameCheckStatus.idle ||
-        usernameState.username.isEmpty) {
+/// Displays username availability status (checking, available, taken, reserved, error)
+class UsernameStatusIndicator extends StatelessWidget {
+  const UsernameStatusIndicator({required this.state, super.key});
+
+  final UsernameState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.status == UsernameCheckStatus.idle || state.username.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Checking indicator
-    if (usernameState.isChecking) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Checking availability...',
-              style: TextStyle(color: Colors.grey[400], fontSize: 12),
-            ),
-          ],
-        ),
-      );
+    if (state.isChecking) {
+      return const _UsernameCheckingIndicator();
     }
 
-    // Available indicator
-    if (usernameState.isAvailable) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: VineTheme.vineGreen,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Username available!',
-              style: TextStyle(color: VineTheme.vineGreen, fontSize: 12),
-            ),
-          ],
-        ),
-      );
+    if (state.isAvailable) {
+      return const _UsernameAvailableIndicator();
     }
 
-    // Taken indicator
-    if (usernameState.isTaken) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            Icon(Icons.cancel, color: Colors.red[400], size: 16),
-            const SizedBox(width: 8),
-            Text(
-              'Username already taken',
-              style: TextStyle(color: Colors.red[400], fontSize: 12),
-            ),
-          ],
-        ),
-      );
+    if (state.isTaken) {
+      return const _UsernameTakenIndicator();
     }
 
-    // Reserved indicator with Contact Support button
-    if (usernameState.isReserved) {
-      return _buildReservedIndicator(usernameState.username);
+    if (state.isReserved) {
+      return _UsernameReservedIndicator(username: state.username);
     }
 
-    // Error indicator
-    if (usernameState.hasError) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.orange[400], size: 16),
-            const SizedBox(width: 8),
-            Text(
-              usernameState.errorMessage ?? 'Failed to check availability',
-              style: TextStyle(color: Colors.orange[400], fontSize: 12),
-            ),
-          ],
-        ),
+    if (state.hasError) {
+      return _UsernameErrorIndicator(
+        message: state.errorMessage ?? 'Failed to check availability',
       );
     }
 
     return const SizedBox.shrink();
   }
+}
 
-  /// Build reserved username indicator with Contact Support button
-  Widget _buildReservedIndicator(String username) {
+class _UsernameCheckingIndicator extends StatelessWidget {
+  const _UsernameCheckingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Checking availability...',
+            style: TextStyle(color: Colors.grey[400], fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UsernameAvailableIndicator extends StatelessWidget {
+  const _UsernameAvailableIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            'Username available!',
+            style: TextStyle(color: VineTheme.vineGreen, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UsernameTakenIndicator extends StatelessWidget {
+  const _UsernameTakenIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(Icons.cancel, color: Colors.red[400], size: 16),
+          const SizedBox(width: 8),
+          Text(
+            'Username already taken',
+            style: TextStyle(color: Colors.red[400], fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UsernameReservedIndicator extends StatelessWidget {
+  const _UsernameReservedIndicator({required this.username});
+
+  final String username;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -1682,7 +1701,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               Icon(Icons.lock, color: Colors.orange[400], size: 16),
               const SizedBox(width: 8),
               Text(
-                'This username is reserved',
+                'Username is reserved',
                 style: TextStyle(color: Colors.orange[400], fontSize: 12),
               ),
             ],
@@ -1694,7 +1713,27 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => _launchSupportEmail(username),
+            onPressed: () async {
+              // Capture messenger before async gap
+              final messenger = ScaffoldMessenger.of(context);
+              final uri = Uri.parse(
+                'mailto:support@divine.video?subject=Reserved Username Request - $username',
+              );
+              try {
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open email app'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (_) {
+                // Email launch failed - silently ignore
+              }
+            },
             icon: const Icon(Icons.email, size: 16),
             label: const Text('Contact Support'),
             style: OutlinedButton.styleFrom(
@@ -1708,31 +1747,27 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
     );
   }
+}
 
-  /// Launch email to support for reserved username request
-  Future<void> _launchSupportEmail(String username) async {
-    final uri = Uri.parse(
-      'mailto:support@divine.video?subject=Reserved Username Request - $username',
+class _UsernameErrorIndicator extends StatelessWidget {
+  const _UsernameErrorIndicator({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.orange[400], size: 16),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(color: Colors.orange[400], fontSize: 12),
+          ),
+        ],
+      ),
     );
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open email app'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      Log.error(
-        'Failed to launch support email: $e',
-        name: 'ProfileSetupScreen',
-        category: LogCategory.ui,
-      );
-    }
   }
 }

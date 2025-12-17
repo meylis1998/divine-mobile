@@ -13,6 +13,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'username_notifier.g.dart';
 
+/// Minimum length for a valid username
+const kMinUsernameLength = 3;
+
+/// Maximum length for a valid username
+const kMaxUsernameLength = 20;
+
 /// Notifier for managing username availability checking and registration
 ///
 /// Provides debounced availability checking to avoid excessive API calls
@@ -41,7 +47,7 @@ class UsernameNotifier extends _$UsernameNotifier {
     final trimmed = value.trim().toLowerCase();
 
     // Reset if empty or too short
-    if (trimmed.isEmpty || trimmed.length < 3) {
+    if (trimmed.isEmpty || trimmed.length < kMinUsernameLength) {
       state = UsernameState(
         username: trimmed,
         status: UsernameCheckStatus.idle,
@@ -190,6 +196,6 @@ class UsernameNotifier extends _$UsernameNotifier {
   /// Validate username format locally
   bool _isValidFormat(String username) {
     final regex = RegExp(r'^[a-z0-9\-_.]+$', caseSensitive: false);
-    return regex.hasMatch(username) && username.length <= 20;
+    return regex.hasMatch(username) && username.length <= kMaxUsernameLength;
   }
 }

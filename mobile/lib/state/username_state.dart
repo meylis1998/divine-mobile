@@ -67,7 +67,7 @@ class UsernameState extends Equatable {
   }) => UsernameState(
     username: username ?? this.username,
     status: status ?? this.status,
-    // Allow clearing errorMessage by not using ?? operator
+    // errorMessage resets to null if copyWith is called without it
     errorMessage: errorMessage,
   );
 
