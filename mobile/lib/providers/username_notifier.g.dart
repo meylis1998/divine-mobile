@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'username_controller.dart';
+part of 'username_notifier.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -8,41 +8,41 @@ part of 'username_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Controller for managing username availability checking and registration
+/// Notifier for managing username availability checking and registration
 ///
 /// Provides debounced availability checking to avoid excessive API calls
 /// and handles the full registration flow including reserved name detection.
 
-@ProviderFor(UsernameController)
-const usernameControllerProvider = UsernameControllerProvider._();
+@ProviderFor(UsernameNotifier)
+const usernameProvider = UsernameNotifierProvider._();
 
-/// Controller for managing username availability checking and registration
+/// Notifier for managing username availability checking and registration
 ///
 /// Provides debounced availability checking to avoid excessive API calls
 /// and handles the full registration flow including reserved name detection.
-final class UsernameControllerProvider
-    extends $NotifierProvider<UsernameController, UsernameState> {
-  /// Controller for managing username availability checking and registration
+final class UsernameNotifierProvider
+    extends $NotifierProvider<UsernameNotifier, UsernameState> {
+  /// Notifier for managing username availability checking and registration
   ///
   /// Provides debounced availability checking to avoid excessive API calls
   /// and handles the full registration flow including reserved name detection.
-  const UsernameControllerProvider._()
+  const UsernameNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'usernameControllerProvider',
+        name: r'usernameProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$usernameControllerHash();
+  String debugGetCreateSourceHash() => _$usernameNotifierHash();
 
   @$internal
   @override
-  UsernameController create() => UsernameController();
+  UsernameNotifier create() => UsernameNotifier();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(UsernameState value) {
@@ -53,15 +53,14 @@ final class UsernameControllerProvider
   }
 }
 
-String _$usernameControllerHash() =>
-    r'0b7872db99408da64a69e41dcbd8bfedb25e6181';
+String _$usernameNotifierHash() => r'7d349040e0795d2183870a19716dfb0dbd26cb31';
 
-/// Controller for managing username availability checking and registration
+/// Notifier for managing username availability checking and registration
 ///
 /// Provides debounced availability checking to avoid excessive API calls
 /// and handles the full registration flow including reserved name detection.
 
-abstract class _$UsernameController extends $Notifier<UsernameState> {
+abstract class _$UsernameNotifier extends $Notifier<UsernameState> {
   UsernameState build();
   @$mustCallSuper
   @override

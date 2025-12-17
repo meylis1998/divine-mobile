@@ -14,7 +14,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:openvine/models/user_profile.dart' as profile_model;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/username_controller.dart';
+import 'package:openvine/providers/username_notifier.dart';
 import 'package:openvine/state/username_state.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -146,7 +146,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     // Watch username controller state for reactive updates
-    final usernameState = ref.watch(usernameControllerProvider);
+    final usernameState = ref.watch(usernameProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -359,7 +359,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           onFieldSubmitted: (_) =>
                               FocusScope.of(context).nextFocus(),
                           onChanged: (value) => ref
-                              .read(usernameControllerProvider.notifier)
+                              .read(usernameProvider.notifier)
                               .onUsernameChanged(value),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -857,13 +857,13 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
 
       // Handle NIP-05 registration if username is available
-      final usernameState = ref.read(usernameControllerProvider);
+      final usernameState = ref.read(usernameProvider);
       if (usernameState.canRegister) {
         try {
           final relays = nostrService.connectedRelays.toList();
 
           final registrationResult = await ref
-              .read(usernameControllerProvider.notifier)
+              .read(usernameProvider.notifier)
               .registerUsername(
                 pubkey: authService.currentPublicKeyHex!,
                 relays: relays,

@@ -1,5 +1,5 @@
 // ABOUTME: State class for username availability checking and registration
-// ABOUTME: Used by UsernameController to track check/register status
+// ABOUTME: Used by UsernameNotifier to track check/register status
 
 import 'package:equatable/equatable.dart';
 

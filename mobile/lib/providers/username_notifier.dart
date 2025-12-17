@@ -1,4 +1,4 @@
-// ABOUTME: Riverpod controller for username availability checking and registration
+// ABOUTME: Riverpod notifier for username availability checking and registration
 // ABOUTME: Handles debounced availability checks and registration via UsernameRepository
 
 import 'dart:async';
@@ -11,14 +11,14 @@ import 'package:openvine/state/username_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'username_controller.g.dart';
+part 'username_notifier.g.dart';
 
-/// Controller for managing username availability checking and registration
+/// Notifier for managing username availability checking and registration
 ///
 /// Provides debounced availability checking to avoid excessive API calls
 /// and handles the full registration flow including reserved name detection.
 @riverpod
-class UsernameController extends _$UsernameController {
+class UsernameNotifier extends _$UsernameNotifier {
   Timer? _debounceTimer;
   static const _debounceDuration = Duration(milliseconds: 500);
 
@@ -81,7 +81,7 @@ class UsernameController extends _$UsernameController {
 
     Log.debug(
       'Checking availability for username: $username',
-      name: 'UsernameController',
+      name: 'UsernameNotifier',
       category: LogCategory.api,
     );
 
@@ -94,14 +94,14 @@ class UsernameController extends _$UsernameController {
           state = state.copyWith(status: UsernameCheckStatus.available);
           Log.debug(
             'Username $username is available',
-            name: 'UsernameController',
+            name: 'UsernameNotifier',
             category: LogCategory.api,
           );
         case UsernameAvailability.taken:
           state = state.copyWith(status: UsernameCheckStatus.taken);
           Log.debug(
             'Username $username is taken',
-            name: 'UsernameController',
+            name: 'UsernameNotifier',
             category: LogCategory.api,
           );
         case UsernameAvailability.error:
@@ -111,7 +111,7 @@ class UsernameController extends _$UsernameController {
           );
           Log.error(
             'Failed to check username availability',
-            name: 'UsernameController',
+            name: 'UsernameNotifier',
             category: LogCategory.api,
           );
       }
@@ -129,7 +129,7 @@ class UsernameController extends _$UsernameController {
     if (!state.canRegister) {
       Log.warning(
         'Attempted to register unavailable username: ${state.username}',
-        name: 'UsernameController',
+        name: 'UsernameNotifier',
         category: LogCategory.api,
       );
       return const UsernameRegistrationResult(
@@ -142,7 +142,7 @@ class UsernameController extends _$UsernameController {
 
     Log.info(
       'Registering username: ${state.username}',
-      name: 'UsernameController',
+      name: 'UsernameNotifier',
       category: LogCategory.api,
     );
 
@@ -156,7 +156,7 @@ class UsernameController extends _$UsernameController {
     if (result.isReserved) {
       Log.info(
         'Username ${state.username} is reserved',
-        name: 'UsernameController',
+        name: 'UsernameNotifier',
         category: LogCategory.api,
       );
       state = state.copyWith(
@@ -166,7 +166,7 @@ class UsernameController extends _$UsernameController {
     } else if (result.isTaken) {
       Log.info(
         'Username ${state.username} is taken',
-        name: 'UsernameController',
+        name: 'UsernameNotifier',
         category: LogCategory.api,
       );
       state = state.copyWith(
@@ -176,7 +176,7 @@ class UsernameController extends _$UsernameController {
     } else if (result.isSuccess) {
       Log.info(
         'Username ${state.username} registered successfully',
-        name: 'UsernameController',
+        name: 'UsernameNotifier',
         category: LogCategory.api,
       );
     }

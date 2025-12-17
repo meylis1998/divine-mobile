@@ -1,11 +1,11 @@
-// ABOUTME: Unit tests for UsernameController Riverpod notifier
+// ABOUTME: Unit tests for UsernameNotifier Riverpod notifier
 // ABOUTME: Tests availability checking and registration flow
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/username_controller.dart';
+import 'package:openvine/providers/username_notifier.dart';
 import 'package:openvine/repositories/username_repository.dart';
 import 'package:openvine/services/nip05_service.dart';
 import 'package:openvine/state/username_state.dart';
@@ -30,18 +30,18 @@ void main() {
     return container;
   }
 
-  group('UsernameController', () {
+  group('UsernameNotifier', () {
     group('onUsernameChanged', () {
       test('sets idle state for empty username', () {
         final container = createContainer();
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.idle);
         expect(state.username, '');
       });
@@ -51,11 +51,11 @@ void main() {
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('ab');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.idle);
         expect(state.username, 'ab');
       });
@@ -65,11 +65,11 @@ void main() {
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('user@name');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.error);
         expect(state.errorMessage, 'Invalid format');
       });
@@ -79,11 +79,11 @@ void main() {
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('validuser');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.checking);
         expect(state.username, 'validuser');
       });
@@ -93,11 +93,11 @@ void main() {
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('ValidUser');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.username, 'validuser');
       });
 
@@ -118,18 +118,18 @@ void main() {
 
           // Keep a listener active to prevent auto-dispose
           final sub = container.listen(
-            usernameControllerProvider,
+            usernameProvider,
             (_, __) {},
           );
 
           // Act - trigger onUsernameChanged which starts debounce timer
           container
-              .read(usernameControllerProvider.notifier)
+              .read(usernameProvider.notifier)
               .onUsernameChanged('validuser');
 
           // Initially should be checking
           expect(
-            container.read(usernameControllerProvider).status,
+            container.read(usernameProvider).status,
             UsernameCheckStatus.checking,
           );
 
@@ -138,7 +138,7 @@ void main() {
 
           // Assert - state should have updated to available after timer fired
           expect(
-            container.read(usernameControllerProvider).status,
+            container.read(usernameProvider).status,
             UsernameCheckStatus.available,
           );
 
@@ -154,11 +154,11 @@ void main() {
 
         // Act
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('  validuser  ');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.username, 'validuser');
       });
     });
@@ -174,16 +174,16 @@ void main() {
 
         // Set up checking state first (simulating onUsernameChanged)
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('validuser');
 
         // Act - call checkAvailability directly (bypassing debounce timer)
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('validuser');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.available);
         expect(state.isAvailable, true);
         expect(state.canRegister, true);
@@ -201,16 +201,16 @@ void main() {
 
         // Set up checking state first
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('takenuser');
 
         // Act
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('takenuser');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.taken);
         expect(state.isTaken, true);
         expect(state.canRegister, false);
@@ -226,16 +226,16 @@ void main() {
 
         // Set up checking state first
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('erroruser');
 
         // Act
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('erroruser');
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.error);
         expect(state.hasError, true);
         expect(state.errorMessage, 'Failed to check availability');
@@ -251,21 +251,21 @@ void main() {
 
         // Set up state for 'olduser'
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('olduser');
 
         // Change to different username before check completes
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('newuser');
 
         // Act - check for old username
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('olduser');
 
         // Assert - state should still be for 'newuser' (checking), not 'olduser'
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.username, 'newuser');
         expect(state.status, UsernameCheckStatus.checking);
       });
@@ -281,7 +281,7 @@ void main() {
 
         // State is idle (not available)
         final result = await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .registerUsername(pubkey: validPubkey, relays: relays);
 
         expect(result.status, UsernameRegistrationStatus.error);
@@ -309,18 +309,18 @@ void main() {
 
         // Get to available state
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('newuser');
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('newuser');
 
         // Verify available state
-        expect(container.read(usernameControllerProvider).isAvailable, true);
+        expect(container.read(usernameProvider).isAvailable, true);
 
         // Act
         final result = await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .registerUsername(pubkey: validPubkey, relays: relays);
 
         // Assert
@@ -357,20 +357,20 @@ void main() {
 
         // Get to available state
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('reserved');
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('reserved');
 
         // Act
         final result = await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .registerUsername(pubkey: validPubkey, relays: relays);
 
         // Assert
         expect(result.isReserved, true);
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.isReserved, true);
         expect(state.status, UsernameCheckStatus.reserved);
       });
@@ -397,20 +397,20 @@ void main() {
 
         // Get to available state
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('justtaken');
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('justtaken');
 
         // Act
         final result = await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .registerUsername(pubkey: validPubkey, relays: relays);
 
         // Assert
         expect(result.isTaken, true);
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.isTaken, true);
         expect(state.status, UsernameCheckStatus.taken);
       });
@@ -426,23 +426,23 @@ void main() {
         ).thenAnswer((_) async => UsernameAvailability.available);
 
         container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .onUsernameChanged('testuser');
         await container
-            .read(usernameControllerProvider.notifier)
+            .read(usernameProvider.notifier)
             .checkAvailability('testuser');
 
         // Verify we're not in initial state
         expect(
-          container.read(usernameControllerProvider).status,
+          container.read(usernameProvider).status,
           UsernameCheckStatus.available,
         );
 
         // Act
-        container.read(usernameControllerProvider.notifier).clear();
+        container.read(usernameProvider.notifier).clear();
 
         // Assert
-        final state = container.read(usernameControllerProvider);
+        final state = container.read(usernameProvider);
         expect(state.status, UsernameCheckStatus.idle);
         expect(state.username, '');
         expect(state.errorMessage, isNull);
