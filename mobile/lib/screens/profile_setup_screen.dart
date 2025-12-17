@@ -79,7 +79,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
               // Extract username from NIP-05 if present
               if (profile.nip05 != null &&
-                  profile.nip05!.endsWith('@openvine.co')) {
+                  (profile.nip05!.endsWith('@divine.video') ||
+                      profile.nip05!.endsWith('@openvine.co'))) {
                 final username = profile.nip05!.split('@')[0];
                 _nip05Controller.text = username;
               }
@@ -320,6 +321,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         TextFormField(
                           controller: _nip05Controller,
                           style: const TextStyle(color: Colors.white),
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           decoration: InputDecoration(
                             labelText: 'Username (Optional)',
                             labelStyle: const TextStyle(color: Colors.grey),
