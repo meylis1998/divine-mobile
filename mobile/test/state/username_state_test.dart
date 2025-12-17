@@ -102,7 +102,19 @@ void main() {
     });
 
     group('copyWith', () {
-      test('preserves unchanged values', () {
+      test('preserves status when only username changes', () {
+        const original = UsernameState(
+          username: 'test',
+          status: UsernameCheckStatus.available,
+        );
+
+        final copied = original.copyWith(username: 'newuser');
+
+        expect(copied.username, 'newuser');
+        expect(copied.status, UsernameCheckStatus.available);
+      });
+
+      test('preserves username when only status changes', () {
         const original = UsernameState(
           username: 'test',
           status: UsernameCheckStatus.available,

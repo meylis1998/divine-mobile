@@ -101,6 +101,54 @@ void main() {
         expect(state.username, 'validuser');
       });
 
+      test(
+        'debounce timer triggers checkAvailability after delay',
+        () async {
+          // Create container without auto-dispose to let timer fire
+          final container = ProviderContainer(
+            overrides: [
+              usernameRepositoryProvider.overrideWithValue(usernameRepository),
+            ],
+          );
+
+          // Arrange
+          when(
+            () => usernameRepository.checkAvailability('validuser'),
+          ).thenAnswer((_) async => UsernameAvailability.available);
+
+          // Keep a listener active to prevent auto-dispose
+          final sub = container.listen(
+            usernameControllerProvider,
+            (_, __) {},
+          );
+
+          // Act - trigger onUsernameChanged which starts debounce timer
+          container
+              .read(usernameControllerProvider.notifier)
+              .onUsernameChanged('validuser');
+
+          // Initially should be checking
+          expect(
+            container.read(usernameControllerProvider).status,
+            UsernameCheckStatus.checking,
+          );
+
+          // Wait for debounce timer (500ms) plus buffer for async completion
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+
+          // Assert - state should have updated to available after timer fired
+          expect(
+            container.read(usernameControllerProvider).status,
+            UsernameCheckStatus.available,
+          );
+
+          // Clean up
+          sub.close();
+          container.dispose();
+        },
+        timeout: const Timeout(Duration(seconds: 5)),
+      );
+
       test('trims whitespace from username', () {
         final container = createContainer();
 
