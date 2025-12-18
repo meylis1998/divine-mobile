@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import 'package:openvine/widgets/login/keycast_login_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
@@ -93,6 +94,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       onAgreedToTermsChanged: (value) =>
                           setState(() => _agreedToTerms = value),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    KeycastLoginButton(enabled: _canProceed),
 
                     const SizedBox(height: 16),
 
