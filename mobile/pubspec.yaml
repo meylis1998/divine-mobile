@@ -104,7 +104,13 @@ dependencies:
   # Nostr Key Manager - Secure key management with hardware-backed storage
   nostr_key_manager:
     path: packages/nostr_key_manager
-  
+
+  keycast_flutter:
+    git:
+      url: https://github.com/divinevideo/keycast_flutter_demo.git
+      path: packages/keycast_flutter
+      ref: master
+
   # Logging
   logging: ^1.2.0
 

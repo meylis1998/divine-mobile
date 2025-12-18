@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -37,6 +38,7 @@ import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
+import 'package:openvine/services/keycast_auth_listener.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
@@ -219,6 +221,44 @@ GeoBlockingService geoBlockingService(Ref ref) {
 @Riverpod(keepAlive: true)
 SecureKeyStorage secureKeyStorage(Ref ref) {
   return SecureKeyStorage();
+}
+
+// =============================================================================
+// KEYCAST & OAUTH SERVICES
+// =============================================================================
+
+/// OAuth configuration for the Keycast server
+@Riverpod(keepAlive: true)
+OAuthConfig oauthConfig(Ref ref) {
+  return const OAuthConfig(
+    serverUrl: 'https://login.divine.video',
+    clientId: 'divine-mobile',
+    redirectUri: 'https://login.divine.video/app/callback',
+  );
+}
+
+/// Keycast OAuth client for handling PKCE flows
+@Riverpod(keepAlive: true)
+KeycastOAuth oauthClient(Ref ref) {
+  // The generator creates 'oauthConfigProvider' from the function above
+  final config = ref.watch(oauthConfigProvider);
+  return KeycastOAuth(config: config);
+}
+
+@Riverpod(keepAlive: true)
+KeycastAuthListener keycastAuthListener(Ref ref) {
+  final listener = KeycastAuthListener(ref);
+  ref.onDispose(() => listener.dispose());
+  return listener;
+}
+
+/// Holds the PKCE verifier while the user is in the browser.
+@Riverpod(keepAlive: true)
+class PendingVerifier extends _$PendingVerifier {
+  @override
+  String? build() => null;
+
+  void set(String? verifier) => state = verifier;
 }
 
 /// Web authentication service (for web platform only)
