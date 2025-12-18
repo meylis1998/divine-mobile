@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class KeycastLoginButton extends ConsumerWidget {
   const KeycastLoginButton({super.key, required this.enabled});
@@ -8,26 +10,24 @@ class KeycastLoginButton extends ConsumerWidget {
 
   Future<void> _handleKeycastLogin(BuildContext context, WidgetRef ref) async {
     try {
-      throw 'Keycast login not implemented yet';
-      // final oauth = ref.read(oauthClientProvider);
+      final oauth = ref.read(oauthClientProvider);
 
-      // // 1. Generate Auth URL and PKCE verifier
-      // final (url, verifier) = oauth.getAuthorizationUrl(
-      //   scope: 'policy:social',
-      //   defaultRegister: true,
-      // );
+      // Generate Auth URL and PKCE verifier
+      final (url, verifier) = await oauth.getAuthorizationUrl(
+        scope: 'policy:social',
+        defaultRegister: true,
+      );
 
-      // // 2. Store verifier for token exchange when the app resumes
-      // // Assuming pendingVerifierProvider is defined in your app_providers.dart
-      // ref.read(pendingVerifierProvider.notifier).state = verifier;
+      // Store verifier for token exchange when the app resumes
+      ref.read(pendingVerifierProvider.notifier).set(verifier);
 
-      // // 3. Launch the system browser
-      // final uri = Uri.parse(url);
-      // if (await canLaunchUrl(uri)) {
-      //   await launchUrl(uri, mode: LaunchMode.externalApplication);
-      // } else {
-      //   throw 'Could not launch browser';
-      // }
+      // Launch the system browser
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch browser';
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

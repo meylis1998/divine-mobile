@@ -2,8 +2,8 @@
 // ABOUTME: Handles Nostr identity creation, import, and session management with secure storage
 
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer, SecureKeyStorage;
@@ -95,6 +95,7 @@ class AuthService {
   SecureKeyContainer? _currentKeyContainer;
   UserProfile? _currentProfile;
   String? _lastError;
+  KeycastRpc? _rpcSigner;
 
   // Streaming controllers for reactive auth state
   final StreamController<AuthState> _authStateController =
@@ -423,6 +424,73 @@ class AuthService {
     }
   }
 
+  /// Sign in using a Keycast Session (OAuth 2.0 flow)
+  /// Fulfills TC-AUTH-019
+  Future<void> signInWithKeycast(KeycastSession session) async {
+    Log.debug(
+      'Integrating Keycast session into AuthService',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
+
+    _setAuthState(AuthState.authenticating);
+    _lastError = null;
+
+    try {
+      // 1. Prepare RPC Signer
+      // Note: In a production refactor, the config should be passed via constructor
+      // or a provider, but for now we'll use the diVine defaults.
+      const config = OAuthConfig(
+        serverUrl: 'https://login.divine.video',
+        clientId: 'divine-mobile',
+        redirectUri: 'https://login.divine.video/app/callback',
+      );
+
+      _rpcSigner = KeycastRpc.fromSession(config, session);
+
+      // 2. Fetch the public key from the Keycast server
+      final publicKeyHex = await _rpcSigner?.getPublicKey();
+      if (publicKeyHex == null) {
+        throw Exception('Could not retrieve public key from Keycast server');
+      }
+
+      // 3. Update internal state
+      // Note: Since SecureKeyContainer is strictly for local keys,
+      // you may need to update your NostrClient to accept this RPC signer.
+      // For now, we set the profile so the UI can update.
+      _currentProfile = UserProfile(
+        npub: NostrKeyUtils.encodePubKey(publicKeyHex),
+        publicKeyHex: publicKeyHex,
+        displayName: 'Keycast User', // Or fetch from session if available
+      );
+
+      // 4. Persistence
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user_pubkey_hex', publicKeyHex);
+      await prefs.setBool('is_keycast_account', true); // Helper flag
+
+      // 5. Finalize state
+      // Note: We bypass awaitingTosAcceptance because the Keycast signup
+      // flow includes TOS agreement (TC-AUTH-024)
+      _setAuthState(AuthState.authenticated);
+      _profileController.add(_currentProfile);
+
+      Log.info(
+        '✅ Keycast session successfully integrated for $publicKeyHex',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+    } catch (e) {
+      Log.error(
+        'Failed to integrate Keycast session: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      _lastError = 'Keycast integration failed: $e';
+      _setAuthState(AuthState.unauthenticated);
+    }
+  }
+
   /// Sign out the current user
   Future<void> signOut({bool deleteKeys = false}) async {
     Log.debug(
@@ -529,6 +597,7 @@ class AuthService {
   }
 
   /// Create and sign a Nostr event
+  /// Handles both local SecureKeyStorage and remote KeycastRpc signing
   Future<Event?> createAndSignEvent({
     required int kind,
     required String content,
@@ -545,183 +614,144 @@ class AuthService {
     }
 
     try {
-      return await _keyStorage.withPrivateKey<Event?>((privateKey) {
-        // Create event with current user's public key
-        // Use appropriate timestamp backdating based on event kind
-        final driftTolerance = NostrTimestamp.getDriftToleranceForKind(kind);
+      // 1. Prepare event metadata and tags
+      // CRITICAL: divine relays require specific tags for storage
+      final eventTags = List<List<String>>.from(tags ?? []);
 
-        // CRITICAL: divine relays require specific tags for storage
-        final eventTags = List<List<String>>.from(tags ?? []);
+      // CRITICAL: Kind 0 events require expiration tag FIRST (matching Python script order)
+      if (kind == 0) {
+        final expirationTimestamp =
+            (DateTime.now().millisecondsSinceEpoch ~/ 1000) +
+            (72 * 60 * 60); // 72 hours
+        eventTags.add(['expiration', expirationTimestamp.toString()]);
+      }
 
-        // CRITICAL: Kind 0 events require expiration tag FIRST (matching Python script order)
-        if (kind == 0) {
-          final expirationTimestamp =
-              (DateTime.now().millisecondsSinceEpoch ~/ 1000) +
-              (72 * 60 * 60); // 72 hours
-          eventTags.add(['expiration', expirationTimestamp.toString()]);
-        }
+      // Create the unsigned event object
+      final driftTolerance = NostrTimestamp.getDriftToleranceForKind(kind);
+      final event = Event(
+        _currentKeyContainer!.publicKeyHex,
+        kind,
+        eventTags,
+        content,
+        createdAt: NostrTimestamp.now(driftTolerance: driftTolerance),
+      );
 
-        final event = Event(
-          _currentKeyContainer!.publicKeyHex,
-          kind,
-          eventTags,
-          content,
-          createdAt: NostrTimestamp.now(driftTolerance: driftTolerance),
-        );
+      // DEBUG: Log event details before signing
+      Log.info(
+        '🔍 Event BEFORE signing:',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - ID: ${event.id}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Pubkey: ${event.pubkey}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Kind: ${event.kind}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Created at: ${event.createdAt}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Tags: ${event.tags}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Content: ${event.content}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Signature (before): ${event.sig}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Is valid (before): ${event.isValid}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - Is signed (before): ${event.isSigned}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
-        // DEBUG: Log event details before signing
-        Log.info(
-          '🔍 Event BEFORE signing:',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - ID: ${event.id}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Pubkey: ${event.pubkey}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Kind: ${event.kind}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Created at: ${event.createdAt}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Tags: ${event.tags}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Content: ${event.content}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Signature (before): ${event.sig}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Is valid (before): ${event.isValid}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Is signed (before): ${event.isSigned}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
+      // 2. Branch Signing Logic (Local vs Keycast RPC)
+      Event? signedEvent;
 
-        // CRITICAL DEBUG: Log the exact JSON array used for ID calculation
-        final idCalculationArray = [
-          0,
-          event.pubkey,
-          event.createdAt,
-          event.kind,
-          event.tags,
-          event.content,
-        ];
-        final idCalculationJson = jsonEncode(idCalculationArray);
-        Log.info(
-          '📊 CRITICAL: ID calculation JSON array:',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '   Raw Array: $idCalculationArray',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '   JSON: $idCalculationJson',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '   JSON Length: ${idCalculationJson.length} chars',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
+      if (_rpcSigner != null) {
+        // --- KEYCAST RPC PATH (TC-AUTH-019) ---
+        Log.info('🚀 Signing via Keycast Remote RPC', name: 'AuthService');
+        signedEvent = await _rpcSigner!.signEvent(event);
+      } else {
+        // --- LOCAL SECURE STORAGE PATH ---
+        Log.info('🔐 Signing via Local Secure Storage', name: 'AuthService');
+        signedEvent = await _keyStorage.withPrivateKey<Event?>((privateKey) {
+          event.sign(privateKey);
+          return event;
+        }, biometricPrompt: biometricPrompt);
+      }
 
-        // Sign the event
-        event.sign(privateKey);
+      // 3. Post-Signing Validation and Debugging
+      if (signedEvent == null) {
+        Log.error(
+          '❌ Signing failed: Signer returned null',
+          name: 'AuthService',
+        );
+        return null;
+      }
 
-        // DEBUG: Log event details after signing
-        Log.info(
-          '🔍 Event AFTER signing:',
+      // CRITICAL: Verify signature is actually valid
+      if (!signedEvent.isSigned) {
+        Log.error(
+          '❌ Event signature validation FAILED!',
           name: 'AuthService',
           category: LogCategory.auth,
         );
-        Log.info(
-          '  - ID (should be same): ${event.id}',
+        Log.error(
+          '   This would cause relay to accept but not store the event',
           name: 'AuthService',
           category: LogCategory.auth,
         );
-        Log.info(
-          '  - Signature (after): ${event.sig}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Is valid (after): ${event.isValid}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        Log.info(
-          '  - Is signed (after): ${event.isSigned}',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
+        return null;
+      }
 
-        // CRITICAL: Verify signature is actually valid
-        if (!event.isSigned) {
-          Log.error(
-            '❌ Event signature validation FAILED!',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-          Log.error(
-            '   This would cause relay to accept but not store the event',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-          return null;
-        }
-
-        if (!event.isValid) {
-          Log.error(
-            '❌ Event structure validation FAILED!',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-          Log.error(
-            '   Event ID does not match computed hash',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-          return null;
-        }
-
-        Log.info(
-          '✅ Event signature and structure validation PASSED',
+      if (!signedEvent.isValid) {
+        Log.error(
+          '❌ Event structure validation FAILED!',
           name: 'AuthService',
           category: LogCategory.auth,
         );
+        Log.error(
+          '   Event ID does not match computed hash',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        return null;
+      }
 
-        return event;
-      }, biometricPrompt: biometricPrompt);
+      Log.info(
+        '✅ Event signed and validated: ${signedEvent.id}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+
+      return signedEvent;
     } catch (e) {
       Log.error(
-        'Failed to create event: $e',
+        'Failed to create or sign event: $e',
         name: 'AuthService',
         category: LogCategory.auth,
       );

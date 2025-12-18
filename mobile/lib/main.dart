@@ -462,24 +462,26 @@ class _DivineAppState extends ConsumerState<DivineApp> {
       if (!_servicesInitialized) {
         _servicesInitialized = true;
         _initializeServices();
-        _initializeDeepLinkService();
+        _initializeDeepLinkServices();
       }
     });
   }
 
-  void _initializeDeepLinkService() {
+  void _initializeDeepLinkServices() {
     Log.info(
-      '🔗 Initializing deep link service...',
+      '🔗 Initializing link services...',
       name: 'DeepLinkHandler',
       category: LogCategory.ui,
     );
 
-    // Initialize the deep link service
-    final service = ref.read(deepLinkServiceProvider);
-    service.initialize();
+    // Initialize the deep link service for video content
+    ref.read(deepLinkServiceProvider).initialize();
+
+    // Initialize the deep link service for keycast authentication
+    ref.read(keycastAuthListenerProvider).initialize();
 
     Log.info(
-      '✅ Deep link service initialized',
+      '✅ Link services initialized',
       name: 'DeepLinkHandler',
       category: LogCategory.ui,
     );
