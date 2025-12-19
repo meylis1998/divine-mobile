@@ -225,6 +225,7 @@ class AuthService {
       category: LogCategory.auth,
     );
 
+    _persistTosAndAgeConfirmations();
     _setAuthState(AuthState.authenticating);
     _lastError = null;
 
@@ -278,6 +279,7 @@ class AuthService {
       name: 'AuthService',
       category: LogCategory.auth,
     );
+    _persistTosAndAgeConfirmations();
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -391,16 +393,19 @@ class AuthService {
     }
   }
 
+  Future<void> _persistTosAndAgeConfirmations() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'terms_accepted_at',
+      DateTime.now().toIso8601String(),
+    );
+    await prefs.setBool('age_verified_16_plus', true);
+  }
+
   /// Accept Terms of Service - transitions to authenticated state
   Future<void> acceptTermsOfService() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'terms_accepted_at',
-        DateTime.now().toIso8601String(),
-      );
-      await prefs.setBool('age_verified_16_plus', true);
-
+      await _persistTosAndAgeConfirmations();
       // If unauthenticated (e.g., after logout), re-initialize to load existing keys
       if (_authState == AuthState.unauthenticated) {
         await initialize();
@@ -432,6 +437,8 @@ class AuthService {
       name: 'AuthService',
       category: LogCategory.auth,
     );
+
+    await _persistTosAndAgeConfirmations();
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -479,6 +486,10 @@ class AuthService {
       );
       _setAuthState(AuthState.authenticated);
       _profileController.add(_currentProfile);
+
+      final keyContainer = SecureKeyContainer.fromPublicKey(publicKeyHex);
+
+      await _setupUserSession(keyContainer);
 
       Log.info(
         '✅ Keycast session successfully integrated for $publicKeyHex',
