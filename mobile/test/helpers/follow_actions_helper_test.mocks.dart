@@ -5,9 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i3;
 
+import 'package:keycast_flutter/keycast_flutter.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:nostr_sdk/event.dart' as _i5;
-import 'package:openvine/providers/optimistic_follow_provider.dart' as _i6;
+import 'package:nostr_sdk/event.dart' as _i6;
+import 'package:openvine/providers/optimistic_follow_provider.dart' as _i7;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/user_profile_service.dart' as _i4;
 
@@ -174,6 +175,15 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i3.Future<void>);
 
   @override
+  _i3.Future<void> signInWithKeycast(_i5.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
   _i3.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -203,7 +213,7 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i3.Future<String?>);
 
   @override
-  _i3.Future<_i5.Event?> createAndSignEvent({
+  _i3.Future<_i6.Event?> createAndSignEvent({
     required int? kind,
     required String? content,
     List<List<String>>? tags,
@@ -216,9 +226,9 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
               #tags: tags,
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i3.Future<_i5.Event?>.value(),
+            returnValue: _i3.Future<_i6.Event?>.value(),
           )
-          as _i3.Future<_i5.Event?>);
+          as _i3.Future<_i6.Event?>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -231,7 +241,7 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockOptimisticFollowMethods extends _i1.Mock
-    implements _i6.OptimisticFollowMethods {
+    implements _i7.OptimisticFollowMethods {
   MockOptimisticFollowMethods() {
     _i1.throwOnMissingStub(this);
   }

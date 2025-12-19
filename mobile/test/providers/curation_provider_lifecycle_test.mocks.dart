@@ -6,6 +6,7 @@
 import 'dart:async' as _i6;
 import 'dart:ui' as _i10;
 
+import 'package:keycast_flutter/keycast_flutter.dart' as _i16;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
 import 'package:nostr_client/nostr_client.dart' as _i4;
@@ -13,7 +14,7 @@ import 'package:nostr_client/src/models/models.dart' as _i2;
 import 'package:nostr_sdk/nostr_sdk.dart' as _i7;
 import 'package:openvine/models/video_event.dart' as _i9;
 import 'package:openvine/services/age_verification_service.dart' as _i12;
-import 'package:openvine/services/analytics_api_service.dart' as _i16;
+import 'package:openvine/services/analytics_api_service.dart' as _i17;
 import 'package:openvine/services/auth_service.dart' as _i3;
 import 'package:openvine/services/content_blocklist_service.dart' as _i11;
 import 'package:openvine/services/social_service.dart' as _i14;
@@ -1710,6 +1711,15 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as _i6.Future<void>);
 
   @override
+  _i6.Future<void> signInWithKeycast(_i16.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
   _i6.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -1767,7 +1777,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAnalyticsApiService extends _i1.Mock
-    implements _i16.AnalyticsApiService {
+    implements _i17.AnalyticsApiService {
   MockAnalyticsApiService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1791,7 +1801,7 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i6.Future<List<_i9.VideoEvent>>);
 
   @override
-  _i6.Future<List<_i16.TrendingHashtag>> getTrendingHashtags({
+  _i6.Future<List<_i17.TrendingHashtag>> getTrendingHashtags({
     String? timeWindow = '24h',
     int? limit = 50,
     bool? forceRefresh = false,
@@ -1802,14 +1812,14 @@ class MockAnalyticsApiService extends _i1.Mock
               #limit: limit,
               #forceRefresh: forceRefresh,
             }),
-            returnValue: _i6.Future<List<_i16.TrendingHashtag>>.value(
-              <_i16.TrendingHashtag>[],
+            returnValue: _i6.Future<List<_i17.TrendingHashtag>>.value(
+              <_i17.TrendingHashtag>[],
             ),
           )
-          as _i6.Future<List<_i16.TrendingHashtag>>);
+          as _i6.Future<List<_i17.TrendingHashtag>>);
 
   @override
-  _i6.Future<List<_i16.TopCreator>> getTopCreators({
+  _i6.Future<List<_i17.TopCreator>> getTopCreators({
     String? timeWindow = '7d',
     int? limit = 50,
     bool? forceRefresh = false,
@@ -1820,11 +1830,11 @@ class MockAnalyticsApiService extends _i1.Mock
               #limit: limit,
               #forceRefresh: forceRefresh,
             }),
-            returnValue: _i6.Future<List<_i16.TopCreator>>.value(
-              <_i16.TopCreator>[],
+            returnValue: _i6.Future<List<_i17.TopCreator>>.value(
+              <_i17.TopCreator>[],
             ),
           )
-          as _i6.Future<List<_i16.TopCreator>>);
+          as _i6.Future<List<_i17.TopCreator>>);
 
   @override
   _i6.Future<List<_i9.VideoEvent>> getRelatedVideos({

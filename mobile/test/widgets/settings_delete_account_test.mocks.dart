@@ -5,6 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
+import 'package:keycast_flutter/keycast_flutter.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:nostr_sdk/event.dart' as _i5;
 import 'package:openvine/services/account_deletion_service.dart' as _i2;
@@ -209,6 +210,15 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
   _i4.Future<void> acceptTermsOfService() =>
       (super.noSuchMethod(
             Invocation.method(#acceptTermsOfService, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> signInWithKeycast(_i7.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )

@@ -7,12 +7,13 @@ import 'dart:async' as _i6;
 import 'dart:io' as _i7;
 
 import 'package:dio/dio.dart' as _i3;
+import 'package:keycast_flutter/keycast_flutter.dart' as _i9;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i11;
+import 'package:mockito/src/dummies.dart' as _i12;
 import 'package:nostr_client/src/models/models.dart' as _i5;
-import 'package:nostr_client/src/nostr_client.dart' as _i10;
-import 'package:nostr_sdk/event.dart' as _i9;
-import 'package:nostr_sdk/nostr_sdk.dart' as _i12;
+import 'package:nostr_client/src/nostr_client.dart' as _i11;
+import 'package:nostr_sdk/event.dart' as _i10;
+import 'package:nostr_sdk/nostr_sdk.dart' as _i13;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i4;
 import 'package:openvine/services/user_profile_service.dart' as _i8;
@@ -349,6 +350,15 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i6.Future<void>);
 
   @override
+  _i6.Future<void> signInWithKeycast(_i9.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
   _i6.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -378,7 +388,7 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i6.Future<String?>);
 
   @override
-  _i6.Future<_i9.Event?> createAndSignEvent({
+  _i6.Future<_i10.Event?> createAndSignEvent({
     required int? kind,
     required String? content,
     List<List<String>>? tags,
@@ -391,9 +401,9 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
               #tags: tags,
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -405,7 +415,7 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
 /// A class which mocks [NostrClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
+class MockNostrClient extends _i1.Mock implements _i11.NostrClient {
   MockNostrClient() {
     _i1.throwOnMissingStub(this);
   }
@@ -414,7 +424,7 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
   String get publicKey =>
       (super.noSuchMethod(
             Invocation.getter(#publicKey),
-            returnValue: _i11.dummyValue<String>(
+            returnValue: _i12.dummyValue<String>(
               this,
               Invocation.getter(#publicKey),
             ),
@@ -489,7 +499,7 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
   String get primaryRelay =>
       (super.noSuchMethod(
             Invocation.getter(#primaryRelay),
-            returnValue: _i11.dummyValue<String>(
+            returnValue: _i12.dummyValue<String>(
               this,
               Invocation.getter(#primaryRelay),
             ),
@@ -506,8 +516,8 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
           as _i6.Future<void>);
 
   @override
-  _i6.Future<_i9.Event?> publishEvent(
-    _i9.Event? event, {
+  _i6.Future<_i10.Event?> publishEvent(
+    _i10.Event? event, {
     List<String>? targetRelays,
   }) =>
       (super.noSuchMethod(
@@ -516,13 +526,13 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [event],
               {#targetRelays: targetRelays},
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<List<_i9.Event>> queryEvents(
-    List<_i12.Filter>? filters, {
+  _i6.Future<List<_i10.Event>> queryEvents(
+    List<_i13.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -543,13 +553,13 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
                 #useCache: useCache,
               },
             ),
-            returnValue: _i6.Future<List<_i9.Event>>.value(<_i9.Event>[]),
+            returnValue: _i6.Future<List<_i10.Event>>.value(<_i10.Event>[]),
           )
-          as _i6.Future<List<_i9.Event>>);
+          as _i6.Future<List<_i10.Event>>);
 
   @override
   _i6.Future<_i5.CountResult> countEvents(
-    List<_i12.Filter>? filters, {
+    List<_i13.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -585,7 +595,7 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
           as _i6.Future<_i5.CountResult>);
 
   @override
-  _i6.Future<_i9.Event?> fetchEventById(
+  _i6.Future<_i10.Event?> fetchEventById(
     String? eventId, {
     String? relayUrl,
     bool? useGateway = true,
@@ -601,12 +611,12 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
                 #useCache: useCache,
               },
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<_i9.Event?> fetchProfile(
+  _i6.Future<_i10.Event?> fetchProfile(
     String? pubkey, {
     bool? useGateway = true,
     bool? useCache = true,
@@ -617,13 +627,13 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [pubkey],
               {#useGateway: useGateway, #useCache: useCache},
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Stream<_i9.Event> subscribe(
-    List<_i12.Filter>? filters, {
+  _i6.Stream<_i10.Event> subscribe(
+    List<_i13.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -644,9 +654,9 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
                 #onEose: onEose,
               },
             ),
-            returnValue: _i6.Stream<_i9.Event>.empty(),
+            returnValue: _i6.Stream<_i10.Event>.empty(),
           )
-          as _i6.Stream<_i9.Event>);
+          as _i6.Stream<_i10.Event>);
 
   @override
   _i6.Future<void> unsubscribe(String? subscriptionId) =>
@@ -717,7 +727,7 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
           as Map<String, bool>);
 
   @override
-  _i6.Future<_i9.Event?> sendLike(
+  _i6.Future<_i10.Event?> sendLike(
     String? eventId, {
     String? content,
     List<String>? tempRelays,
@@ -733,12 +743,12 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
                 #targetRelays: targetRelays,
               },
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<_i9.Event?> sendRepost(
+  _i6.Future<_i10.Event?> sendRepost(
     String? eventId, {
     String? relayAddr,
     String? content = '',
@@ -756,12 +766,12 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
                 #targetRelays: targetRelays,
               },
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<_i9.Event?> deleteEvent(
+  _i6.Future<_i10.Event?> deleteEvent(
     String? eventId, {
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -772,12 +782,12 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [eventId],
               {#tempRelays: tempRelays, #targetRelays: targetRelays},
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<_i9.Event?> deleteEvents(
+  _i6.Future<_i10.Event?> deleteEvents(
     List<String>? eventIds, {
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -788,13 +798,13 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [eventIds],
               {#tempRelays: tempRelays, #targetRelays: targetRelays},
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Future<_i9.Event?> sendContactList(
-    _i12.ContactList? contacts,
+  _i6.Future<_i10.Event?> sendContactList(
+    _i13.ContactList? contacts,
     String? content, {
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -805,12 +815,12 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [contacts, content],
               {#tempRelays: tempRelays, #targetRelays: targetRelays},
             ),
-            returnValue: _i6.Future<_i9.Event?>.value(),
+            returnValue: _i6.Future<_i10.Event?>.value(),
           )
-          as _i6.Future<_i9.Event?>);
+          as _i6.Future<_i10.Event?>);
 
   @override
-  _i6.Stream<_i9.Event> searchVideos(
+  _i6.Stream<_i10.Event> searchVideos(
     String? query, {
     List<String>? authors,
     DateTime? since,
@@ -823,21 +833,21 @@ class MockNostrClient extends _i1.Mock implements _i10.NostrClient {
               [query],
               {#authors: authors, #since: since, #until: until, #limit: limit},
             ),
-            returnValue: _i6.Stream<_i9.Event>.empty(),
+            returnValue: _i6.Stream<_i10.Event>.empty(),
           )
-          as _i6.Stream<_i9.Event>);
+          as _i6.Stream<_i10.Event>);
 
   @override
-  _i6.Stream<_i9.Event> searchUsers(String? query, {int? limit}) =>
+  _i6.Stream<_i10.Event> searchUsers(String? query, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#searchUsers, [query], {#limit: limit}),
-            returnValue: _i6.Stream<_i9.Event>.empty(),
+            returnValue: _i6.Stream<_i10.Event>.empty(),
           )
-          as _i6.Stream<_i9.Event>);
+          as _i6.Stream<_i10.Event>);
 
   @override
   _i6.Future<_i5.NostrBroadcastResult> broadcast(
-    _i9.Event? event, {
+    _i10.Event? event, {
     List<String>? targetRelays,
   }) =>
       (super.noSuchMethod(

@@ -5,16 +5,17 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
+import 'package:keycast_flutter/keycast_flutter.dart' as _i9;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i9;
+import 'package:mockito/src/dummies.dart' as _i10;
 import 'package:nostr_client/nostr_client.dart' as _i3;
 import 'package:nostr_sdk/event.dart' as _i6;
-import 'package:nostr_sdk/filter.dart' as _i10;
-import 'package:nostr_sdk/nostr_sdk.dart' as _i11;
+import 'package:nostr_sdk/filter.dart' as _i11;
+import 'package:nostr_sdk/nostr_sdk.dart' as _i12;
 import 'package:openvine/models/video_event.dart' as _i7;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/social_service.dart' as _i4;
-import 'package:openvine/services/subscription_manager.dart' as _i12;
+import 'package:openvine/services/subscription_manager.dart' as _i13;
 import 'package:openvine/services/user_profile_service.dart' as _i8;
 
 // ignore_for_file: type=lint
@@ -492,6 +493,15 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<void> signInWithKeycast(_i9.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -557,7 +567,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
   String get publicKey =>
       (super.noSuchMethod(
             Invocation.getter(#publicKey),
-            returnValue: _i9.dummyValue<String>(
+            returnValue: _i10.dummyValue<String>(
               this,
               Invocation.getter(#publicKey),
             ),
@@ -632,7 +642,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
   String get primaryRelay =>
       (super.noSuchMethod(
             Invocation.getter(#primaryRelay),
-            returnValue: _i9.dummyValue<String>(
+            returnValue: _i10.dummyValue<String>(
               this,
               Invocation.getter(#primaryRelay),
             ),
@@ -665,7 +675,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
 
   @override
   _i5.Future<List<_i6.Event>> queryEvents(
-    List<_i10.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -692,7 +702,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
 
   @override
   _i5.Future<_i3.CountResult> countEvents(
-    List<_i10.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -766,7 +776,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
 
   @override
   _i5.Stream<_i6.Event> subscribe(
-    List<_i10.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -937,7 +947,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
 
   @override
   _i5.Future<_i6.Event?> sendContactList(
-    _i11.ContactList? contacts,
+    _i12.ContactList? contacts,
     String? content, {
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -1016,7 +1026,7 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockSubscriptionManager extends _i1.Mock
-    implements _i12.SubscriptionManager {
+    implements _i13.SubscriptionManager {
   MockSubscriptionManager() {
     _i1.throwOnMissingStub(this);
   }
@@ -1052,7 +1062,7 @@ class MockSubscriptionManager extends _i1.Mock
   @override
   _i5.Future<String> createSubscription({
     required String? name,
-    required List<_i10.Filter>? filters,
+    required List<_i11.Filter>? filters,
     required dynamic Function(_i6.Event)? onEvent,
     dynamic Function(dynamic)? onError,
     dynamic Function()? onComplete,
@@ -1070,7 +1080,7 @@ class MockSubscriptionManager extends _i1.Mock
               #priority: priority,
             }),
             returnValue: _i5.Future<String>.value(
-              _i9.dummyValue<String>(
+              _i10.dummyValue<String>(
                 this,
                 Invocation.method(#createSubscription, [], {
                   #name: name,
