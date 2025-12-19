@@ -1263,6 +1263,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.3"
+  keycast_flutter:
+    dependency: "direct main"
+    description:
+      path: "packages/keycast_flutter"
+      relative: true
+    source: path
+    version: "0.1.0"
   leak_tracker:
     dependency: transitive
     description:
