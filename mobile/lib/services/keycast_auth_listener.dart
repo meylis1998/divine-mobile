@@ -42,7 +42,7 @@ class KeycastAuthListener {
 
     try {
       final oauth = ref.read(oauthClientProvider);
-      final result = await oauth.parseCallback(uri.toString());
+      final result = oauth.parseCallback(uri.toString());
 
       if (result case CallbackSuccess(code: var resultCode)) {
         // Retrieve the verifier we saved when the button was pressed
