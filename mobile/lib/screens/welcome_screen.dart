@@ -104,11 +104,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     // Import existing keys option
                     Center(
                       child: GestureDetector(
-                        onTap: () => context.push('/import-key'),
-                        child: const Text(
+                        onTap: () =>
+                            _canProceed ? context.push('/import-key') : null,
+                        child: Text(
                           'Already have keys? Import them here →',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: _canProceed
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.5),
                             fontSize: 14,
                             decoration: TextDecoration.underline,
                           ),
