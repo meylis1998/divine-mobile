@@ -6,9 +6,10 @@
 import 'dart:async' as _i5;
 import 'dart:io' as _i7;
 
+import 'package:keycast_flutter/keycast_flutter.dart' as _i10;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:models/models.dart' as _i8;
-import 'package:nostr_sdk/event.dart' as _i10;
+import 'package:nostr_sdk/event.dart' as _i11;
 import 'package:openvine/models/pending_upload.dart' as _i2;
 import 'package:openvine/models/vine_draft.dart' as _i6;
 import 'package:openvine/services/auth_service.dart' as _i3;
@@ -497,6 +498,15 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<void> signInWithKeycast(_i10.KeycastSession? session) =>
+      (super.noSuchMethod(
+            Invocation.method(#signInWithKeycast, [session]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -526,7 +536,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as _i5.Future<String?>);
 
   @override
-  _i5.Future<_i10.Event?> createAndSignEvent({
+  _i5.Future<_i11.Event?> createAndSignEvent({
     required int? kind,
     required String? content,
     List<List<String>>? tags,
@@ -539,9 +549,9 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
               #tags: tags,
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<_i10.Event?>.value(),
+            returnValue: _i5.Future<_i11.Event?>.value(),
           )
-          as _i5.Future<_i10.Event?>);
+          as _i5.Future<_i11.Event?>);
 
   @override
   void dispose() => super.noSuchMethod(
