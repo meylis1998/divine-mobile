@@ -157,6 +157,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final prefs = await SharedPreferences.getInstance();
 
+      final authState = ref.read(authServiceProvider).authState;
+      if (authState == AuthState.authenticated &&
+          (location == '/welcome' || location == '/import-key')) {
+        debugPrint('[Router] Authenticated. moving to /home/0');
+        return '/home/0';
+      }
+
       // Check TOS acceptance first (before any other routes except /welcome)
       if (!location.startsWith('/welcome') &&
           !location.startsWith('/import-key')) {
