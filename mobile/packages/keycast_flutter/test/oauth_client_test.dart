@@ -58,9 +58,7 @@ void main() {
 
       test('respects defaultRegister=false', () async {
         final oauth = KeycastOAuth(config: config);
-        final (url, _) = await oauth.getAuthorizationUrl(
-          defaultRegister: false,
-        );
+        final (url, _) = await oauth.getAuthorizationUrl(defaultRegister: false);
 
         final uri = Uri.parse(url);
         expect(uri.queryParameters['default_register'], 'false');
@@ -129,10 +127,8 @@ void main() {
     group('exchangeCode', () {
       test('exchanges code for tokens', () async {
         final mockClient = MockClient((request) async {
-          expect(
-            request.url.toString(),
-            'https://login.divine.video/api/oauth/token',
-          );
+          expect(request.url.toString(),
+              'https://login.divine.video/api/oauth/token');
           expect(request.method, 'POST');
 
           final body = jsonDecode(request.body);
