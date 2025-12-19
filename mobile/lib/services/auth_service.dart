@@ -472,6 +472,11 @@ class AuthService {
       // 5. Finalize state
       // Note: We bypass awaitingTosAcceptance because the Keycast signup
       // flow includes TOS agreement (TC-AUTH-024)
+      Log.info(
+        '✅ Keycast auth listener setting auth state to authenticated.',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _setAuthState(AuthState.authenticated);
       _profileController.add(_currentProfile);
 
