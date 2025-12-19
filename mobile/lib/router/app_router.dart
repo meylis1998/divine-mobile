@@ -199,6 +199,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         category: LogCategory.ui,
       );
 
+      final authState = ref.read(authServiceProvider).authState;
+      if (authState == AuthState.authenticated &&
+          (location == '/welcome' || location == '/import-key')) {
+        debugPrint('[Router] Authenticated. moving to /home/0');
+        return '/home/0';
+      }
+
       // Check TOS acceptance first (before any other routes except /welcome)
       if (!location.startsWith('/welcome') &&
           !location.startsWith('/import-key')) {
