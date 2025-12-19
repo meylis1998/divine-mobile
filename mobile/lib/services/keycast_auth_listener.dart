@@ -42,7 +42,7 @@ class KeycastAuthListener {
 
     try {
       final oauth = ref.read(oauthClientProvider);
-      final result = oauth.parseCallback(uri.toString());
+      final result = await oauth.parseCallback(uri.toString());
 
       if (result case CallbackSuccess(code: var resultCode)) {
         // Retrieve the verifier we saved when the button was pressed
@@ -77,6 +77,8 @@ class KeycastAuthListener {
         ref.read(pendingVerifierProvider.notifier).set(null);
 
         Log.info('✅ Keycast authentication complete', name: 'KeycastAuth');
+      } else {
+        Log.error('❌ Unexpected result $result', name: 'KeycastAuth');
       }
     } catch (e) {
       Log.error('❌ Keycast finalization failed: $e', name: 'KeycastAuth');
