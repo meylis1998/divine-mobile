@@ -548,6 +548,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/drafts',
+        name: 'drafts',
+        builder: (_, __) => const ClipLibraryScreen(),
+      ),
+      GoRoute(
+        path: '/clips',
         name: 'clips',
         builder: (_, __) => const ClipLibraryScreen(),
       ),
@@ -603,25 +608,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/edit-video',
         name: 'edit-video',
         builder: (ctx, st) {
-          // Use print for guaranteed output - debugging route builder execution
-          print('🔴🔴🔴 /edit-video ROUTE BUILDER CALLED 🔴🔴🔴');
-          Log.debug(
-            '/edit-video route builder called',
-            name: 'AppRouter',
-            category: LogCategory.ui,
-          );
-          print('🔴 extra type = ${st.extra?.runtimeType}');
-          print('🔴 extra = ${st.extra}');
           final videoPath = st.extra as String?;
           if (videoPath == null) {
-            print('🔴 videoPath is NULL - showing error screen');
             // If no video provided, show error screen
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
               body: const Center(child: Text('No video selected for editing')),
             );
           }
-          print('🔴 Creating VideoEditorScreen with path: $videoPath');
           return VideoEditorScreen(videoPath: videoPath);
         },
       ),

@@ -1125,7 +1125,24 @@ class _UniversalCameraScreenPureState
         const SizedBox(height: 12),
         // Aspect ratio toggle
         _buildAspectRatioToggle(recordingState),
+        const SizedBox(height: 12),
+        // Clips library button
+        _buildClipsLibraryButton(),
       ],
+    );
+  }
+
+  Widget _buildClipsLibraryButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        icon: const Icon(Icons.video_library, color: Colors.white, size: 28),
+        tooltip: 'View clips library',
+        onPressed: () => context.push('/clips'),
+      ),
     );
   }
 

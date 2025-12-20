@@ -136,28 +136,24 @@ class VideoExportService {
       // Build FFmpeg command - with or without crop filter and audio
       final audioArgs = muteAudio ? '-an' : '-c:a aac';
 
-      // TEMP DEBUG: Skip cropping on macOS for multi-clip to test if that's causing the hang
-      final bool skipCropOnMacOS = Platform.isMacOS && sortedClips.length > 1;
-      if (skipCropOnMacOS && effectiveAspectRatio != null) {
-        Log.warning(
-          'DEBUG: Skipping crop on macOS for multi-clip (testing hang issue)',
-          name: 'VideoExportService',
-          category: LogCategory.system,
-        );
-      }
-      final bool needsEncoding =
-          effectiveAspectRatio != null && !skipCropOnMacOS;
+      // Always re-encode when there are multiple clips to fix timestamp discontinuities
+      // Clips from library or different recording sessions have non-continuous timestamps
+      // which causes issues with -c copy mode (Non-monotonous DTS warnings, lost content)
+      final bool needsCrop = effectiveAspectRatio != null;
+      final bool needsReencode = needsCrop || sortedClips.length > 1;
 
-      if (needsEncoding) {
-        // With crop: need to re-encode
-        final cropFilter = _buildCropFilter(effectiveAspectRatio);
+      if (needsReencode) {
+        // Build crop filter only if aspect ratio is specified
+        final String? cropFilter = needsCrop
+            ? _buildCropFilter(effectiveAspectRatio)
+            : null;
 
-        // For single clip, use simple -vf filter instead of complex filter_complex
-        // This avoids macOS FFmpegKit issues with filter_complex concat
-        if (sortedClips.length == 1) {
+        // For single clip with crop, use simple -vf filter
+        if (sortedClips.length == 1 && cropFilter != null) {
           final inputPath = sortedClips.first.filePath;
+          // Limit output to 6.3 seconds max (Vine-style limit)
           final simpleCommand =
-              '-y -i "$inputPath" -vf "$cropFilter" $audioArgs ${_getVideoEncoderArgs()} "$outputPath"';
+              '-y -i "$inputPath" -vf "$cropFilter" -t 6.3 $audioArgs ${_getVideoEncoderArgs()} "$outputPath"';
 
           Log.info(
             'Single clip crop (simple -vf): $simpleCommand',
@@ -178,15 +174,14 @@ class VideoExportService {
           return outputPath;
         }
 
-        // For multiple clips: crop each individually, then concat
-        // This avoids filter_complex which blocks on macOS
+        // For multiple clips: re-encode each individually (with optional crop), then concat
+        // This fixes timestamp discontinuities and avoids filter_complex issues on macOS
         Log.info(
-          'Multi-clip crop: processing ${sortedClips.length} clips individually',
+          'Multi-clip re-encode: processing ${sortedClips.length} clips individually${needsCrop ? " with crop" : ""}',
           name: 'VideoExportService',
           category: LogCategory.system,
         );
 
-        // Step 1: Crop each clip individually
         // Use software encoding (libx264) on macOS to avoid VideoToolbox resource accumulation
         // that can block the UI thread when running many sequential encode operations
         final useSoftwareEncoder = Platform.isMacOS;
@@ -196,51 +191,55 @@ class VideoExportService {
 
         if (useSoftwareEncoder) {
           Log.info(
-            'Using software encoder (libx264) on macOS for multi-clip crop',
+            'Using software encoder (libx264) on macOS for multi-clip',
             name: 'VideoExportService',
             category: LogCategory.system,
           );
         }
 
-        final croppedPaths = <String>[];
+        final processedPaths = <String>[];
         for (var i = 0; i < sortedClips.length; i++) {
           final clip = sortedClips[i];
-          final croppedPath = '${tempDir.path}/cropped_${timestamp}_$i.mp4';
+          final processedPath = '${tempDir.path}/processed_${timestamp}_$i.mp4';
 
-          final cropCommand =
-              '-y -i "${clip.filePath}" -vf "$cropFilter" -c:a aac $encoderArgs "$croppedPath"';
+          // Build command with optional crop filter
+          final filterArg = cropFilter != null ? '-vf "$cropFilter"' : '';
+          final processCommand =
+              '-y -i "${clip.filePath}" $filterArg -c:a aac $encoderArgs "$processedPath"';
 
           Log.info(
-            'Cropping clip $i: $cropCommand',
+            'Processing clip $i: $processCommand',
             name: 'VideoExportService',
             category: LogCategory.system,
           );
 
           await FFmpegEncoder.executeCommandWithFallback(
-            command: cropCommand,
+            command: processCommand,
             logTag: 'VideoExportService',
           );
 
-          // Explicitly clear sessions after each crop to release encoder resources
-          // This prevents resource accumulation that can block the UI on macOS
+          // Explicitly clear sessions after each encode to release encoder resources
           await FFmpegEncoder.clearSessions();
 
-          croppedPaths.add(croppedPath);
+          processedPaths.add(processedPath);
         }
 
-        // Step 2: Concat cropped clips using simple concat demuxer
-        final croppedListContent = croppedPaths
+        // Concat processed clips using simple concat demuxer
+        // Timestamps are now continuous since we re-encoded each clip
+        final processedListContent = processedPaths
             .map((p) => "file '$p'")
             .join('\n');
-        final croppedListPath = '${tempDir.path}/cropped_list_$timestamp.txt';
-        await File(croppedListPath).writeAsString(croppedListContent);
+        final processedListPath =
+            '${tempDir.path}/processed_list_$timestamp.txt';
+        await File(processedListPath).writeAsString(processedListContent);
 
         final concatAudioArgs = muteAudio ? '-an' : '-c:a copy';
+        // Limit output to 6.3 seconds max (Vine-style limit)
         final concatCommand =
-            '-y -f concat -safe 0 -i "$croppedListPath" -c:v copy $concatAudioArgs "$outputPath"';
+            '-y -f concat -safe 0 -i "$processedListPath" -t 6.3 -c:v copy $concatAudioArgs "$outputPath"';
 
         Log.info(
-          'Concatenating cropped clips: $concatCommand',
+          'Concatenating processed clips: $concatCommand',
           name: 'VideoExportService',
           category: LogCategory.system,
         );
@@ -257,8 +256,8 @@ class VideoExportService {
         // Cleanup temp files
         try {
           await File(listFilePath).delete();
-          await File(croppedListPath).delete();
-          for (final path in croppedPaths) {
+          await File(processedListPath).delete();
+          for (final path in processedPaths) {
             await File(path).delete();
           }
         } catch (_) {}
@@ -272,15 +271,17 @@ class VideoExportService {
         return outputPath;
       }
 
-      // No encoding needed - just copy
+      // No encoding needed - just copy (single clip, no crop, no mute)
+      // Still apply 6.3s max limit
       String command;
       if (muteAudio) {
         // No crop but muting: need to process to strip audio
         command =
-            '-y -f concat -safe 0 -i "$listFilePath" -c:v copy $audioArgs "$outputPath"';
+            '-y -f concat -safe 0 -i "$listFilePath" -t 6.3 -c:v copy $audioArgs "$outputPath"';
       } else {
         // Without crop or mute: lossless copy
-        command = '-f concat -safe 0 -i "$listFilePath" -c copy "$outputPath"';
+        command =
+            '-y -f concat -safe 0 -i "$listFilePath" -t 6.3 -c copy "$outputPath"';
       }
 
       Log.info(

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Clip Library Navigation and UI (2025-12-20)
+
+#### Bug Fixes
+- **Fixed clip library multi-select UI** - Restored circular checkboxes and "Create Video" FAB that were lost during merge
+  - Users can now select multiple clips and navigate to Clip Manager
+  - Selection shows green circular checkmarks instead of square boxes
+
+- **Fixed navigation dead-end errors** - Changed `go()` to `push()` for clip navigation
+  - Camera → Clips now uses `push` to preserve back navigation
+  - Clips → Clip Manager now uses `push` to preserve back navigation
+  - Profile → Clips now uses `push` to preserve back navigation
+  - Previously caused GoRouter error: "You have popped the last page off of the stack"
+
+- **Fixed delete confirmation being bypassed** - Delete now shows confirmation dialog
+  - Long press on clip shows preview sheet with delete icon
+  - Tapping delete icon shows "Delete Clip?" confirmation dialog
+
+- **Fixed session grouping for clips with null sessionId** - `getClipsBySession('ungrouped')` now correctly returns clips without a session
+
+#### Technical Details
+- Modified `lib/screens/clip_library_screen.dart`:
+  - Restored `_selectedClipIds` Set for multi-select tracking
+  - Restored `_toggleClipSelection()`, `_clearSelection()`, `_createVideoFromSelected()`
+  - Changed `context.go('/clip-manager')` to `context.push('/clip-manager')`
+  - Fixed delete flow to call `_confirmDeleteClip()` with confirmation dialog
+- Modified `lib/screens/profile_screen_router.dart`:
+  - Changed `context.go('/clips')` to `context.push('/clips')`
+- Modified `lib/screens/pure/universal_camera_screen_pure.dart`:
+  - Changed `context.go('/clips')` to `context.push('/clips')`
+- Modified `lib/services/clip_library_service.dart`:
+  - Restored `getClipsGroupedBySession()` and `getClipsBySession()` methods
+  - Fixed `getClipsBySession('ungrouped')` to return clips with null sessionId
+
 ### Fixed - macOS Camera and Video Processing (2025-12-20)
 
 #### Bug Fixes

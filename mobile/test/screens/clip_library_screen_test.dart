@@ -70,7 +70,9 @@ void main() {
       expect(find.text('1.5s'), findsOneWidget);
     });
 
-    testWidgets('shows delete confirmation dialog', (tester) async {
+    testWidgets('shows delete icon in preview sheet on long press', (
+      tester,
+    ) async {
       await clipService.saveClip(
         SavedClip(
           id: 'clip_to_delete',
@@ -85,11 +87,13 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Long press to show delete option
+      // Long press to show preview sheet
       await tester.longPress(find.byType(ClipThumbnailCard));
-      await tester.pumpAndSettle();
+      // Use pump instead of pumpAndSettle since VideoPlayer may not initialize
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Delete'), findsOneWidget);
+      // Preview sheet should have delete icon button
+      expect(find.byIcon(Icons.delete), findsOneWidget);
     });
 
     testWidgets('deletes clip when confirmed', (tester) async {
@@ -110,15 +114,19 @@ void main() {
       // Initially has 1 clip
       expect((await clipService.getAllClips()).length, 1);
 
-      // Long press and delete
+      // Long press to show preview sheet
       await tester.longPress(find.byType(ClipThumbnailCard));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Tap delete icon in preview sheet
+      await tester.tap(find.byIcon(Icons.delete));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Delete'));
-      await tester.pumpAndSettle();
+      // Confirmation dialog should appear
+      expect(find.text('Delete Clip?'), findsOneWidget);
 
       // Confirm deletion
-      await tester.tap(find.text('Delete').last);
+      await tester.tap(find.text('Delete'));
       await tester.pumpAndSettle();
 
       // Clip should be deleted

@@ -73,7 +73,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.editVideo:
     case RouteType.settings:
     case RouteType.editProfile:
-    case RouteType.drafts:
+    case RouteType.clips:
     case RouteType.importKey:
     case RouteType.welcome:
       // Non-video routes - return null

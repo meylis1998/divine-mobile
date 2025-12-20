@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/saved_clip.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:video_player/video_player.dart';
@@ -33,7 +34,9 @@ class ClipLibraryScreen extends ConsumerStatefulWidget {
 class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
   List<SavedClip> _clips = [];
   bool _isLoading = true;
-  String? _selectedClipId;
+  // Always show selection checkboxes when not in single-selection mode
+  // This makes multi-select the default behavior for better UX
+  Set<String> _selectedClipIds = {};
 
   @override
   void initState() {
@@ -65,17 +68,74 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
     }
   }
 
+  String _buildAppBarTitle() {
+    if (widget.selectionMode) {
+      return 'Select Clip';
+    } else if (_selectedClipIds.isNotEmpty) {
+      return '${_selectedClipIds.length} selected';
+    } else {
+      return 'Clips';
+    }
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedClipIds.clear();
+    });
+  }
+
+  void _toggleClipSelection(String clipId) {
+    setState(() {
+      if (_selectedClipIds.contains(clipId)) {
+        _selectedClipIds.remove(clipId);
+      } else {
+        _selectedClipIds.add(clipId);
+      }
+    });
+  }
+
+  Future<void> _createVideoFromSelected() async {
+    final selectedClips = _clips
+        .where((clip) => _selectedClipIds.contains(clip.id))
+        .toList();
+    if (selectedClips.isEmpty) return;
+
+    // Add selected clips to ClipManager
+    final clipManagerNotifier = ref.read(clipManagerProvider.notifier);
+
+    // Clear existing clips first
+    clipManagerNotifier.clearAll();
+
+    // Add each selected clip
+    for (final clip in selectedClips) {
+      clipManagerNotifier.addClip(
+        filePath: clip.filePath,
+        duration: clip.duration,
+        thumbnailPath: clip.thumbnailPath,
+      );
+    }
+
+    // Navigate to ClipManager screen (push to preserve back navigation)
+    context.push('/clip-manager');
+
+    // Clear selection
+    _clearSelection();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
     appBar: AppBar(
       backgroundColor: VineTheme.vineGreen,
       foregroundColor: VineTheme.whiteText,
-      title: Text(widget.selectionMode ? 'Select Clip' : 'Clips'),
+      title: Text(_buildAppBarTitle()),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: VineTheme.whiteText),
         onPressed: () {
-          if (widget.selectionMode) {
+          if (_selectedClipIds.isNotEmpty && !widget.selectionMode) {
+            // Clear selection first
+            _clearSelection();
+          } else if (widget.selectionMode) {
             Navigator.of(context).pop();
           } else {
             final authService = ref.read(authServiceProvider);
@@ -89,7 +149,18 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
         },
       ),
       actions: [
-        if (_clips.isNotEmpty && !widget.selectionMode)
+        // Clear selection button when clips are selected
+        if (_selectedClipIds.isNotEmpty && !widget.selectionMode)
+          TextButton(
+            onPressed: _clearSelection,
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: VineTheme.whiteText),
+            ),
+          ),
+        if (_selectedClipIds.isEmpty &&
+            _clips.isNotEmpty &&
+            !widget.selectionMode)
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: VineTheme.whiteText),
             onSelected: (value) {
@@ -119,6 +190,14 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
         : _clips.isEmpty
         ? _buildEmptyState()
         : _buildClipsGrid(),
+    floatingActionButton: _selectedClipIds.isNotEmpty
+        ? FloatingActionButton.extended(
+            onPressed: _createVideoFromSelected,
+            icon: const Icon(Icons.movie_creation),
+            label: const Text('Create Video'),
+            backgroundColor: VineTheme.vineGreen,
+          )
+        : null,
   );
 
   Widget _buildEmptyState() => Center(
@@ -186,19 +265,23 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
       final clip = _clips[index];
       return ClipThumbnailCard(
         clip: clip,
-        isSelected: _selectedClipId == clip.id,
+        isSelected: _selectedClipIds.contains(clip.id),
+        // Show checkboxes when not in single-selection mode
+        showCheckbox: !widget.selectionMode,
         onTap: () => _handleClipTap(clip),
-        onLongPress: () => _showClipOptions(clip),
+        onLongPress: () => _showClipPreview(clip),
       );
     },
   );
 
   void _handleClipTap(SavedClip clip) {
     if (widget.selectionMode) {
+      // Single selection mode from ClipManager - select and close
       widget.onClipSelected?.call(clip);
       Navigator.of(context).pop();
     } else {
-      _showClipPreview(clip);
+      // Default behavior: toggle selection for multi-select
+      _toggleClipSelection(clip.id);
     }
   }
 
@@ -211,47 +294,8 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
         clip: clip,
         onDelete: () {
           Navigator.of(context).pop();
-          _deleteClip(clip);
+          _confirmDeleteClip(clip);
         },
-      ),
-    );
-  }
-
-  void _showClipOptions(SavedClip clip) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.grey[900],
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.play_circle,
-                color: VineTheme.vineGreen,
-              ),
-              title: const Text(
-                'Preview',
-                style: TextStyle(color: VineTheme.whiteText),
-              ),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showClipPreview(clip);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.of(context).pop();
-                _confirmDeleteClip(clip);
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -418,12 +462,14 @@ class ClipThumbnailCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.isSelected = false,
+    this.showCheckbox = true,
   });
 
   final SavedClip clip;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final bool isSelected;
+  final bool showCheckbox;
 
   @override
   Widget build(BuildContext context) {
@@ -501,6 +547,26 @@ class ClipThumbnailCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Selection checkbox (always visible when showCheckbox is true)
+              if (showCheckbox)
+                Positioned(
+                  left: 4,
+                  top: 4,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected
+                          ? VineTheme.vineGreen
+                          : Colors.black.withValues(alpha: 0.7),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        : null,
+                  ),
+                ),
             ],
           ),
         ),

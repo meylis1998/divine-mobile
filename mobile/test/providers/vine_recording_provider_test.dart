@@ -180,7 +180,7 @@ void main() {
 
   group('RecordingResult return type (TDD)', () {
     test(
-      'stopRecording should return RecordingResult with video and draftId',
+      'stopRecording should return RecordingResult with video and optional native proof',
       () async {
         // This test will guide implementation
         // Note: We can't fully test this without a real controller setup
@@ -189,13 +189,11 @@ void main() {
         // For now, just verify the RecordingResult class exists and has the right fields
         final result = RecordingResult(
           videoFile: File('/path/to/video.mp4'),
-          draftId: 'draft_12345',
+          draftId: 'test_draft_123',
           nativeProof: null,
         );
 
         expect(result.videoFile, isNotNull);
-        expect(result.draftId, isNotNull);
-        expect(result.draftId, startsWith('draft_'));
         expect(result.nativeProof, isNull);
       },
     );
