@@ -73,10 +73,8 @@ class CrashReportingService {
         kDebugMode ? 'debug' : 'release',
       );
 
-      // Enable crash collection for all environments (including TestFlight/production)
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-        !kDebugMode,
-      );
+      // Enable crash collection for all environments (debug, TestFlight, production)
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
       _initialized = true;
       Log.info(
