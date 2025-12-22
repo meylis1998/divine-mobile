@@ -14,6 +14,28 @@ import 'package:openvine/utils/nostr_timestamp.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Key for persisted authentication source
+const _kAuthSourceKey = 'authentication_source';
+
+/// Source of authentication used to restore session at startup
+enum AuthenticationSource {
+  none('none'),
+  keycast('keycast'),
+  importedKeys('imported_keys'),
+  automatic('automatic');
+
+  const AuthenticationSource(this.code);
+
+  final String code;
+
+  static AuthenticationSource fromCode(String? code) {
+    return AuthenticationSource.values
+            .where((s) => s.code == code)
+            .firstOrNull ??
+        AuthenticationSource.none;
+  }
+}
+
 /// Authentication state for the user
 enum AuthState {
   /// User is not authenticated (no keys stored)
@@ -148,8 +170,46 @@ class AuthService {
       // Initialize secure key storage
       await _keyStorage.initialize();
 
-      // Check for existing keys
-      await _checkExistingAuth();
+      // Decide restore path based on persisted authentication source
+      final authSource = await _loadAuthSource();
+      switch (authSource) {
+        case AuthenticationSource.none:
+          // Explicit logout or fresh install — show welcome
+          _setAuthState(AuthState.unauthenticated);
+          return;
+
+        case AuthenticationSource.keycast:
+          // Try to load Keycast session from secure storage
+          final session = await KeycastSession.load();
+          if (session != null && session.hasRpcAccess) {
+            await signInWithKeycast(session);
+            return;
+          }
+          // Could not restore Keycast session — fall back to unauthenticated
+          _setAuthState(AuthState.unauthenticated);
+          return;
+
+        case AuthenticationSource.importedKeys:
+          // Only restore if secure keys exist
+          final hasKeys = await _keyStorage.hasKeys();
+          if (hasKeys) {
+            final keyContainer = await _keyStorage.getKeyContainer();
+            if (keyContainer != null) {
+              await _setupUserSession(
+                keyContainer,
+                AuthenticationSource.importedKeys,
+              );
+              return;
+            }
+          }
+          _setAuthState(AuthState.unauthenticated);
+          return;
+
+        case AuthenticationSource.automatic:
+          // Default behavior: check for keys and auto-create if needed
+          await _checkExistingAuth();
+          break;
+      }
 
       Log.info(
         'SecureAuthService initialized',
@@ -187,7 +247,7 @@ class AuthService {
       );
 
       // Set up user session
-      await _setupUserSession(keyContainer);
+      await _setupUserSession(keyContainer, AuthenticationSource.automatic);
 
       Log.info(
         'New secure identity created successfully',
@@ -211,6 +271,16 @@ class AuthService {
       _setAuthState(AuthState.unauthenticated);
 
       return AuthResult.failure(_lastError!);
+    }
+  }
+
+  Future<AuthenticationSource> _loadAuthSource() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kAuthSourceKey);
+      return AuthenticationSource.fromCode(raw);
+    } catch (e) {
+      return AuthenticationSource.automatic;
     }
   }
 
@@ -242,7 +312,7 @@ class AuthService {
       );
 
       // Set up user session
-      await _setupUserSession(keyContainer);
+      await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
 
       Log.info(
         'Identity imported to secure storage successfully',
@@ -297,7 +367,7 @@ class AuthService {
       );
 
       // Set up user session
-      await _setupUserSession(keyContainer);
+      await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
 
       Log.info(
         'Identity imported from hex to secure storage successfully',
@@ -412,7 +482,7 @@ class AuthService {
         return;
       }
 
-      _setAuthState(AuthState.authenticated);
+      _setAuthStateAuthenticated(AuthenticationSource.automatic);
 
       Log.info(
         'Terms of Service accepted, user is now fully authenticated',
@@ -474,7 +544,6 @@ class AuthService {
       // 4. Persistence
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('current_user_pubkey_hex', publicKeyHex);
-      await prefs.setBool('is_keycast_account', true); // Helper flag
 
       // 5. Finalize state
       // Note: We bypass awaitingTosAcceptance because the Keycast signup
@@ -484,12 +553,11 @@ class AuthService {
         name: 'AuthService',
         category: LogCategory.auth,
       );
-      _setAuthState(AuthState.authenticated);
       _profileController.add(_currentProfile);
 
       final keyContainer = SecureKeyContainer.fromPublicKey(publicKeyHex);
 
-      await _setupUserSession(keyContainer);
+      await _setupUserSession(keyContainer, AuthenticationSource.keycast);
 
       Log.info(
         '✅ Keycast session successfully integrated for $publicKeyHex',
@@ -545,6 +613,14 @@ class AuthService {
       _currentKeyContainer = null;
       _currentProfile = null;
       _lastError = null;
+
+      // Persist that the app is now signed out — welcome should be shown
+      await prefs.setString(_kAuthSourceKey, AuthenticationSource.none.code);
+
+      // Clear persisted Keycast session if present
+      try {
+        await KeycastSession.clear();
+      } catch (_) {}
 
       _setAuthState(AuthState.unauthenticated);
 
@@ -846,7 +922,10 @@ class AuthService {
   }
 
   /// Set up user session after successful authentication
-  Future<void> _setupUserSession(SecureKeyContainer keyContainer) async {
+  Future<void> _setupUserSession(
+    SecureKeyContainer keyContainer,
+    AuthenticationSource source,
+  ) async {
     _currentKeyContainer = keyContainer;
 
     // Create user profile from secure container
@@ -878,10 +957,12 @@ class AuthService {
       );
 
       final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
-      if (hasAcceptedTos) {
-        _setAuthState(AuthState.authenticated);
-      } else {
+      if (!hasAcceptedTos) {
         _setAuthState(AuthState.awaitingTosAcceptance);
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kAuthSourceKey, source.code);
+        _setAuthState(AuthState.authenticated);
       }
     } catch (e) {
       Log.warning(
