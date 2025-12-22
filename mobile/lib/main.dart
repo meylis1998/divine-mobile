@@ -548,7 +548,7 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
   void _initializeDeepLinkServices() {
     Log.info(
-      '🔗 Initializing link services...',
+      '🔗 Initializing depp link services...',
       name: 'DeepLinkHandler',
       category: LogCategory.ui,
     );
@@ -560,7 +560,7 @@ class _DivineAppState extends ConsumerState<DivineApp> {
     ref.read(keycastAuthListenerProvider).initialize();
 
     Log.info(
-      '✅ Link services initialized',
+      '✅ Deep Link services initialized',
       name: 'DeepLinkHandler',
       category: LogCategory.ui,
     );

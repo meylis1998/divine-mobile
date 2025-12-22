@@ -6,7 +6,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service to listen for Keycast OAuth redirects and finalize authentication.
-/// Moved from main.dart to satisfy Single Responsibility Principle.
 class KeycastAuthListener {
   KeycastAuthListener(this.ref);
   final Ref ref;
@@ -28,8 +27,10 @@ class KeycastAuthListener {
   }
 
   Future<void> _handleUri(Uri uri) async {
-    Log.info('🔑 callback from host ${uri.host} path: ${uri.path', '
-        'name: 'KeycastAuth');
+    Log.info(
+      '🔑 callback from host ${uri.host} path: ${uri.path}',
+      name: 'KeycastAuth',
+    );
 
     if (uri.host != 'login.divine.video' ||
         !uri.path.startsWith('/app/callback')) {
@@ -43,7 +44,6 @@ class KeycastAuthListener {
       final result = oauth.parseCallback(uri.toString());
 
       if (result case CallbackSuccess(code: var resultCode)) {
-
         // Retrieve the verifier we saved when the button was pressed
         final verifier = ref.read(pendingVerifierProvider);
         if (verifier == null) {
