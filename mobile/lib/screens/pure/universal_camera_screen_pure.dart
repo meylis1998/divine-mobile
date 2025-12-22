@@ -47,6 +47,7 @@ class _UniversalCameraScreenPureState
   FlashMode _flashMode = FlashMode.off;
   TimerDuration _timerDuration = TimerDuration.off;
   int? _countdownValue;
+  bool _wasInBackground = false;
 
   // Track current device orientation for debugging
   DeviceOrientation? _currentOrientation;
@@ -115,14 +116,15 @@ class _UniversalCameraScreenPureState
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.resumed) {
-      // App returned from background - re-check permissions
-      context.read<CameraPermissionBloc>().add(const CameraPermissionRefresh());
-    } else if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    if (state == AppLifecycleState.resumed && _wasInBackground) {
+      _handleInitialPermissionState();
+      _wasInBackground = false;
+    }
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       // App going to background - clean up camera
       _disposeCameraSafely();
+      _wasInBackground = true;
     }
   }
 
@@ -151,6 +153,8 @@ class _UniversalCameraScreenPureState
 
     if (state is CameraPermissionLoaded) {
       _handlePermissionStatus(state.status);
+    } else if (state is CameraPermissionDenied) {
+      cameraBloc.add(const CameraPermissionRefresh());
     }
   }
 
@@ -163,9 +167,9 @@ class _UniversalCameraScreenPureState
         break;
 
       case CameraPermissionStatus.canRequest:
-        // Show pre-permission dialog and request permissions
+        // Show pre-permission sheet and request permissions
         if (!mounted) return;
-        final shouldRequest = await CameraMicrophonePrePermissionDialog.show(
+        final shouldRequest = await CameraMicrophonePrePermissionSheet.show(
           context,
         );
 
@@ -175,16 +179,16 @@ class _UniversalCameraScreenPureState
             const CameraPermissionRequest(),
           );
         } else {
-          // User closed dialog or said no - go back to home
+          // User tapped "Not now" - go back to home
           GoRouter.of(context).pop();
         }
         break;
 
       case CameraPermissionStatus.requiresSettings:
-        // Show settings required dialog
+        // Show settings required sheet
         if (!mounted) return;
         final openedSettings =
-            await CameraMicrophonePermissionRequiredDialog.show(
+            await CameraMicrophonePermissionRequiredSheet.show(
               context,
               onOpenSettings: () {
                 context.read<CameraPermissionBloc>().add(
@@ -264,11 +268,14 @@ class _UniversalCameraScreenPureState
     return BlocListener<CameraPermissionBloc, CameraPermissionState>(
       listenWhen: (previous, current) {
         // Only listen when state becomes loaded (e.g., after refresh from background)
-        return current is CameraPermissionLoaded;
+        return current is CameraPermissionLoaded ||
+            current is CameraPermissionDenied;
       },
       listener: (context, state) {
         if (state is CameraPermissionLoaded) {
           _handlePermissionStatus(state.status);
+        } else if (state is CameraPermissionDenied) {
+          GoRouter.of(context).pop();
         }
       },
       child: Scaffold(
@@ -1394,12 +1401,6 @@ class _CameraPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.videocam_outlined,
-              size: 64,
-              color: Colors.white.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
             const CircularProgressIndicator(color: VineTheme.vineGreen),
             const SizedBox(height: 16),
             Text(

@@ -25,6 +25,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
     with WidgetsBindingObserver {
   late final BackgroundActivityManager _backgroundManager;
   bool _tickersEnabled = true;
+  bool _wasInBackground = false;
 
   @override
   void initState() {
@@ -61,9 +62,12 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         // Notify foreground state provider - enables visibility detection
         ref.read(appForegroundProvider.notifier).setForeground(true);
 
-        // Refresh camera permission status - user may have changed permissions in Settings
-        final cameraBloc = context.read<CameraPermissionBloc>();
-        cameraBloc.add(const CameraPermissionRefresh());
+        // Only refresh camera permissions if returning from real background (e.g., Settings app)
+        if (_wasInBackground) {
+          _wasInBackground = false;
+          final cameraBloc = context.read<CameraPermissionBloc>();
+          cameraBloc.add(const CameraPermissionRefresh());
+        }
 
         if (!_tickersEnabled) {
           setState(() => _tickersEnabled = true);
@@ -92,6 +96,8 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
           name: 'AppLifecycleHandler',
           category: LogCategory.system,
         );
+
+        _wasInBackground = true;
 
         // CRITICAL: Notify foreground state provider FIRST - disables visibility detection
         // This prevents VisibilityDetector callbacks from reactivating videos

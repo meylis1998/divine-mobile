@@ -49,15 +49,18 @@ class CameraPermissionBloc
       final cameraStatus = await Permission.camera.request();
 
       if (!cameraStatus.isGranted) {
-        final status = await checkPermissions();
-        emit(CameraPermissionLoaded(status));
+        emit(CameraPermissionDenied());
         return;
       }
 
-      await Permission.microphone.request();
+      final microphoneStatus = await Permission.microphone.request();
 
-      final status = await checkPermissions();
-      emit(CameraPermissionLoaded(status));
+      if (!microphoneStatus.isGranted) {
+        emit(CameraPermissionDenied());
+        return;
+      }
+
+      emit(CameraPermissionLoaded(CameraPermissionStatus.authorized));
     } catch (e) {
       emit(const CameraPermissionError());
     }
