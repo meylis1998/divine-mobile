@@ -28,11 +28,9 @@ class KeycastAuthListener {
   }
 
   Future<void> _handleUri(Uri uri) async {
-    print('------in keycast callback-------------==========<<<<<<<<');
-    print('host: ${uri.host}');
-    print('path: ${uri.path}');
+    Log.info('🔑 callback from host ${uri.host} path: ${uri.path', '
+        'name: 'KeycastAuth');
 
-    // Exact same filter logic from your main.dart
     if (uri.host != 'login.divine.video' ||
         !uri.path.startsWith('/app/callback')) {
       return;
@@ -45,8 +43,8 @@ class KeycastAuthListener {
       final result = oauth.parseCallback(uri.toString());
 
       if (result case CallbackSuccess(code: var resultCode)) {
-        // Retrieve the verifier we saved when the button was pressed
 
+        // Retrieve the verifier we saved when the button was pressed
         final verifier = ref.read(pendingVerifierProvider);
         if (verifier == null) {
           Log.error(
