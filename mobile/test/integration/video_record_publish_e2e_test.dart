@@ -10,6 +10,7 @@ import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import '../helpers/real_integration_test_helper.dart';
 
 void main() {
@@ -167,7 +168,7 @@ void main() {
 
         // Subscribe to events and wait for response
         final events = <Event>[];
-        final eventStream = nostrService.subscribeToEvents(filters: [filter]);
+        final eventStream = nostrService.subscribe([filter]);
 
         final subscription = eventStream.listen((event) {
           print('📥 Received event from relay: ${event.id}...');

@@ -7,24 +7,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 import 'search_navigation_integration_test.mocks.dart';
 
-@GenerateMocks([VideoEventService, INostrService])
+@GenerateMocks([VideoEventService, NostrClient])
 void main() {
   group('Search Navigation Integration Tests', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Setup default mock behavior
       when(mockNostrService.isInitialized).thenReturn(true);

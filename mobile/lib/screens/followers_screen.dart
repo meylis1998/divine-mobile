@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
 import 'package:openvine/mixins/nostr_list_fetch_mixin.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -59,14 +59,12 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
     final nostrService = ref.read(nostrServiceProvider);
 
     // Subscribe to kind 3 events that mention this pubkey in p tags
-    final subscription = nostrService.subscribeToEvents(
-      filters: [
-        nostr_sdk.Filter(
-          kinds: [3], // Contact lists
-          p: [widget.pubkey], // Events that mention this pubkey
-        ),
-      ],
-    );
+    final subscription = nostrService.subscribe([
+      nostr_sdk.Filter(
+        kinds: [3], // Contact lists
+        p: [widget.pubkey], // Events that mention this pubkey
+      ),
+    ]);
 
     // Apply timeout to detect relay connection issues
     final timeoutSubscription = subscription.timeout(
@@ -132,6 +130,6 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
   }
 
   void _navigateToProfile(String pubkey) {
-    context.goProfile(pubkey, 0);
+    context.pushProfile(pubkey, 0);
   }
 }

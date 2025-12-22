@@ -9,9 +9,10 @@ import 'package:mockito/mockito.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/state/social_state.dart';
 
@@ -27,18 +28,18 @@ class TestSocialNotifier extends social.SocialNotifier {
   SocialState build() => _state;
 }
 
-@GenerateMocks([VideoEventService, INostrService, SubscriptionManager])
+@GenerateMocks([VideoEventService, NostrClient, SubscriptionManager])
 void main() {
   group('HomeFeedProvider', () {
     late ProviderContainer container;
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     final List<VoidCallback> registeredListeners = [];
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
       registeredListeners.clear();
 
@@ -502,12 +503,12 @@ void main() {
 
   group('HomeFeed Helper Providers', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Setup default mock behaviors

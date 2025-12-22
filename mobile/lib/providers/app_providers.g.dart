@@ -1093,6 +1093,59 @@ final class DraftStorageServiceProvider
 String _$draftStorageServiceHash() =>
     r'33f3e00de2b933fffa49823e6eef306ed15f04cb';
 
+/// Clip library service for persisting individual video clips
+
+@ProviderFor(clipLibraryService)
+const clipLibraryServiceProvider = ClipLibraryServiceProvider._();
+
+/// Clip library service for persisting individual video clips
+
+final class ClipLibraryServiceProvider
+    extends
+        $FunctionalProvider<
+          ClipLibraryService,
+          ClipLibraryService,
+          ClipLibraryService
+        >
+    with $Provider<ClipLibraryService> {
+  /// Clip library service for persisting individual video clips
+  const ClipLibraryServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'clipLibraryServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$clipLibraryServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<ClipLibraryService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ClipLibraryService create(Ref ref) {
+    return clipLibraryService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ClipLibraryService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ClipLibraryService>(value),
+    );
+  }
+}
+
+String _$clipLibraryServiceHash() =>
+    r'b979f5ba3eb3437f096e14abbe5492905a3cd82d';
+
 /// Authentication service depends on secure key storage and user data cleanup
 
 @ProviderFor(authService)
@@ -1236,52 +1289,6 @@ final class UserDataCleanupServiceProvider
 
 String _$userDataCleanupServiceHash() =>
     r'bad5e2e3ae1a38a6de7e77d75e321628c36a3ba2';
-
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
-
-@ProviderFor(nostrService)
-const nostrServiceProvider = NostrServiceProvider._();
-
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
-
-final class NostrServiceProvider
-    extends $FunctionalProvider<INostrService, INostrService, INostrService>
-    with $Provider<INostrService> {
-  /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
-  const NostrServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'nostrServiceProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$nostrServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<INostrService> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  INostrService create(Ref ref) {
-    return nostrService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(INostrService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<INostrService>(value),
-    );
-  }
-}
-
-String _$nostrServiceHash() => r'e83bb74d0adf803fa7119aa120a3572dc5d6b1ec';
 
 /// Subscription manager for centralized subscription management
 
@@ -1533,6 +1540,78 @@ final class SocialServiceProvider
 
 String _$socialServiceHash() => r'213dee56c5edc2193f20d68b36573570f28148a1';
 
+/// Provider for FollowRepository instance
+///
+/// Creates a FollowRepository for managing follow relationships.
+/// Requires authentication.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalEventCacheService (for caching contact list events)
+
+@ProviderFor(followRepository)
+const followRepositoryProvider = FollowRepositoryProvider._();
+
+/// Provider for FollowRepository instance
+///
+/// Creates a FollowRepository for managing follow relationships.
+/// Requires authentication.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalEventCacheService (for caching contact list events)
+
+final class FollowRepositoryProvider
+    extends
+        $FunctionalProvider<
+          FollowRepository,
+          FollowRepository,
+          FollowRepository
+        >
+    with $Provider<FollowRepository> {
+  /// Provider for FollowRepository instance
+  ///
+  /// Creates a FollowRepository for managing follow relationships.
+  /// Requires authentication.
+  ///
+  /// Uses:
+  /// - NostrClient from nostrServiceProvider (for relay communication)
+  /// - PersonalEventCacheService (for caching contact list events)
+  const FollowRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'followRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$followRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<FollowRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  FollowRepository create(Ref ref) {
+    return followRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FollowRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FollowRepository>(value),
+    );
+  }
+}
+
+String _$followRepositoryHash() => r'ed2a3c727eb23941dbddd5c5e9689b01a37a1ae6';
+
 /// Enhanced notification service with Nostr integration (lazy loaded)
 
 @ProviderFor(notificationServiceEnhanced)
@@ -1745,12 +1824,10 @@ String _$mediaAuthInterceptorHash() =>
     r'adae18db875674843f6ced55608bb65a5ef7f445';
 
 /// Blossom upload service (uses user-configured Blossom server)
-/// Blossom upload service (uses user-configured Blossom server)
 
 @ProviderFor(blossomUploadService)
 const blossomUploadServiceProvider = BlossomUploadServiceProvider._();
 
-/// Blossom upload service (uses user-configured Blossom server)
 /// Blossom upload service (uses user-configured Blossom server)
 
 final class BlossomUploadServiceProvider
@@ -1761,7 +1838,6 @@ final class BlossomUploadServiceProvider
           BlossomUploadService
         >
     with $Provider<BlossomUploadService> {
-  /// Blossom upload service (uses user-configured Blossom server)
   /// Blossom upload service (uses user-configured Blossom server)
   const BlossomUploadServiceProvider._()
     : super(
@@ -1798,7 +1874,7 @@ final class BlossomUploadServiceProvider
 }
 
 String _$blossomUploadServiceHash() =>
-    r'd57fa3ec36057b410664e0da59b8067e68bebade';
+    r'e5fedc7e9f4a91ea5dcbb1c607b5fa5008b589ba';
 
 /// Upload manager uses only Blossom upload service
 
@@ -2037,7 +2113,7 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'7780155fc9c4c9eeee848c008400349f6075aded';
+    r'b246ddd7f795dcf5adb837e3530bbc21c2c14fa8';
 
 /// Lists state notifier - manages curated lists state
 
@@ -2321,7 +2397,7 @@ final class ContentDeletionServiceProvider
 }
 
 String _$contentDeletionServiceHash() =>
-    r'7421e7b16a33959dd2cce177c3f54272352dc721';
+    r'595760368d4f392891586c43959ceba01e02bcd5';
 
 /// Account Deletion Service for NIP-62 Request to Vanish
 
@@ -2473,3 +2549,75 @@ final class BugReportServiceProvider
 }
 
 String _$bugReportServiceHash() => r'250a5fce245b0ddfe83986b90719d24bff84b58a';
+
+/// Provider for LikesRepository instance
+///
+/// Creates a LikesRepository when the user is authenticated.
+/// Returns null when user is not authenticated.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalReactionsDao from databaseProvider (for local storage)
+
+@ProviderFor(likesRepository)
+const likesRepositoryProvider = LikesRepositoryProvider._();
+
+/// Provider for LikesRepository instance
+///
+/// Creates a LikesRepository when the user is authenticated.
+/// Returns null when user is not authenticated.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalReactionsDao from databaseProvider (for local storage)
+
+final class LikesRepositoryProvider
+    extends
+        $FunctionalProvider<
+          LikesRepository?,
+          LikesRepository?,
+          LikesRepository?
+        >
+    with $Provider<LikesRepository?> {
+  /// Provider for LikesRepository instance
+  ///
+  /// Creates a LikesRepository when the user is authenticated.
+  /// Returns null when user is not authenticated.
+  ///
+  /// Uses:
+  /// - NostrClient from nostrServiceProvider (for relay communication)
+  /// - PersonalReactionsDao from databaseProvider (for local storage)
+  const LikesRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'likesRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$likesRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<LikesRepository?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  LikesRepository? create(Ref ref) {
+    return likesRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LikesRepository? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LikesRepository?>(value),
+    );
+  }
+}
+
+String _$likesRepositoryHash() => r'00af72833fee780ad5521b90b45735592bc3db5e';

@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
@@ -20,7 +21,7 @@ import 'package:openvine/services/subscription_manager.dart';
   SharedPreferences,
   SocialService,
   AuthService,
-  INostrService,
+  NostrClient,
   UserProfileService,
   SubscriptionManager,
 ])
@@ -88,9 +89,9 @@ MockUserProfileService createMockUserProfileService() {
   return mockProfile;
 }
 
-/// Creates a properly stubbed MockINostrService for testing
-MockINostrService createMockNostrService() {
-  final mockNostr = MockINostrService();
+/// Creates a properly stubbed MockNostrClient for testing
+MockNostrClient createMockNostrService() {
+  final mockNostr = MockNostrClient();
 
   // Stub common properties
   when(mockNostr.isInitialized).thenReturn(true);
@@ -114,7 +115,7 @@ List<dynamic> getStandardTestOverrides({
   AuthService? mockAuthService,
   SocialService? mockSocialService,
   UserProfileService? mockUserProfileService,
-  INostrService? mockNostrService,
+  NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
 }) {
   final mockPrefs = mockSharedPreferences ?? createMockSharedPreferences();
@@ -164,7 +165,7 @@ Widget testProviderScope({
   AuthService? mockAuthService,
   SocialService? mockSocialService,
   UserProfileService? mockUserProfileService,
-  INostrService? mockNostrService,
+  NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
 }) {
   return ProviderScope(
@@ -206,7 +207,7 @@ Widget testMaterialApp({
   AuthService? mockAuthService,
   SocialService? mockSocialService,
   UserProfileService? mockUserProfileService,
-  INostrService? mockNostrService,
+  NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
   ThemeData? theme,
 }) {

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
 import 'package:openvine/mixins/nostr_list_fetch_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -79,15 +80,13 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
     final nostrService = ref.read(nostrServiceProvider);
 
     // Subscribe to the user's kind 3 contact list events
-    final subscription = nostrService.subscribeToEvents(
-      filters: [
-        nostr_sdk.Filter(
-          authors: [pubkey],
-          kinds: [3], // Contact lists
-          limit: 1, // Get most recent only
-        ),
-      ],
-    );
+    final subscription = nostrService.subscribe([
+      nostr_sdk.Filter(
+        authors: [pubkey],
+        kinds: [3], // Contact lists
+        limit: 1, // Get most recent only
+      ),
+    ]);
 
     // Apply timeout to detect relay connection issues
     final timeoutSubscription = subscription.timeout(
@@ -162,6 +161,6 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
   }
 
   void _navigateToProfile(String pubkey) {
-    context.goProfile(pubkey, 0);
+    context.pushProfile(pubkey, 0);
   }
 }

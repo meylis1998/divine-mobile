@@ -9,6 +9,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import '../test/helpers/real_integration_test_helper.dart';
 
 void main() {
@@ -87,14 +88,12 @@ void main() {
       print('🔌 Initializing NostrService with relay connections...');
       final nostrService = container.read(nostrServiceProvider);
 
-      // Initialize with OpenVine relays
-      await nostrService.initialize(
-        customRelays: ['wss://relay3.openvine.co', 'wss://relay.damus.io'],
-      );
+      // Initialize
+      await nostrService.initialize();
 
       print('✅ NostrService initialized');
-      print('   Configured relays: ${nostrService.relays}');
-      print('   Relay count: ${nostrService.relayCount}');
+      print('   Configured relays: ${nostrService.configuredRelays}');
+      print('   Relay count: ${nostrService.configuredRelayCount}');
       print(
         '   Note: Relay connections are asynchronous - publishing will connect as needed',
       );
@@ -233,8 +232,8 @@ void main() {
         // Check NostrService relay connections before publishing
         final nostrService = container.read(nostrServiceProvider);
         print('📡 Nostr relay status:');
-        print('   Configured relays: ${nostrService.relays}');
-        print('   Relay count: ${nostrService.relayCount}');
+        print('   Configured relays: ${nostrService.configuredRelays}');
+        print('   Relay count: ${nostrService.configuredRelayCount}');
 
         final videoEventPublisher = container.read(videoEventPublisherProvider);
 

@@ -10,16 +10,17 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 
 import 'following_screen_test.mocks.dart';
 
-@GenerateMocks([NostrService, AuthService, SocialService])
+@GenerateMocks([NostrClient, AuthService, SocialService])
 void main() {
-  late MockNostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockAuthService mockAuthService;
   late MockSocialService mockSocialService;
   late StreamController<nostr_sdk.Event> eventStreamController;
@@ -35,7 +36,7 @@ void main() {
   }
 
   setUp(() {
-    mockNostrService = MockNostrService();
+    mockNostrService = MockNostrClient();
     mockAuthService = MockAuthService();
     mockSocialService = MockSocialService();
     eventStreamController = StreamController<nostr_sdk.Event>();
@@ -45,7 +46,7 @@ void main() {
       mockAuthService.currentPublicKeyHex,
     ).thenReturn(validPubkey('different'));
     when(
-      mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      mockNostrService.subscribe(argThat(anything)),
     ).thenAnswer((_) => eventStreamController.stream);
     when(mockNostrService.isInitialized).thenReturn(true);
     when(mockSocialService.isFollowing(any)).thenReturn(false);
@@ -122,9 +123,7 @@ void main() {
       expect(find.byType(ListView), findsOneWidget);
 
       // Should NOT have called subscribeToEvents
-      verifyNever(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      );
+      verifyNever(mockNostrService.subscribe(argThat(anything)));
     });
 
     testWidgets('shows empty state when no following', (tester) async {
@@ -170,7 +169,7 @@ void main() {
       // Create a controller that will timeout
       final timeoutController = StreamController<nostr_sdk.Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => timeoutController.stream);
 
       await tester.pumpWidget(createTestWidget());
@@ -303,7 +302,7 @@ void main() {
       // Create new stream controller for retry
       final retryStreamController = StreamController<nostr_sdk.Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => retryStreamController.stream);
 
       // Tap retry button

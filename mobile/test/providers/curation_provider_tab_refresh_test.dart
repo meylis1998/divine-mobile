@@ -7,9 +7,10 @@ import 'package:mockito/mockito.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/analytics_api_service.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:riverpod/riverpod.dart';
@@ -17,7 +18,7 @@ import 'package:riverpod/riverpod.dart';
 import 'curation_provider_lifecycle_test.mocks.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   VideoEventService,
   SocialService,
   AuthService,
@@ -25,14 +26,14 @@ import 'curation_provider_lifecycle_test.mocks.dart';
 ])
 void main() {
   group('CurationProvider Tab Refresh', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
     late MockSocialService mockSocialService;
     late MockAuthService mockAuthService;
     late MockAnalyticsApiService mockAnalyticsApiService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
       mockSocialService = MockSocialService();
       mockAuthService = MockAuthService();
@@ -40,9 +41,8 @@ void main() {
 
       // Stub nostr service to return empty stream (no async fetch for this test)
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => const Stream.empty());
