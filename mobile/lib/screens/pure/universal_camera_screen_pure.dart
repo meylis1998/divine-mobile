@@ -597,7 +597,7 @@ class _UniversalCameraScreenPureState
     }
   }
 
-  void _stopRecording() async {
+  Future<void> _stopRecording() async {
     // Just stop the current segment - don't finish the recording
     // This allows the user to record multiple segments before finalizing
     try {
@@ -629,7 +629,7 @@ class _UniversalCameraScreenPureState
     }
   }
 
-  void _finishRecording() async {
+  Future<void> _finishRecording() async {
     // Set processing state immediately so UI shows "Processing video..."
     // during the entire FFmpeg processing time
     if (_isProcessing) {
@@ -688,7 +688,7 @@ class _UniversalCameraScreenPureState
     }
   }
 
-  void _switchCamera() async {
+  Future<void> _switchCamera() async {
     Log.info(
       '🔄 _switchCamera() UI button pressed',
       name: 'UniversalCameraScreenPure',
@@ -768,7 +768,7 @@ class _UniversalCameraScreenPureState
     }
   }
 
-  void _handleRecordingAutoStop() async {
+  Future<void> _handleRecordingAutoStop() async {
     try {
       // Auto-stop just pauses the current segment
       // User must press publish button to finish and concatenate
@@ -808,7 +808,7 @@ class _UniversalCameraScreenPureState
     );
   }
 
-  void _processRecording(
+  Future<void> _processRecording(
     File recordedFile,
     NativeProofData? nativeProof,
   ) async {
@@ -917,7 +917,7 @@ class _UniversalCameraScreenPureState
     }
   }
 
-  void _retryInitialization() async {
+  Future<void> _retryInitialization() async {
     setState(() {
       _errorMessage = null;
     });

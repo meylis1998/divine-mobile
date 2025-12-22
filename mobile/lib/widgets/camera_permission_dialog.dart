@@ -8,13 +8,10 @@ import 'package:openvine/theme/vine_theme.dart';
 class CameraMicrophonePrePermissionDialog extends StatelessWidget {
   const CameraMicrophonePrePermissionDialog({super.key});
 
-  /// Show the pre-permission dialog.
-  ///
-  /// Returns `true` if user taps "Continue", `false` if dismissed.
+  /// Shows the dialog and returns `true` if user taps "Continue".
   static Future<bool> show(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      barrierDismissible: true,
       builder: (_) => const CameraMicrophonePrePermissionDialog(),
     );
     return result ?? false;
