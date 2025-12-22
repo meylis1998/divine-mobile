@@ -2,7 +2,9 @@
 // ABOUTME: Ensures videos never play when app is not visible and manages background battery usage
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -58,6 +60,10 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
         // Notify foreground state provider - enables visibility detection
         ref.read(appForegroundProvider.notifier).setForeground(true);
+
+        // Refresh camera permission status - user may have changed permissions in Settings
+        final cameraBloc = context.read<CameraPermissionBloc>();
+        cameraBloc.add(const CameraPermissionRefresh());
 
         if (!_tickersEnabled) {
           setState(() => _tickersEnabled = true);

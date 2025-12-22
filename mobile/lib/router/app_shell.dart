@@ -264,11 +264,6 @@ class AppShell extends ConsumerWidget {
             tooltip: 'Open camera',
             icon: const Icon(Icons.photo_camera_outlined),
             onPressed: () {
-              Log.info(
-                '👆 User tapped camera button',
-                name: 'Navigation',
-                category: LogCategory.ui,
-              );
               context.pushCamera();
             },
           ),
