@@ -472,7 +472,8 @@ class AuthService {
     await prefs.setBool('age_verified_16_plus', true);
   }
 
-  /// Accept Terms of Service - transitions to authenticated state
+  /// transitions to authenticated state w/o first creating or importing keys
+  // TODO(any): rename this method to "signInAutomatically"
   Future<void> acceptTermsOfService() async {
     try {
       await _persistTosAndAgeConfirmations();
@@ -481,8 +482,6 @@ class AuthService {
         await initialize();
         return;
       }
-
-      _setAuthStateAuthenticated(AuthenticationSource.automatic);
 
       Log.info(
         'Terms of Service accepted, user is now fully authenticated',
@@ -870,7 +869,7 @@ class AuthService {
             name: 'AuthService',
             category: LogCategory.auth,
           );
-          await _setupUserSession(keyContainer);
+          await _setupUserSession(keyContainer, AuthenticationSource.automatic);
           return;
         } else {
           Log.warning(
