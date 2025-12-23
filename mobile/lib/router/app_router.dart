@@ -221,9 +221,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           category: LogCategory.ui,
         );
 
-        if (!hasAcceptedTerms) {
+        if (!hasAcceptedTerms || authState == AuthState.unauthenticated) {
           Log.debug(
-            'TOS not accepted, redirecting to /welcome',
+            'TOS not accepted or not authenticated, redirecting to /welcome',
             name: 'AppRouter',
             category: LogCategory.ui,
           );

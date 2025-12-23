@@ -5,7 +5,8 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-/// Service to listen for Keycast OAuth redirects and finalize authentication.
+/// Service to listen for Keycast OAuth redirects (deeplinks) and then
+/// finalize authentication.
 class KeycastAuthListener {
   KeycastAuthListener(this.ref);
   final Ref ref;
