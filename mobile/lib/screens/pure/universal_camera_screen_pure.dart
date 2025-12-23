@@ -5,10 +5,8 @@ import 'package:camera/camera.dart' show FlashMode;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
@@ -21,7 +19,6 @@ import 'package:openvine/services/vine_recording_controller.dart'
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
-import 'package:openvine/widgets/camera_permission_dialog.dart';
 import 'package:openvine/widgets/circular_icon_button.dart';
 import 'package:openvine/widgets/dynamic_zoom_selector.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart'
@@ -29,6 +26,9 @@ import 'package:openvine/widgets/macos_camera_preview.dart'
 import 'package:models/models.dart' as vine show AspectRatio;
 
 /// Pure universal camera screen using revolutionary single-controller Riverpod architecture
+///
+/// Note: This screen assumes camera/microphone permissions are already granted.
+/// Wrap with [CameraPermissionGate] to handle permission flow.
 class UniversalCameraScreenPure extends ConsumerStatefulWidget {
   const UniversalCameraScreenPure({super.key});
 
@@ -38,12 +38,10 @@ class UniversalCameraScreenPure extends ConsumerStatefulWidget {
 }
 
 class _UniversalCameraScreenPureState
-    extends ConsumerState<UniversalCameraScreenPure>
-    with WidgetsBindingObserver {
+    extends ConsumerState<UniversalCameraScreenPure> {
   String? _errorMessage;
   bool _isProcessing = false;
   bool _isInitializing = false;
-  bool _wasInBackground = false;
 
   // Camera control states
   FlashMode _flashMode = FlashMode.off;
@@ -57,9 +55,6 @@ class _UniversalCameraScreenPureState
   void initState() {
     super.initState();
 
-    // Add app lifecycle observer to detect when user returns from Settings
-    WidgetsBinding.instance.addObserver(this);
-
     // Log initial orientation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final orientation = MediaQuery.of(context).orientation;
@@ -71,9 +66,6 @@ class _UniversalCameraScreenPureState
         category: LogCategory.video,
       );
     });
-
-    // Initialize permission bloc and handle initial permission state
-    _handleInitialPermissionState();
 
     // CRITICAL: Dispose all video controllers when entering camera screen
     // IndexedStack keeps widgets alive, so we must force-dispose controllers
@@ -93,6 +85,9 @@ class _UniversalCameraScreenPureState
       }
     });
 
+    // Initialize camera services (permissions already granted via CameraPermissionGate)
+    _initializeServices();
+
     Log.info(
       '📹 UniversalCameraScreenPure: Initialized',
       category: LogCategory.video,
@@ -101,9 +96,6 @@ class _UniversalCameraScreenPureState
 
   @override
   void dispose() {
-    // Remove app lifecycle observer
-    WidgetsBinding.instance.removeObserver(this);
-
     // Provider handles disposal automatically
     super.dispose();
 
@@ -111,86 +103,6 @@ class _UniversalCameraScreenPureState
       '📹 UniversalCameraScreenPure: Disposed',
       category: LogCategory.video,
     );
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    switch (state) {
-      case AppLifecycleState.resumed:
-        // Only refresh permissions if returning from real background (e.g., Settings app)
-        // OS permission dialogs trigger inactive→resumed without paused/hidden
-        if (_wasInBackground) {
-          _wasInBackground = false;
-          _handleInitialPermissionState();
-        }
-      case AppLifecycleState.paused:
-      case AppLifecycleState.hidden:
-        _wasInBackground = true;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
-        // Don't mark as background - these happen during OS dialogs
-        break;
-    }
-  }
-
-  /// Handle initial permission state when screen loads
-  void _handleInitialPermissionState() {
-    final bloc = context.read<CameraPermissionBloc>();
-    final state = bloc.state;
-
-    if (state is CameraPermissionLoaded) {
-      _handlePermissionStatus(state.status);
-    } else if (state is CameraPermissionLoaded) {
-      bloc.add(const CameraPermissionRefresh());
-    }
-  }
-
-  /// Handle permission status changes from the bloc
-  Future<void> _handlePermissionStatus(CameraPermissionStatus status) async {
-    switch (status) {
-      case CameraPermissionStatus.authorized:
-        _initializeServices();
-
-      case CameraPermissionStatus.canRequest:
-        // Show pre-permission sheet and request permissions
-        if (!mounted) return;
-        final shouldRequest = await CameraMicrophonePrePermissionSheet.show(
-          context,
-        );
-
-        if (!mounted) return;
-        if (shouldRequest) {
-          context.read<CameraPermissionBloc>().add(
-            const CameraPermissionRequest(),
-          );
-        } else {
-          // User tapped "Not now" - go back to home
-          GoRouter.of(context).pop();
-        }
-        break;
-
-      case CameraPermissionStatus.requiresSettings:
-        // Show settings required sheet
-        if (!mounted) return;
-        final openedSettings =
-            await CameraMicrophonePermissionRequiredSheet.show(
-              context,
-              onOpenSettings: () {
-                context.read<CameraPermissionBloc>().add(
-                  const CameraPermissionOpenSettings(),
-                );
-              },
-            );
-
-        // If user didn't open settings, go back to home
-        if (!mounted) return;
-        if (openedSettings != true) {
-          GoRouter.of(context).pop();
-        }
-        break;
-    }
   }
 
   Future<void> _initializeServices() async {
@@ -223,7 +135,7 @@ class _UniversalCameraScreenPureState
         ref.read(vineRecordingProvider.notifier).cleanupAndReset();
       }
 
-      // Initialize camera - permissions should already be granted via bloc
+      // Initialize camera - permissions should already be granted via CameraPermissionGate
       Log.info(
         '📹 Initializing recording service',
         category: LogCategory.video,
@@ -280,301 +192,275 @@ class _UniversalCameraScreenPureState
       return _buildErrorScreen();
     }
 
-    return BlocListener<CameraPermissionBloc, CameraPermissionState>(
-      listenWhen: (previous, current) {
-        // Only listen when state becomes loaded (e.g., after refresh from background)
-        return current is CameraPermissionLoaded ||
-            current is CameraPermissionDenied;
-      },
-      listener: (context, state) {
-        if (state is CameraPermissionLoaded) {
-          _handlePermissionStatus(state.status);
-        } else if (state is CameraPermissionDenied) {
-          GoRouter.of(context).pop();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Consumer(
-          builder: (context, ref, child) {
-            final recordingState = ref.watch(vineRecordingProvider);
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Consumer(
+        builder: (context, ref, child) {
+          final recordingState = ref.watch(vineRecordingProvider);
 
-            // Listen for auto-stop (when recording stops without user action)
-            ref.listen<VineRecordingUIState>(vineRecordingProvider, (
-              previous,
-              next,
-            ) {
-              if (previous != null &&
-                  previous.isRecording &&
-                  !next.isRecording &&
-                  !_isProcessing) {
-                // Recording stopped - check if it was max duration, manual stop, or error
-                if (next.hasSegments) {
-                  // Check if this was an auto-stop due to max duration (remaining time ~0ms)
-                  // vs. manual segment stop (remaining time > 50ms)
-                  // With 6.3s max duration, timer should stop at exactly 0ms remaining
-                  if (next.remainingDuration.inMilliseconds < 50) {
-                    // Has segments + virtually no remaining time = legitimate max duration auto-stop
-                    Log.info(
-                      '📹 Recording auto-stopped at max duration',
-                      category: LogCategory.video,
-                    );
-                    _handleRecordingAutoStop();
-                  } else {
-                    // Has segments + time remaining = manual segment stop (user released button)
-                    Log.debug(
-                      '📹 Manual segment stop (${next.remainingDuration.inMilliseconds}ms remaining)',
-                      category: LogCategory.video,
-                    );
-                    // Don't show "max time reached" message for manual stops
-                  }
+          // Listen for auto-stop (when recording stops without user action)
+          ref.listen<VineRecordingUIState>(vineRecordingProvider, (
+            previous,
+            next,
+          ) {
+            if (previous != null &&
+                previous.isRecording &&
+                !next.isRecording &&
+                !_isProcessing) {
+              // Recording stopped - check if it was max duration, manual stop, or error
+              if (next.hasSegments) {
+                // Check if this was an auto-stop due to max duration (remaining time ~0ms)
+                // vs. manual segment stop (remaining time > 50ms)
+                // With 6.3s max duration, timer should stop at exactly 0ms remaining
+                if (next.remainingDuration.inMilliseconds < 50) {
+                  // Has segments + virtually no remaining time = legitimate max duration auto-stop
+                  Log.info(
+                    '📹 Recording auto-stopped at max duration',
+                    category: LogCategory.video,
+                  );
+                  _handleRecordingAutoStop();
+                } else {
+                  // Has segments + time remaining = manual segment stop (user released button)
+                  Log.debug(
+                    '📹 Manual segment stop (${next.remainingDuration.inMilliseconds}ms remaining)',
+                    category: LogCategory.video,
+                  );
+                  // Don't show "max time reached" message for manual stops
                 }
               }
-            });
+            }
+          });
 
-            // Sync clip manager duration with recording provider
-            // This ensures the progress bar updates when clips are deleted in ClipManager
-            ref.listen<ClipManagerState>(clipManagerProvider, (previous, next) {
-              if (previous != null &&
-                  previous.totalDuration != next.totalDuration) {
+          // Sync clip manager duration with recording provider
+          // This ensures the progress bar updates when clips are deleted in ClipManager
+          ref.listen<ClipManagerState>(clipManagerProvider, (previous, next) {
+            if (previous != null &&
+                previous.totalDuration != next.totalDuration) {
+              Log.info(
+                '📹 ClipManager duration changed: ${previous.totalDuration.inMilliseconds}ms → ${next.totalDuration.inMilliseconds}ms',
+                category: LogCategory.video,
+              );
+              ref
+                  .read(vineRecordingProvider.notifier)
+                  .setPreviouslyRecordedDuration(next.totalDuration);
+            }
+          });
+
+          if (recordingState.isError) {
+            return _buildErrorScreen(recordingState.errorMessage);
+          }
+
+          // Show processing overlay if processing (even if camera not initialized)
+          if (_isProcessing) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: VineTheme.vineGreen),
+                  SizedBox(height: 16),
+                  Text(
+                    'Processing video...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Auto-reinitialize camera if it was released (e.g., after back navigation)
+          if (!recordingState.isInitialized && !_isInitializing) {
+            // Trigger re-initialization in next microtask to avoid build phase issues
+            _isInitializing = true;
+            Future.microtask(() async {
+              try {
                 Log.info(
-                  '📹 ClipManager duration changed: ${previous.totalDuration.inMilliseconds}ms → ${next.totalDuration.inMilliseconds}ms',
+                  '📹 Camera not initialized, triggering re-initialization',
                   category: LogCategory.video,
                 );
-                ref
-                    .read(vineRecordingProvider.notifier)
-                    .setPreviouslyRecordedDuration(next.totalDuration);
+                await ref.read(vineRecordingProvider.notifier).initialize();
+                if (mounted) {
+                  setState(() {
+                    _isInitializing = false;
+                  });
+                }
+              } catch (e) {
+                Log.error(
+                  '📹 Failed to re-initialize camera: $e',
+                  category: LogCategory.video,
+                );
+                if (mounted) {
+                  setState(() {
+                    _isInitializing = false;
+                    _errorMessage = 'Failed to initialize camera: $e';
+                  });
+                }
               }
             });
+          }
 
-            if (recordingState.isError) {
-              return _buildErrorScreen(recordingState.errorMessage);
-            }
-
-            // Show processing overlay if processing (even if camera not initialized)
-            if (_isProcessing) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: VineTheme.vineGreen),
-                    SizedBox(height: 16),
-                    Text(
-                      'Processing video...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Auto-reinitialize camera if it was released (e.g., after back navigation)
-            // Only reinitialize if permissions are authorized
-            final permState = context.read<CameraPermissionBloc>().state;
-            final isAuthorized =
-                permState is CameraPermissionLoaded &&
-                permState.status == CameraPermissionStatus.authorized;
-            if (!recordingState.isInitialized &&
-                !_isInitializing &&
-                isAuthorized) {
-              // Trigger re-initialization in next microtask to avoid build phase issues
-              _isInitializing = true;
-              Future.microtask(() async {
-                try {
-                  Log.info(
-                    '📹 Camera not initialized, triggering re-initialization',
-                    category: LogCategory.video,
-                  );
-                  await ref.read(vineRecordingProvider.notifier).initialize();
-                  if (mounted) {
-                    setState(() {
-                      _isInitializing = false;
-                    });
-                  }
-                } catch (e) {
-                  Log.error(
-                    '📹 Failed to re-initialize camera: $e',
-                    category: LogCategory.video,
-                  );
-                  if (mounted) {
-                    setState(() {
-                      _isInitializing = false;
-                      _errorMessage = 'Failed to initialize camera: $e';
-                    });
-                  }
-                }
-              });
-            }
-
-            if (!recordingState.isInitialized) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: VineTheme.vineGreen),
-                    SizedBox(height: 16),
-                    Text(
-                      'Initializing camera...',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // Camera preview - EXACTLY matching experimental app structure
-                if (recordingState.isInitialized)
-                  ref.read(vineRecordingProvider.notifier).previewWidget
-                else
-                  CameraPreviewPlaceholder(
-                    isRecording: recordingState.isRecording,
+          if (!recordingState.isInitialized) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: VineTheme.vineGreen),
+                  SizedBox(height: 16),
+                  Text(
+                    'Initializing camera...',
+                    style: TextStyle(color: Colors.white),
                   ),
+                ],
+              ),
+            );
+          }
 
-                // Tap-anywhere-to-record gesture detector (MUST be before top bar so bar receives taps)
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // Camera preview - EXACTLY matching experimental app structure
+              if (recordingState.isInitialized)
+                ref.read(vineRecordingProvider.notifier).previewWidget
+              else
+                CameraPreviewPlaceholder(
+                  isRecording: recordingState.isRecording,
+                ),
+
+              // Tap-anywhere-to-record gesture detector (MUST be before top bar so bar receives taps)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTapDown: !kIsWeb && recordingState.canRecord
+                      ? (_) => _startRecording()
+                      : null,
+                  onTapUp: !kIsWeb && recordingState.isRecording
+                      ? (_) => _stopRecording()
+                      : null,
+                  onTapCancel: !kIsWeb && recordingState.isRecording
+                      ? () => _stopRecording()
+                      : null,
+                  behavior: HitTestBehavior.translucent,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+
+              // Top progress bar - Vine-style full width at top (AFTER gesture detector so buttons work)
+              Positioned(
+                top: MediaQuery.of(context).padding.top,
+                left: 0,
+                right: 0,
+                child: _buildTopProgressBar(recordingState),
+              ),
+
+              // Square crop mask overlay (only shown in square mode)
+              // Positioned OUTSIDE ClipRect so it's not clipped away
+              if (recordingState.aspectRatio == vine.AspectRatio.square &&
+                  recordingState.isInitialized)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    Log.info(
+                      '🎭 Building square crop mask overlay',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
+
+                    // Use screen dimensions, not camera preview dimensions
+                    final screenWidth = constraints.maxWidth;
+                    final screenHeight = constraints.maxHeight;
+                    final squareSize =
+                        screenWidth; // Square uses full screen width
+
+                    Log.info(
+                      '🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
+
+                    return _buildSquareCropMaskForPreview(
+                      screenWidth,
+                      screenHeight,
+                    );
+                  },
+                ),
+
+              // Dynamic zoom selector (above recording controls)
+              if (recordingState.isInitialized && !recordingState.isRecording)
+                Positioned(
+                  bottom: 180,
+                  left: 0,
+                  right: 0,
+                  child: _buildZoomSelector(),
+                ),
+
+              // Recording controls overlay (bottom)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.7),
+                      ],
+                    ),
+                  ),
+                  child: _buildRecordingControls(recordingState),
+                ),
+              ),
+
+              // Camera controls (right side, vertically centered)
+              if (recordingState.isInitialized && !recordingState.isRecording)
+                Positioned(
+                  top: 0,
+                  bottom: 180, // Above the bottom recording controls
+                  right: 16,
+                  child: Center(child: _buildCameraControls(recordingState)),
+                ),
+
+              // Countdown overlay
+              if (_countdownValue != null)
                 Positioned.fill(
-                  child: GestureDetector(
-                    onTapDown: !kIsWeb && recordingState.canRecord
-                        ? (_) => _startRecording()
-                        : null,
-                    onTapUp: !kIsWeb && recordingState.isRecording
-                        ? (_) => _stopRecording()
-                        : null,
-                    onTapCancel: !kIsWeb && recordingState.isRecording
-                        ? () => _stopRecording()
-                        : null,
-                    behavior: HitTestBehavior.translucent,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-
-                // Top progress bar - Vine-style full width at top (AFTER gesture detector so buttons work)
-                Positioned(
-                  top: MediaQuery.of(context).padding.top,
-                  left: 0,
-                  right: 0,
-                  child: _buildTopProgressBar(recordingState),
-                ),
-
-                // Square crop mask overlay (only shown in square mode)
-                // Positioned OUTSIDE ClipRect so it's not clipped away
-                if (recordingState.aspectRatio == vine.AspectRatio.square &&
-                    recordingState.isInitialized)
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      Log.info(
-                        '🎭 Building square crop mask overlay',
-                        name: 'UniversalCameraScreenPure',
-                        category: LogCategory.video,
-                      );
-
-                      // Use screen dimensions, not camera preview dimensions
-                      final screenWidth = constraints.maxWidth;
-                      final screenHeight = constraints.maxHeight;
-                      final squareSize =
-                          screenWidth; // Square uses full screen width
-
-                      Log.info(
-                        '🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
-                        name: 'UniversalCameraScreenPure',
-                        category: LogCategory.video,
-                      );
-
-                      return _buildSquareCropMaskForPreview(
-                        screenWidth,
-                        screenHeight,
-                      );
-                    },
-                  ),
-
-                // Dynamic zoom selector (above recording controls)
-                if (recordingState.isInitialized && !recordingState.isRecording)
-                  Positioned(
-                    bottom: 180,
-                    left: 0,
-                    right: 0,
-                    child: _buildZoomSelector(),
-                  ),
-
-                // Recording controls overlay (bottom)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7),
+                    color: Colors.black.withValues(alpha: 0.5),
+                    child: Center(
+                      child: Text(
+                        _countdownValue.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 72,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Processing overlay
+              if (_isProcessing)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: VineTheme.vineGreen),
+                          SizedBox(height: 16),
+                          Text(
+                            'Processing video...',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                         ],
                       ),
                     ),
-                    child: _buildRecordingControls(recordingState),
                   ),
                 ),
-
-                // Camera controls (right side, vertically centered)
-                if (recordingState.isInitialized && !recordingState.isRecording)
-                  Positioned(
-                    top: 0,
-                    bottom: 180, // Above the bottom recording controls
-                    right: 16,
-                    child: Center(child: _buildCameraControls(recordingState)),
-                  ),
-
-                // Countdown overlay
-                if (_countdownValue != null)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      child: Center(
-                        child: Text(
-                          _countdownValue.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 72,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Processing overlay
-                if (_isProcessing)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(
-                              color: VineTheme.vineGreen,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Processing video...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1410,10 +1296,11 @@ class _UniversalCameraScreenPureState
   void _retryInitialization() async {
     setState(() {
       _errorMessage = null;
+      _isInitializing = false;
     });
 
-    // Refresh permission state via bloc, which will trigger appropriate actions
-    context.read<CameraPermissionBloc>().add(const CameraPermissionRefresh());
+    // Re-trigger initialization
+    _initializeServices();
   }
 
   String _formatDuration(Duration duration) {

@@ -15,6 +15,7 @@ import 'package:openvine/screens/notifications_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
+import 'package:openvine/widgets/camera_permission_gate.dart';
 import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
@@ -471,7 +472,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/camera',
         name: 'camera',
-        builder: (_, __) => const UniversalCameraScreenPure(),
+        builder: (_, __) =>
+            const CameraPermissionGate(child: UniversalCameraScreenPure()),
       ),
       GoRoute(
         path: '/clip-manager',

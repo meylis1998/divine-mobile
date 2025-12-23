@@ -16,24 +16,9 @@ part 'camera_permission_state.dart';
 class CameraPermissionBloc
     extends Bloc<CameraPermissionEvent, CameraPermissionState> {
   CameraPermissionBloc() : super(const CameraPermissionInitial()) {
-    on<CameraPermissionInitialize>(_onInitialize);
     on<CameraPermissionRequest>(_onRequest);
     on<CameraPermissionRefresh>(_onRefresh);
     on<CameraPermissionOpenSettings>(_onOpenSettings);
-  }
-
-  Future<void> _onInitialize(
-    CameraPermissionInitialize event,
-    Emitter<CameraPermissionState> emit,
-  ) async {
-    emit(const CameraPermissionLoading());
-
-    try {
-      final status = await checkPermissions();
-      emit(CameraPermissionLoaded(status));
-    } catch (e) {
-      emit(const CameraPermissionError());
-    }
   }
 
   Future<void> _onRequest(
