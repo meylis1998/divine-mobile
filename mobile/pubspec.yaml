@@ -20,7 +20,7 @@ version: 1.0.4+176
 
 environment:
   sdk: ^3.10.0
-  flutter: ^3.38.3
+  flutter: ^3.38.0
 
 workspace:
   - packages/comments_repository
@@ -163,6 +163,7 @@ dev_dependencies:
   # Testing
   mocktail: ^1.0.3
   mockito: ^5.4.4
+  bloc_test: ^10.0.0
 
   # Code generation
   build_runner: ^2.7.1
