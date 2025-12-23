@@ -25,8 +25,13 @@ class CameraPermissionBloc
     CameraPermissionRequest event,
     Emitter<CameraPermissionState> emit,
   ) async {
-    final currentStatus = (state as CameraPermissionLoaded).status;
-    if (currentStatus != CameraPermissionStatus.canRequest) {
+    final currentState = state;
+
+    if (currentState is! CameraPermissionLoaded) {
+      return;
+    }
+
+    if (currentState.status != CameraPermissionStatus.canRequest) {
       return;
     }
 
@@ -58,7 +63,9 @@ class CameraPermissionBloc
     try {
       final status = await checkPermissions();
       emit(CameraPermissionLoaded(status));
-    } catch (e) {}
+    } catch (e) {
+      emit(const CameraPermissionError());
+    }
   }
 
   Future<void> _onOpenSettings(
