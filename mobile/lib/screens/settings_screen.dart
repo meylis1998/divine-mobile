@@ -264,7 +264,11 @@ class SettingsScreen extends ConsumerWidget {
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              final authService = ref.read(authServiceProvider);
+              authService.signOut();
+              Navigator.of(context).pop(true);
+            },
             child: const Text(
               'Log Out',
               style: TextStyle(color: VineTheme.vineGreen),

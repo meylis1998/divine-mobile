@@ -76,6 +76,7 @@ class SecureKeyContainer {
 
     try {
       _publicKeyBytes = _hexToBytes(publicKeyHex);
+      _privateKeyBytes = Uint8List(0);
 
       // Generate npub for public operations
       _npub = Nip19.encodePubKey(publicKeyHex);
