@@ -29,177 +29,6 @@ void main() {
       });
     });
 
-    group('CameraPermissionInitialize', () {
-      test(
-        'emits [Loading, Loaded(authorized)] when both permissions granted',
-        () async {
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.camera),
-          ).thenAnswer((_) async => PermissionStatus.granted);
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.microphone),
-          ).thenAnswer((_) async => PermissionStatus.granted);
-
-          bloc.add(const CameraPermissionInitialize());
-
-          await expectLater(
-            bloc.stream,
-            emitsInOrder([
-              isA<CameraPermissionLoading>(),
-              isA<CameraPermissionLoaded>().having(
-                (s) => s.status,
-                'status',
-                CameraPermissionStatus.authorized,
-              ),
-            ]),
-          );
-        },
-      );
-
-      test('emits [Loading, Loaded(canRequest)] when permissions denied but '
-          'can request', () async {
-        when(
-          () => mockPlatform.checkPermissionStatus(Permission.camera),
-        ).thenAnswer((_) async => PermissionStatus.denied);
-        when(
-          () => mockPlatform.checkPermissionStatus(Permission.microphone),
-        ).thenAnswer((_) async => PermissionStatus.denied);
-
-        bloc.add(const CameraPermissionInitialize());
-
-        await expectLater(
-          bloc.stream,
-          emitsInOrder([
-            isA<CameraPermissionLoading>(),
-            isA<CameraPermissionLoaded>().having(
-              (s) => s.status,
-              'status',
-              CameraPermissionStatus.canRequest,
-            ),
-          ]),
-        );
-      });
-
-      test('emits [Loading, Loaded(requiresSettings)] when camera permanently '
-          'denied', () async {
-        when(
-          () => mockPlatform.checkPermissionStatus(Permission.camera),
-        ).thenAnswer((_) async => PermissionStatus.permanentlyDenied);
-        when(
-          () => mockPlatform.checkPermissionStatus(Permission.microphone),
-        ).thenAnswer((_) async => PermissionStatus.denied);
-
-        bloc.add(const CameraPermissionInitialize());
-
-        await expectLater(
-          bloc.stream,
-          emitsInOrder([
-            isA<CameraPermissionLoading>(),
-            isA<CameraPermissionLoaded>().having(
-              (s) => s.status,
-              'status',
-              CameraPermissionStatus.requiresSettings,
-            ),
-          ]),
-        );
-      });
-
-      test(
-        'emits [Loading, Loaded(requiresSettings)] when microphone permanently '
-        'denied',
-        () async {
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.camera),
-          ).thenAnswer((_) async => PermissionStatus.granted);
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.microphone),
-          ).thenAnswer((_) async => PermissionStatus.permanentlyDenied);
-
-          bloc.add(const CameraPermissionInitialize());
-
-          await expectLater(
-            bloc.stream,
-            emitsInOrder([
-              isA<CameraPermissionLoading>(),
-              isA<CameraPermissionLoaded>().having(
-                (s) => s.status,
-                'status',
-                CameraPermissionStatus.requiresSettings,
-              ),
-            ]),
-          );
-        },
-      );
-
-      test(
-        'emits [Loading, Loaded(requiresSettings)] when camera restricted',
-        () async {
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.camera),
-          ).thenAnswer((_) async => PermissionStatus.restricted);
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.microphone),
-          ).thenAnswer((_) async => PermissionStatus.denied);
-
-          bloc.add(const CameraPermissionInitialize());
-
-          await expectLater(
-            bloc.stream,
-            emitsInOrder([
-              isA<CameraPermissionLoading>(),
-              isA<CameraPermissionLoaded>().having(
-                (s) => s.status,
-                'status',
-                CameraPermissionStatus.requiresSettings,
-              ),
-            ]),
-          );
-        },
-      );
-
-      test(
-        'emits [Loading, Loaded(requiresSettings)] when microphone restricted',
-        () async {
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.camera),
-          ).thenAnswer((_) async => PermissionStatus.granted);
-          when(
-            () => mockPlatform.checkPermissionStatus(Permission.microphone),
-          ).thenAnswer((_) async => PermissionStatus.restricted);
-
-          bloc.add(const CameraPermissionInitialize());
-
-          await expectLater(
-            bloc.stream,
-            emitsInOrder([
-              isA<CameraPermissionLoading>(),
-              isA<CameraPermissionLoaded>().having(
-                (s) => s.status,
-                'status',
-                CameraPermissionStatus.requiresSettings,
-              ),
-            ]),
-          );
-        },
-      );
-
-      test('emits [Loading, Error] when checkPermissions throws', () async {
-        when(
-          () => mockPlatform.checkPermissionStatus(Permission.camera),
-        ).thenThrow(Exception('Platform error'));
-
-        bloc.add(const CameraPermissionInitialize());
-
-        await expectLater(
-          bloc.stream,
-          emitsInOrder([
-            isA<CameraPermissionLoading>(),
-            isA<CameraPermissionError>(),
-          ]),
-        );
-      });
-    });
-
     group('CameraPermissionRequest', () {
       test(
         'emits [Loaded(authorized)] when both permissions granted',
@@ -212,7 +41,7 @@ void main() {
             () => mockPlatform.checkPermissionStatus(Permission.microphone),
           ).thenAnswer((_) async => PermissionStatus.denied);
 
-          bloc.add(const CameraPermissionInitialize());
+          bloc.add(const CameraPermissionRefresh());
           await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
           // Set up request responses
@@ -251,7 +80,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.denied);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         // Set up request - camera denied
@@ -273,7 +102,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.denied);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         // Camera granted but microphone denied
@@ -302,7 +131,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.denied);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         // Request throws
@@ -324,7 +153,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.granted);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         final stateBeforeRequest = bloc.state;
@@ -350,7 +179,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.denied);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         // Now permissions are granted (user enabled in settings)
@@ -384,7 +213,7 @@ void main() {
           () => mockPlatform.checkPermissionStatus(Permission.microphone),
         ).thenAnswer((_) async => PermissionStatus.denied);
 
-        bloc.add(const CameraPermissionInitialize());
+        bloc.add(const CameraPermissionRefresh());
         await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
 
         final stateBeforeRefresh = bloc.state;
@@ -580,13 +409,6 @@ void main() {
   });
 
   group('CameraPermissionEvent equality', () {
-    test('CameraPermissionInitialize instances are equal', () {
-      expect(
-        const CameraPermissionInitialize(),
-        equals(const CameraPermissionInitialize()),
-      );
-    });
-
     test('CameraPermissionRequest instances are equal', () {
       expect(
         const CameraPermissionRequest(),
