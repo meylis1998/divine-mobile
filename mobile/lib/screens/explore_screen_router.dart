@@ -39,9 +39,10 @@ class _ExploreScreenRouterState extends ConsumerState<ExploreScreenRouter>
     return buildAsyncUI(
       pageContext,
       onData: (ctx) {
-        // Only handle explore routes
+        // Only handle explore routes - if we receive a non-explore route, the user
+        // is navigating away and this widget is being unmounted. Return empty.
         if (ctx.type != RouteType.explore) {
-          return const Center(child: Text('Not an explore route'));
+          return const SizedBox.shrink();
         }
 
         int urlIndex = 0;

@@ -28,13 +28,10 @@ class _HashtagScreenRouterState extends ConsumerState<HashtagScreenRouter>
   Widget build(BuildContext context) {
     final routeCtx = ref.watch(pageContextProvider).asData?.value;
 
+    // If route context is null or not a hashtag route, the user is navigating
+    // away and this widget is being unmounted. Return empty container.
     if (routeCtx == null || routeCtx.type != RouteType.hashtag) {
-      Log.warning(
-        'HashtagScreenRouter: Invalid route context',
-        name: 'HashtagRouter',
-        category: LogCategory.ui,
-      );
-      return const Scaffold(body: Center(child: Text('Invalid hashtag route')));
+      return const SizedBox.shrink();
     }
 
     final hashtag = routeCtx.hashtag ?? 'trending';
