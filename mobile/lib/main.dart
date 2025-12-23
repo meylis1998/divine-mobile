@@ -924,7 +924,7 @@ class _DivineAppState extends ConsumerState<DivineApp> {
     // Wrap with geo-blocking check first, then lifecycle handler
     Widget wrapped = BlocProvider(
       create: (_) =>
-          CameraPermissionBloc()..add(const CameraPermissionInitialize()),
+          CameraPermissionBloc()..add(const CameraPermissionRefresh()),
       child: GeoBlockingGate(child: AppLifecycleHandler(child: app)),
     );
 
