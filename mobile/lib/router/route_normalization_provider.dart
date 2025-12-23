@@ -11,9 +11,25 @@ import 'package:openvine/router/route_utils.dart';
 final routeNormalizationProvider = Provider<void>((ref) {
   final router = ref.read(goRouterProvider);
 
+  const skipNormalizationPrefixes = <String>{
+    '/settings',
+    '/relay-settings',
+    '/relay-diagnostic',
+    '/blossom-settings',
+    '/notification-settings',
+    '/key-management',
+    '/safety-settings',
+  };
+
   // Set up listener on router delegate to detect navigation changes
   void listener() {
     final loc = router.routeInformationProvider.value.uri.toString();
+
+    for (final prefix in skipNormalizationPrefixes) {
+      if (loc == prefix || loc.startsWith('$prefix/')) {
+        return;
+      }
+    }
 
     // Parse and rebuild to get canonical form
     final parsed = parseRoute(loc);
