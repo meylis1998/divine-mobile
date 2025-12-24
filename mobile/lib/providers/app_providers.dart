@@ -233,7 +233,7 @@ OAuthConfig oauthConfig(Ref ref) {
   return const OAuthConfig(
     serverUrl: 'https://login.divine.video',
     clientId: 'divine-mobile',
-    redirectUri: 'https://login.divine.video/app/callback',
+    redirectUri: 'https://divine.video/app/callback',
   );
 }
 

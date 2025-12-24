@@ -134,7 +134,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="login.divine.video"
+                    android:host="divine.video"
                     android:pathPrefix="/app/callback"/>
             </intent-filter>
         </activity>

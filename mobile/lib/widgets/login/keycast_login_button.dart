@@ -18,7 +18,7 @@ class KeycastLoginButton extends ConsumerWidget {
         defaultRegister: true,
       );
 
-      // Store verifier for token exchange when the app resumes
+      // Store verifier for token exchange when the app resumes via deep link
       ref.read(pendingVerifierProvider.notifier).set(verifier);
 
       // Launch the system browser
@@ -33,7 +33,7 @@ class KeycastLoginButton extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Keycast Error: $e'),
-            backgroundColor: Colors.black.withValues(alpha: 0.8),
+            backgroundColor: Colors.white.withValues(alpha: 0.8),
           ),
         );
       }

@@ -519,7 +519,7 @@ class AuthService {
       const config = OAuthConfig(
         serverUrl: 'https://login.divine.video',
         clientId: 'divine-mobile',
-        redirectUri: 'https://login.divine.video/app/callback',
+        redirectUri: 'https://divine.video/app/callback',
       );
 
       _rpcSigner = KeycastRpc.fromSession(config, session);

@@ -33,8 +33,7 @@ class KeycastAuthListener {
       name: 'KeycastAuth',
     );
 
-    if (uri.host != 'login.divine.video' ||
-        !uri.path.startsWith('/app/callback')) {
+    if (uri.host != 'divine.video' || !uri.path.startsWith('/app/callback')) {
       return;
     }
 
