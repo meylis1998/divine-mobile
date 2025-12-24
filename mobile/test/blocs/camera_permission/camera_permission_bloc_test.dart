@@ -141,7 +141,11 @@ void main() {
         build: () => CameraPermissionBloc(),
         act: (bloc) async {
           bloc.add(const CameraPermissionRefresh());
-          await bloc.stream.firstWhere((s) => s is CameraPermissionLoaded);
+          await bloc.stream.firstWhere(
+            (s) =>
+                s is CameraPermissionLoaded &&
+                s.status == CameraPermissionStatus.canRequest,
+          );
           bloc.add(const CameraPermissionRequest());
         },
         expect: () => [
