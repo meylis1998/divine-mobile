@@ -99,10 +99,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
                     const SizedBox(height: 16),
 
-                    /// TODO(any): At the moment, the Keycast website do not include an AASA file with the app ids.
-                    /// Once that is fixed, we can remove this check.
-                    if (!Platform.isIOS)
-                      KeycastLoginButton(enabled: _canProceed),
+                    KeycastLoginButton(enabled: _canProceed),
 
                     const SizedBox(height: 16),
 
