@@ -1,12 +1,9 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:permissions_service/permissions_service.dart';
 
 part 'camera_permission_event.dart';
 part 'camera_permission_state.dart';
-
-// TODO: Create PermissionService package.
 
 /// BLoC for managing camera and microphone permissions.
 ///
@@ -17,11 +14,15 @@ part 'camera_permission_state.dart';
 /// - Refreshing status when app resumes from background
 class CameraPermissionBloc
     extends Bloc<CameraPermissionEvent, CameraPermissionState> {
-  CameraPermissionBloc() : super(const CameraPermissionInitial()) {
+  CameraPermissionBloc({required PermissionsService permissionsService})
+    : _permissionsService = permissionsService,
+      super(const CameraPermissionInitial()) {
     on<CameraPermissionRequest>(_onRequest);
     on<CameraPermissionRefresh>(_onRefresh);
     on<CameraPermissionOpenSettings>(_onOpenSettings);
   }
+
+  final PermissionsService _permissionsService;
 
   Future<void> _onRequest(
     CameraPermissionRequest event,
@@ -38,21 +39,22 @@ class CameraPermissionBloc
     }
 
     try {
-      final cameraStatus = await Permission.camera.request();
+      final cameraStatus = await _permissionsService.requestCameraPermission();
 
-      if (!cameraStatus.isGranted) {
-        emit(CameraPermissionDenied());
+      if (cameraStatus != PermissionStatus.granted) {
+        emit(const CameraPermissionDenied());
         return;
       }
 
-      final microphoneStatus = await Permission.microphone.request();
+      final microphoneStatus = await _permissionsService
+          .requestMicrophonePermission();
 
-      if (!microphoneStatus.isGranted) {
-        emit(CameraPermissionDenied());
+      if (microphoneStatus != PermissionStatus.granted) {
+        emit(const CameraPermissionDenied());
         return;
       }
 
-      emit(CameraPermissionLoaded(CameraPermissionStatus.authorized));
+      emit(const CameraPermissionLoaded(CameraPermissionStatus.authorized));
     } catch (e) {
       emit(const CameraPermissionError());
     }
@@ -63,7 +65,7 @@ class CameraPermissionBloc
     Emitter<CameraPermissionState> emit,
   ) async {
     try {
-      final status = await checkPermissions();
+      final status = await _checkPermissions();
       emit(CameraPermissionLoaded(status));
     } catch (e) {
       emit(const CameraPermissionError());
@@ -74,28 +76,23 @@ class CameraPermissionBloc
     CameraPermissionOpenSettings event,
     Emitter<CameraPermissionState> emit,
   ) async {
-    await openAppSettings();
+    await _permissionsService.openAppSettings();
   }
 
-  /// Check the status of camera and microphone permissions from OS.
-  @visibleForTesting
-  Future<CameraPermissionStatus> checkPermissions() async {
+  /// Check the status of camera and microphone permissions.
+  Future<CameraPermissionStatus> _checkPermissions() async {
     final (cameraStatus, micStatus) = await (
-      Permission.camera.status,
-      Permission.microphone.status,
+      _permissionsService.checkCameraStatus(),
+      _permissionsService.checkMicrophoneStatus(),
     ).wait;
 
-    if (cameraStatus.isGranted && micStatus.isGranted) {
+    if (cameraStatus == PermissionStatus.granted &&
+        micStatus == PermissionStatus.granted) {
       return CameraPermissionStatus.authorized;
     }
 
-    final requiresSettings =
-        cameraStatus.isPermanentlyDenied ||
-        micStatus.isPermanentlyDenied ||
-        cameraStatus.isRestricted ||
-        micStatus.isRestricted;
-
-    if (requiresSettings) {
+    if (cameraStatus == PermissionStatus.requiresSettings ||
+        micStatus == PermissionStatus.requiresSettings) {
       return CameraPermissionStatus.requiresSettings;
     }
 

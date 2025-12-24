@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -923,8 +924,9 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
     // Wrap with geo-blocking check first, then lifecycle handler
     Widget wrapped = BlocProvider(
-      create: (_) =>
-          CameraPermissionBloc()..add(const CameraPermissionRefresh()),
+      create: (_) => CameraPermissionBloc(
+        permissionsService: const PermissionHandlerPermissionsService(),
+      )..add(const CameraPermissionRefresh()),
       child: GeoBlockingGate(child: AppLifecycleHandler(child: app)),
     );
 
