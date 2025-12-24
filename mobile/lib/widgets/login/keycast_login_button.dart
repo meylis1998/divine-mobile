@@ -16,7 +16,6 @@ class KeycastLoginButton extends ConsumerWidget {
     try {
       final oauth = ref.read(oauthClientProvider);
 
-      // Generate Auth URL and PKCE verifier
       final (url, verifier) = await oauth.getAuthorizationUrl(
         scope: 'policy:social',
         defaultRegister: true,
@@ -27,7 +26,6 @@ class KeycastLoginButton extends ConsumerWidget {
         // Store verifier for token exchange when the app resumes via deep link
         ref.read(pendingVerifierProvider.notifier).set(verifier);
 
-        // Launch the system browser
         final uri = Uri.parse(url);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -36,7 +34,6 @@ class KeycastLoginButton extends ConsumerWidget {
         }
       } else {
         // iOS: ASWebAuthenticationSession via flutter_web_auth_2
-        // Provides in-app browser and handles callback inline
         final result = await FlutterWebAuth2.authenticate(
           url: url,
           callbackUrlScheme: 'https',
