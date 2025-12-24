@@ -108,10 +108,13 @@ class AuthService {
   AuthService({
     required UserDataCleanupService userDataCleanupService,
     SecureKeyStorage? keyStorage,
+    KeycastOAuth? oauthClient,
   }) : _keyStorage = keyStorage ?? SecureKeyStorage(),
-       _userDataCleanupService = userDataCleanupService;
+       _userDataCleanupService = userDataCleanupService,
+       _oauthClient = oauthClient;
   final SecureKeyStorage _keyStorage;
   final UserDataCleanupService _userDataCleanupService;
+  final KeycastOAuth? _oauthClient;
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
@@ -603,9 +606,12 @@ class AuthService {
       // Persist that the app is now signed out — welcome should be shown
       await prefs.setString(_kAuthSourceKey, AuthenticationSource.none.code);
 
-      // Clear persisted Keycast session if present
       try {
-        await KeycastSession.clear();
+        if (_oauthClient != null) {
+          await _oauthClient.logout();
+        } else {
+          await KeycastSession.clear();
+        }
       } catch (_) {}
 
       _setAuthState(AuthState.unauthenticated);

@@ -240,9 +240,8 @@ OAuthConfig oauthConfig(Ref ref) {
 /// Keycast OAuth client for handling PKCE flows
 @Riverpod(keepAlive: true)
 KeycastOAuth oauthClient(Ref ref) {
-  // The generator creates 'oauthConfigProvider' from the function above
   final config = ref.watch(oauthConfigProvider);
-  return KeycastOAuth(config: config);
+  return KeycastOAuth(config: config, storage: SecureKeycastStorage());
 }
 
 @Riverpod(keepAlive: true)
@@ -374,14 +373,16 @@ ClipLibraryService clipLibraryService(Ref ref) {
 // DEPENDENT SERVICES (With dependencies)
 // =============================================================================
 
-/// Authentication service depends on secure key storage and user data cleanup
+/// Authentication service
 @Riverpod(keepAlive: true)
 AuthService authService(Ref ref) {
   final keyStorage = ref.watch(secureKeyStorageProvider);
   final userDataCleanupService = ref.watch(userDataCleanupServiceProvider);
+  final oauthClient = ref.watch(oauthClientProvider);
   return AuthService(
     userDataCleanupService: userDataCleanupService,
     keyStorage: keyStorage,
+    oauthClient: oauthClient,
   );
 }
 

@@ -16,6 +16,7 @@ class KeycastLoginButton extends ConsumerWidget {
       final (url, verifier) = await oauth.getAuthorizationUrl(
         scope: 'policy:social',
         defaultRegister: true,
+        prompt: 'login',
       );
 
       // Store verifier for token exchange when the app resumes via deep link
