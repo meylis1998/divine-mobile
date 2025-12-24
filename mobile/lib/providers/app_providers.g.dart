@@ -634,7 +634,7 @@ final class OauthConfigProvider
   }
 }
 
-String _$oauthConfigHash() => r'a054efcbe9cd52daef39c693509dc243f3dfbb8e';
+String _$oauthConfigHash() => r'2d26760b0a845d9e0c2dd0362a4c26363be1786f';
 
 /// Keycast OAuth client for handling PKCE flows
 
@@ -680,7 +680,7 @@ final class OauthClientProvider
   }
 }
 
-String _$oauthClientHash() => r'37af38bcaba774431995422816f4ff2f834e53df';
+String _$oauthClientHash() => r'346094d7beec35b5cb82754643e69a00ef9ee0d8';
 
 @ProviderFor(keycastAuthListener)
 const keycastAuthListenerProvider = KeycastAuthListenerProvider._();
@@ -1402,17 +1402,17 @@ final class ClipLibraryServiceProvider
 String _$clipLibraryServiceHash() =>
     r'b979f5ba3eb3437f096e14abbe5492905a3cd82d';
 
-/// Authentication service depends on secure key storage and user data cleanup
+/// Authentication service
 
 @ProviderFor(authService)
 const authServiceProvider = AuthServiceProvider._();
 
-/// Authentication service depends on secure key storage and user data cleanup
+/// Authentication service
 
 final class AuthServiceProvider
     extends $FunctionalProvider<AuthService, AuthService, AuthService>
     with $Provider<AuthService> {
-  /// Authentication service depends on secure key storage and user data cleanup
+  /// Authentication service
   const AuthServiceProvider._()
     : super(
         from: null,
@@ -1446,7 +1446,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'79d0e4b6411299b6a291f193d48cf7db53615f5d';
+String _$authServiceHash() => r'cecb42ef448634104e7e3bd237984ecbb2e8d43a';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds

@@ -19,6 +19,7 @@ class KeycastLoginButton extends ConsumerWidget {
       final (url, verifier) = await oauth.getAuthorizationUrl(
         scope: 'policy:social',
         defaultRegister: true,
+        prompt: 'login',
       );
 
       if (Platform.isAndroid) {

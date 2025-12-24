@@ -54,11 +54,9 @@ class KeycastOAuth {
     return _storage.read(_storageKeyHandle);
   }
 
-  /// Clear all session data including authorization handle
-  /// Use this when user explicitly logs out - clears everything for security
+  /// Clear local session and POST to server logout (keeps authorization_handle)
   Future<void> logout() async {
     await _storage.delete(_storageKeySession);
-    await _storage.delete(_storageKeyHandle);
     await _client.post(Uri.parse('${config.serverUrl}/api/auth/logout'));
   }
 
@@ -71,11 +69,17 @@ class KeycastOAuth {
 
   /// Generate authorization URL for OAuth flow
   /// Automatically uses stored authorization handle for silent re-auth if available
+  ///
+  /// [prompt] - OAuth 2.0 prompt parameter:
+  ///   - 'login': Force fresh login (ignore existing session)
+  ///   - 'consent': Force consent screen even if previously approved
+  ///   - 'none': Silent auth only, fail if interaction required
   Future<(String url, String verifier)> getAuthorizationUrl({
     String? nsec,
     String scope = 'policy:social',
     bool defaultRegister = true,
     String? authorizationHandle,
+    String? prompt,
   }) async {
     String? byokPubkey;
     if (nsec != null) {
@@ -101,10 +105,13 @@ class KeycastOAuth {
       params['byok_pubkey'] = byokPubkey;
     }
 
-    // Use provided handle, or auto-load from storage for silent re-authentication
     final handle = authorizationHandle ?? await getAuthorizationHandle();
     if (handle != null) {
       params['authorization_handle'] = handle;
+    }
+
+    if (prompt != null) {
+      params['prompt'] = prompt;
     }
 
     final uri = Uri.parse(config.authorizeUrl).replace(queryParameters: params);
