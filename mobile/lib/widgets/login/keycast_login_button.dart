@@ -1,5 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,15 +22,42 @@ class KeycastLoginButton extends ConsumerWidget {
         defaultRegister: true,
       );
 
-      // Store verifier for token exchange when the app resumes
-      ref.read(pendingVerifierProvider.notifier).set(verifier);
+      if (Platform.isAndroid) {
+        // Android: url_launcher + app_links
+        // Store verifier for token exchange when the app resumes via deep link
+        ref.read(pendingVerifierProvider.notifier).set(verifier);
 
-      // Launch the system browser
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // Launch the system browser
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw 'Could not launch browser';
+        }
       } else {
-        throw 'Could not launch browser';
+        // iOS: ASWebAuthenticationSession via flutter_web_auth_2
+        // Provides in-app browser and handles callback inline
+        final result = await FlutterWebAuth2.authenticate(
+          url: url,
+          callbackUrlScheme: 'https',
+          options: const FlutterWebAuth2Options(
+            httpsHost: 'divine.video',
+            httpsPath: '/app/callback',
+          ),
+        );
+
+        final callbackResult = oauth.parseCallback(result);
+        if (callbackResult is CallbackSuccess) {
+          final tokenResponse = await oauth.exchangeCode(
+            code: callbackResult.code,
+            verifier: verifier,
+          );
+          final session = KeycastSession.fromTokenResponse(tokenResponse);
+          await session.save();
+          await ref.read(authServiceProvider).signInWithKeycast(session);
+        } else if (callbackResult is CallbackError) {
+          throw 'OAuth error: ${callbackResult.error}';
+        }
       }
     } catch (e) {
       if (context.mounted) {
