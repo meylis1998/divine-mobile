@@ -513,9 +513,6 @@ class AuthService {
     _lastError = null;
 
     try {
-      // 1. Prepare RPC Signer
-      // Note: In a production refactor, the config should be passed via constructor
-      // or a provider, but for now we'll use the diVine defaults.
       const config = OAuthConfig(
         serverUrl: 'https://login.divine.video',
         clientId: 'divine-mobile',
@@ -524,29 +521,20 @@ class AuthService {
 
       _rpcSigner = KeycastRpc.fromSession(config, session);
 
-      // 2. Fetch the public key from the Keycast server
       final publicKeyHex = await _rpcSigner?.getPublicKey();
       if (publicKeyHex == null) {
         throw Exception('Could not retrieve public key from Keycast server');
       }
 
-      // 3. Update internal state
-      // Note: Since SecureKeyContainer is strictly for local keys,
-      // you may need to update your NostrClient to accept this RPC signer.
-      // For now, we set the profile so the UI can update.
       _currentProfile = UserProfile(
         npub: NostrKeyUtils.encodePubKey(publicKeyHex),
         publicKeyHex: publicKeyHex,
-        displayName: 'Keycast User', // Or fetch from session if available
+        displayName: 'Keycast User',
       );
 
-      // 4. Persistence
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('current_user_pubkey_hex', publicKeyHex);
 
-      // 5. Finalize state
-      // Note: We bypass awaitingTosAcceptance because the Keycast signup
-      // flow includes TOS agreement (TC-AUTH-024)
       Log.info(
         '✅ Keycast auth listener setting auth state to authenticated.',
         name: 'AuthService',
@@ -555,7 +543,6 @@ class AuthService {
       _profileController.add(_currentProfile);
 
       final keyContainer = SecureKeyContainer.fromPublicKey(publicKeyHex);
-
       await _setupUserSession(keyContainer, AuthenticationSource.keycast);
 
       Log.info(
