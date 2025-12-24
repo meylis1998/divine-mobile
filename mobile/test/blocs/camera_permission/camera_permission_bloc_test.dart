@@ -5,16 +5,16 @@ import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockPermissionHandlerPlatform extends Mock
+class _MockPermissionHandlerPlatform extends Mock
     with MockPlatformInterfaceMixin
     implements PermissionHandlerPlatform {}
 
 void main() {
   group('CameraPermissionBloc', () {
-    late MockPermissionHandlerPlatform mockPlatform;
+    late _MockPermissionHandlerPlatform mockPlatform;
 
     setUp(() {
-      mockPlatform = MockPermissionHandlerPlatform();
+      mockPlatform = _MockPermissionHandlerPlatform();
       PermissionHandlerPlatform.instance = mockPlatform;
     });
 

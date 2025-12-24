@@ -20,7 +20,7 @@ version: 1.0.4+176
 
 environment:
   sdk: ^3.10.0
-  flutter: ^3.38.0
+  flutter: ^3.38.3
 
 workspace:
   - packages/comments_repository

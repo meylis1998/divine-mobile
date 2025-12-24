@@ -6,6 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 part 'camera_permission_event.dart';
 part 'camera_permission_state.dart';
 
+// TODO: Create PermissionService package.
+
 /// BLoC for managing camera and microphone permissions.
 ///
 /// Handles:
