@@ -35,12 +35,7 @@
       "mcp__dart__analyze_files",
       "Bash(git add:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(dart run:*)",
-      "Bash(dart analyze:*)",
-      "Bash(fvm flutter pub:*)",
-      "Bash(fvm dart analyze:*)",
-      "Bash(fvm flutter test:*)",
-      "Bash(fvm dart format:*)"
+      "Bash(dart run:*)"
     ],
     "deny": [],
     "ask": []
