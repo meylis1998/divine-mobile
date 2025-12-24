@@ -1,8 +1,6 @@
 // ABOUTME: Welcome screen for new users showing TOS acceptance and age verification
 // ABOUTME: App auto-creates nsec on first launch - this screen only handles TOS and shows error if auto-creation fails
 
-import 'dart:io';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
