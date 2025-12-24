@@ -684,7 +684,7 @@ final class OauthConfigProvider
   }
 }
 
-String _$oauthConfigHash() => r'a054efcbe9cd52daef39c693509dc243f3dfbb8e';
+String _$oauthConfigHash() => r'2d26760b0a845d9e0c2dd0362a4c26363be1786f';
 
 /// Keycast OAuth client for handling PKCE flows
 
