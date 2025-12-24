@@ -132,7 +132,9 @@ void main() {
           when(
             () => mockPlatform.requestPermissions([Permission.camera]),
           ).thenAnswer(
-            (_) async => {Permission.camera: PermissionStatus.permanentlyDenied},
+            (_) async => {
+              Permission.camera: PermissionStatus.permanentlyDenied,
+            },
           );
         },
         build: () => CameraPermissionBloc(),
@@ -153,8 +155,9 @@ void main() {
           when(
             () => mockPlatform.requestPermissions([Permission.microphone]),
           ).thenAnswer(
-            (_) async =>
-                {Permission.microphone: PermissionStatus.permanentlyDenied},
+            (_) async => {
+              Permission.microphone: PermissionStatus.permanentlyDenied,
+            },
           );
         },
         build: () => CameraPermissionBloc(),
