@@ -259,6 +259,9 @@ void main() {
           when(
             () => mockPlatform.checkPermissionStatus(Permission.camera),
           ).thenThrow(Exception('Platform error'));
+          when(
+            () => mockPlatform.checkPermissionStatus(Permission.microphone),
+          ).thenAnswer((_) async => PermissionStatus.granted);
         },
         build: () => CameraPermissionBloc(),
         act: (bloc) => bloc.add(const CameraPermissionRefresh()),
