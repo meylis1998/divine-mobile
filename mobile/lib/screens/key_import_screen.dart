@@ -263,10 +263,6 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
         // Clear the text field for security
         _keyController.clear();
 
-        // Accept TOS to transition auth state to authenticated
-        // This avoids desync between prefs and auth state
-        await authService.acceptTermsOfService();
-
         // Navigate to home
         context.go('/home/0');
       } else if (mounted) {

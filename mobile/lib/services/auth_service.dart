@@ -471,8 +471,7 @@ class AuthService {
   }
 
   /// transitions to authenticated state w/o first creating or importing keys
-  // TODO(any): rename this method to "signInAutomatically"
-  Future<void> acceptTermsOfService() async {
+  Future<void> signInAutomatically() async {
     try {
       // If not authenticated (e.g., after logout), re-initialize to load existing keys
       if (_authState != AuthState.authenticated) {

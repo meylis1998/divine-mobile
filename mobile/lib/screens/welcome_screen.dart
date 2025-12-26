@@ -148,7 +148,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       final authService = ref.read(authServiceProvider);
       // Accept TOS - this transitions auth state from awaitingTosAcceptance to authenticated
       // Router will automatically redirect to /explore when state changes
-      await authService.acceptTermsOfService();
+      await authService.signInAutomatically();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
