@@ -686,17 +686,60 @@ final class OauthConfigProvider
 
 String _$oauthConfigHash() => r'2d26760b0a845d9e0c2dd0362a4c26363be1786f';
 
-/// Keycast OAuth client for handling PKCE flows
+@ProviderFor(secureKeycastStorage)
+const secureKeycastStorageProvider = SecureKeycastStorageProvider._();
+
+final class SecureKeycastStorageProvider
+    extends
+        $FunctionalProvider<
+          SecureKeycastStorage,
+          SecureKeycastStorage,
+          SecureKeycastStorage
+        >
+    with $Provider<SecureKeycastStorage> {
+  const SecureKeycastStorageProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'secureKeycastStorageProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$secureKeycastStorageHash();
+
+  @$internal
+  @override
+  $ProviderElement<SecureKeycastStorage> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SecureKeycastStorage create(Ref ref) {
+    return secureKeycastStorage(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SecureKeycastStorage value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SecureKeycastStorage>(value),
+    );
+  }
+}
+
+String _$secureKeycastStorageHash() =>
+    r'd33b1dfe3e6467c3c4794c7c1fa6c0eb60c10cd3';
 
 @ProviderFor(oauthClient)
 const oauthClientProvider = OauthClientProvider._();
 
-/// Keycast OAuth client for handling PKCE flows
-
 final class OauthClientProvider
     extends $FunctionalProvider<KeycastOAuth, KeycastOAuth, KeycastOAuth>
     with $Provider<KeycastOAuth> {
-  /// Keycast OAuth client for handling PKCE flows
   const OauthClientProvider._()
     : super(
         from: null,
@@ -730,7 +773,7 @@ final class OauthClientProvider
   }
 }
 
-String _$oauthClientHash() => r'346094d7beec35b5cb82754643e69a00ef9ee0d8';
+String _$oauthClientHash() => r'd7a61dbb44cb15f2ad9520e1251048469da85b20';
 
 @ProviderFor(keycastAuthListener)
 const keycastAuthListenerProvider = KeycastAuthListenerProvider._();

@@ -237,11 +237,19 @@ OAuthConfig oauthConfig(Ref ref) {
   );
 }
 
-/// Keycast OAuth client for handling PKCE flows
+@Riverpod(keepAlive: true)
+SecureKeycastStorage secureKeycastStorage(Ref ref) => SecureKeycastStorage();
+
 @Riverpod(keepAlive: true)
 KeycastOAuth oauthClient(Ref ref) {
   final config = ref.watch(oauthConfigProvider);
-  return KeycastOAuth(config: config, storage: SecureKeycastStorage());
+  final storage = ref.watch(secureKeycastStorageProvider);
+
+  final oauth = KeycastOAuth(config: config, storage: storage);
+
+  ref.onDispose(() => oauth.close());
+
+  return oauth;
 }
 
 @Riverpod(keepAlive: true)
