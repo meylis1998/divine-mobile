@@ -281,7 +281,13 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kAuthSourceKey);
-      return AuthenticationSource.fromCode(raw);
+      final authSource = await AuthenticationSource.fromCode(raw);
+      Log.info(
+        'Loaded $_kAuthSourceKey as $authSource',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      return authSource;
     } catch (e) {
       return AuthenticationSource.automatic;
     }
@@ -298,7 +304,6 @@ class AuthService {
       category: LogCategory.auth,
     );
 
-    _persistTosAndAgeConfirmations();
     _setAuthState(AuthState.authenticating);
     _lastError = null;
 
@@ -352,7 +357,6 @@ class AuthService {
       name: 'AuthService',
       category: LogCategory.auth,
     );
-    _persistTosAndAgeConfirmations();
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -466,24 +470,13 @@ class AuthService {
     }
   }
 
-  Future<void> _persistTosAndAgeConfirmations() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'terms_accepted_at',
-      DateTime.now().toIso8601String(),
-    );
-    await prefs.setBool('age_verified_16_plus', true);
-  }
-
   /// transitions to authenticated state w/o first creating or importing keys
   // TODO(any): rename this method to "signInAutomatically"
   Future<void> acceptTermsOfService() async {
     try {
-      await _persistTosAndAgeConfirmations();
-      // If unauthenticated (e.g., after logout), re-initialize to load existing keys
-      if (_authState == AuthState.unauthenticated) {
-        await initialize();
-        return;
+      // If not authenticated (e.g., after logout), re-initialize to load existing keys
+      if (_authState != AuthState.authenticated) {
+        await _checkExistingAuth();
       }
 
       Log.info(
@@ -509,8 +502,6 @@ class AuthService {
       name: 'AuthService',
       category: LogCategory.auth,
     );
-
-    await _persistTosAndAgeConfirmations();
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -602,9 +593,6 @@ class AuthService {
       _currentKeyContainer = null;
       _currentProfile = null;
       _lastError = null;
-
-      // Persist that the app is now signed out — welcome should be shown
-      await prefs.setString(_kAuthSourceKey, AuthenticationSource.none.code);
 
       try {
         if (_oauthClient != null) {
@@ -947,15 +935,14 @@ class AuthService {
         'current_user_pubkey_hex',
         keyContainer.publicKeyHex,
       );
+      await prefs.setString(
+        'terms_accepted_at',
+        DateTime.now().toIso8601String(),
+      );
+      await prefs.setBool('age_verified_16_plus', true);
 
-      final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
-      if (!hasAcceptedTos) {
-        _setAuthState(AuthState.awaitingTosAcceptance);
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_kAuthSourceKey, source.code);
-        _setAuthState(AuthState.authenticated);
-      }
+      await prefs.setString(_kAuthSourceKey, source.code);
+      _setAuthState(AuthState.authenticated);
     } catch (e) {
       Log.warning(
         'Failed to check TOS status: $e',
