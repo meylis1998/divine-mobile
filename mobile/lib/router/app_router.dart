@@ -224,12 +224,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      // Redirect FROM /welcome TO /explore when TOS is accepted
-      if (location.startsWith('/welcome')) {
+      // Redirect FROM /welcome or /import-key TO /explore when TOS is accepted
+      // This handles both normal flow (welcome screen) and import key flow
+      if (location.startsWith('/welcome') || location.startsWith('/import-key')) {
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
         if (hasAcceptedTerms) {
           Log.debug(
-            'TOS accepted, redirecting from /welcome to /explore',
+            'TOS accepted, redirecting from $location to /explore',
             name: 'AppRouter',
             category: LogCategory.ui,
           );

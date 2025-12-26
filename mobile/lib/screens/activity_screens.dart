@@ -7,6 +7,7 @@ import 'package:openvine/models/user_profile.dart' as models;
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -40,9 +41,15 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authService = ref.watch(authServiceProvider);
+    // Watch auth state stream for reactive updates when auth state changes
+    final authStateAsync = ref.watch(authStateStreamProvider);
+    final isAuthenticated = authStateAsync.when(
+      data: (state) => state == AuthState.authenticated,
+      loading: () => false,
+      error: (_, __) => false,
+    );
 
-    if (!authService.isAuthenticated) {
+    if (!isAuthenticated) {
       return _buildUnauthenticatedState();
     }
 
