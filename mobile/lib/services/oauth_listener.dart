@@ -45,7 +45,7 @@ class OAuthListener {
 
       if (result case CallbackSuccess(code: var resultCode)) {
         // Retrieve the verifier we saved when the button was pressed
-        final verifier = ref.read(pendingVerifierProvider);
+        final verifier = await ref.read(pendingVerifierProvider.future);
         if (verifier == null) {
           Log.error(
             '❌ OAuth Error: No pending verifier found. Handshake failed.',
@@ -72,7 +72,7 @@ class OAuthListener {
         await ref.read(authServiceProvider).signInWithDivineOAuth(session);
 
         // Success: Clear the verifier state
-        ref.read(pendingVerifierProvider.notifier).set(null);
+        ref.read(pendingVerifierProvider.notifier).clear();
 
         Log.info('✅ OAuth authentication complete', name: '$OAuthListener');
       } else {

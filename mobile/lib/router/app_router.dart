@@ -35,6 +35,7 @@ import 'package:openvine/screens/welcome_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_stop_navigator_observer.dart';
+import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -664,6 +665,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             );
           }
           return VideoEditorScreen(videoPath: videoPath);
+        },
+      ),
+      // oAuth route displayed briefly after authenticating if app was closed
+      // while oauth web page was displayed
+      GoRoute(
+        path: '/app/callback',
+        name: 'oauth-callback',
+        builder: (ctx, st) {
+          return Container(color: VineTheme.vineGreen);
         },
       ),
     ],

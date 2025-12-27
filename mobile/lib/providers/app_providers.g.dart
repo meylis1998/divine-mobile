@@ -775,25 +775,25 @@ final class OauthClientProvider
 
 String _$oauthClientHash() => r'd7a61dbb44cb15f2ad9520e1251048469da85b20';
 
-@ProviderFor(keycastAuthListener)
-const keycastAuthListenerProvider = KeycastAuthListenerProvider._();
+@ProviderFor(oAuthListener)
+const oAuthListenerProvider = OAuthListenerProvider._();
 
-final class KeycastAuthListenerProvider
+final class OAuthListenerProvider
     extends $FunctionalProvider<OAuthListener, OAuthListener, OAuthListener>
     with $Provider<OAuthListener> {
-  const KeycastAuthListenerProvider._()
+  const OAuthListenerProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'keycastAuthListenerProvider',
+        name: r'oAuthListenerProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$keycastAuthListenerHash();
+  String debugGetCreateSourceHash() => _$oAuthListenerHash();
 
   @$internal
   @override
@@ -802,7 +802,7 @@ final class KeycastAuthListenerProvider
 
   @override
   OAuthListener create(Ref ref) {
-    return keycastAuthListener(ref);
+    return oAuthListener(ref);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -814,8 +814,7 @@ final class KeycastAuthListenerProvider
   }
 }
 
-String _$keycastAuthListenerHash() =>
-    r'57363ddf5b18e0a69bd429be748b61d9c432f15c';
+String _$oAuthListenerHash() => r'dcf33ced1dffba07f0b633646392fbc3c9b38b84';
 
 /// Holds the PKCE verifier while the user is in the browser.
 
@@ -824,7 +823,7 @@ const pendingVerifierProvider = PendingVerifierProvider._();
 
 /// Holds the PKCE verifier while the user is in the browser.
 final class PendingVerifierProvider
-    extends $NotifierProvider<PendingVerifier, String?> {
+    extends $AsyncNotifierProvider<PendingVerifier, String?> {
   /// Holds the PKCE verifier while the user is in the browser.
   const PendingVerifierProvider._()
     : super(
@@ -843,32 +842,24 @@ final class PendingVerifierProvider
   @$internal
   @override
   PendingVerifier create() => PendingVerifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(String? value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<String?>(value),
-    );
-  }
 }
 
-String _$pendingVerifierHash() => r'11f57d774a0f31af3d73ccdb93f2f8017ebe1a41';
+String _$pendingVerifierHash() => r'4ca34a3cec65008cdd7f03774ec8f666e13cbee3';
 
 /// Holds the PKCE verifier while the user is in the browser.
 
-abstract class _$PendingVerifier extends $Notifier<String?> {
-  String? build();
+abstract class _$PendingVerifier extends $AsyncNotifier<String?> {
+  FutureOr<String?> build();
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build();
-    final ref = this.ref as $Ref<String?, String?>;
+    final ref = this.ref as $Ref<AsyncValue<String?>, String?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<String?, String?>,
-              String?,
+              AnyNotifier<AsyncValue<String?>, String?>,
+              AsyncValue<String?>,
               Object?,
               Object?
             >;

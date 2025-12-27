@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -253,7 +254,7 @@ KeycastOAuth oauthClient(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-OAuthListener keycastAuthListener(Ref ref) {
+OAuthListener oAuthListener(Ref ref) {
   final listener = OAuthListener(ref);
   ref.onDispose(() => listener.dispose());
   return listener;
@@ -262,10 +263,28 @@ OAuthListener keycastAuthListener(Ref ref) {
 /// Holds the PKCE verifier while the user is in the browser.
 @Riverpod(keepAlive: true)
 class PendingVerifier extends _$PendingVerifier {
-  @override
-  String? build() => null;
+  // Use a secure storage instance
+  final _storage = const FlutterSecureStorage();
+  static const _key = 'oauth_pkce_verifier';
 
-  void set(String? verifier) => state = verifier;
+  @override
+  Future<String?> build() async {
+    final result = await _storage.read(key: _key);
+    print('pending verifier read: $result');
+    return result;
+  }
+
+  Future<void> set(String verifier) async {
+    await _storage.write(key: _key, value: verifier);
+    print('pending verifier set: $verifier');
+    ref.invalidateSelf();
+  }
+
+  Future<void> clear() async {
+    await _storage.delete(key: _key);
+    print('pending verifier cleared');
+    ref.invalidateSelf();
+  }
 }
 
 /// Web authentication service (for web platform only)
