@@ -263,26 +263,25 @@ OAuthListener oAuthListener(Ref ref) {
 /// Holds the PKCE verifier while the user is in the browser.
 @Riverpod(keepAlive: true)
 class PendingVerifier extends _$PendingVerifier {
-  // Use a secure storage instance
+  // Use a persistent storage instance because it is possible that the
+  // operating system kills the app while the user is in the browser logging
+  // in. Use secure storage to avoid leaking the verifier.
   final _storage = const FlutterSecureStorage();
   static const _key = 'oauth_pkce_verifier';
 
   @override
   Future<String?> build() async {
     final result = await _storage.read(key: _key);
-    print('pending verifier read: $result');
     return result;
   }
 
   Future<void> set(String verifier) async {
     await _storage.write(key: _key, value: verifier);
-    print('pending verifier set: $verifier');
     ref.invalidateSelf();
   }
 
   Future<void> clear() async {
     await _storage.delete(key: _key);
-    print('pending verifier cleared');
     ref.invalidateSelf();
   }
 }
