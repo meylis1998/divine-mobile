@@ -477,9 +477,9 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i4.Future<void>);
 
   @override
-  _i4.Future<void> signInWithKeycast(_i8.KeycastSession? session) =>
+  _i4.Future<void> signInWithDivineOAuth(_i8.KeycastSession? session) =>
       (super.noSuchMethod(
-            Invocation.method(#signInWithKeycast, [session]),
+            Invocation.method(#signInWithDivineOAuth, [session]),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
