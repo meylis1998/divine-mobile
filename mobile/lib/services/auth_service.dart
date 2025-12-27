@@ -20,7 +20,7 @@ const _kAuthSourceKey = 'authentication_source';
 /// Source of authentication used to restore session at startup
 enum AuthenticationSource {
   none('none'),
-  keycast('keycast'),
+  divineOAuth('divineOAuth'),
   importedKeys('imported_keys'),
   automatic('automatic');
 
@@ -181,14 +181,14 @@ class AuthService {
           _setAuthState(AuthState.unauthenticated);
           return;
 
-        case AuthenticationSource.keycast:
-          // Try to load Keycast session from secure storage
+        case AuthenticationSource.divineOAuth:
+          // Try to load authorized session from secure storage
           final session = await KeycastSession.load();
           if (session != null && session.hasRpcAccess) {
-            await signInWithKeycast(session);
+            await signInWithDivineOAuth(session);
             return;
           }
-          // Could not restore Keycast session — fall back to unauthenticated
+          // session not restored — fall back to unauthenticated
           _setAuthState(AuthState.unauthenticated);
           return;
 
@@ -493,11 +493,10 @@ class AuthService {
     }
   }
 
-  /// Sign in using a Keycast Session (OAuth 2.0 flow)
-  /// Fulfills TC-AUTH-019
-  Future<void> signInWithKeycast(KeycastSession session) async {
+  /// Sign in using OAuth 2.0 flow
+  Future<void> signInWithDivineOAuth(KeycastSession session) async {
     Log.debug(
-      'Integrating Keycast session into AuthService',
+      'Integrating OAuth session into AuthService',
       name: 'AuthService',
       category: LogCategory.auth,
     );
@@ -516,40 +515,40 @@ class AuthService {
 
       final publicKeyHex = await _rpcSigner?.getPublicKey();
       if (publicKeyHex == null) {
-        throw Exception('Could not retrieve public key from Keycast server');
+        throw Exception('Could not retrieve public key from server');
       }
 
       _currentProfile = UserProfile(
         npub: NostrKeyUtils.encodePubKey(publicKeyHex),
         publicKeyHex: publicKeyHex,
-        displayName: 'Keycast User',
+        displayName: 'diVine User',
       );
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('current_user_pubkey_hex', publicKeyHex);
 
       Log.info(
-        '✅ Keycast auth listener setting auth state to authenticated.',
+        '✅ Divine oauth listener setting auth state to authenticated.',
         name: 'AuthService',
         category: LogCategory.auth,
       );
       _profileController.add(_currentProfile);
 
       final keyContainer = SecureKeyContainer.fromPublicKey(publicKeyHex);
-      await _setupUserSession(keyContainer, AuthenticationSource.keycast);
+      await _setupUserSession(keyContainer, AuthenticationSource.divineOAuth);
 
       Log.info(
-        '✅ Keycast session successfully integrated for $publicKeyHex',
+        '✅ Divine oauth session successfully integrated for $publicKeyHex',
         name: 'AuthService',
         category: LogCategory.auth,
       );
     } catch (e) {
       Log.error(
-        'Failed to integrate Keycast session: $e',
+        'Failed to integrate oauth session: $e',
         name: 'AuthService',
         category: LogCategory.auth,
       );
-      _lastError = 'Keycast integration failed: $e';
+      _lastError = 'oauth integration failed: $e';
       _setAuthState(AuthState.unauthenticated);
     }
   }
@@ -759,15 +758,13 @@ class AuthService {
         category: LogCategory.auth,
       );
 
-      // 2. Branch Signing Logic (Local vs Keycast RPC)
+      // 2. Branch Signing Logic (Local vs RPC)
       Event? signedEvent;
 
       if (_rpcSigner != null) {
-        // --- KEYCAST RPC PATH (TC-AUTH-019) ---
-        Log.info('🚀 Signing via Keycast Remote RPC', name: 'AuthService');
+        Log.info('🚀 Signing via Remote RPC', name: 'AuthService');
         signedEvent = await _rpcSigner!.signEvent(event);
       } else {
-        // --- LOCAL SECURE STORAGE PATH ---
         Log.info('🔐 Signing via Local Secure Storage', name: 'AuthService');
         signedEvent = await _keyStorage.withPrivateKey<Event?>((privateKey) {
           event.sign(privateKey);

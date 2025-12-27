@@ -38,7 +38,7 @@ import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
-import 'package:openvine/services/keycast_auth_listener.dart';
+import 'package:openvine/services/oauth_listener.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
@@ -224,10 +224,10 @@ SecureKeyStorage secureKeyStorage(Ref ref) {
 }
 
 // =============================================================================
-// KEYCAST & OAUTH SERVICES
+// OAUTH SERVICES
 // =============================================================================
 
-/// OAuth configuration for the Keycast server
+/// OAuth configuration for our login.divine.video server
 @Riverpod(keepAlive: true)
 OAuthConfig oauthConfig(Ref ref) {
   return const OAuthConfig(
@@ -253,8 +253,8 @@ KeycastOAuth oauthClient(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-KeycastAuthListener keycastAuthListener(Ref ref) {
-  final listener = KeycastAuthListener(ref);
+OAuthListener keycastAuthListener(Ref ref) {
+  final listener = OAuthListener(ref);
   ref.onDispose(() => listener.dispose());
   return listener;
 }

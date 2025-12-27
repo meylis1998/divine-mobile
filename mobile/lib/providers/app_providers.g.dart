@@ -640,17 +640,17 @@ final class SecureKeyStorageProvider
 
 String _$secureKeyStorageHash() => r'853547d439994307884d2f47f3d9769daa0a1e96';
 
-/// OAuth configuration for the Keycast server
+/// OAuth configuration for our login.divine.video server
 
 @ProviderFor(oauthConfig)
 const oauthConfigProvider = OauthConfigProvider._();
 
-/// OAuth configuration for the Keycast server
+/// OAuth configuration for our login.divine.video server
 
 final class OauthConfigProvider
     extends $FunctionalProvider<OAuthConfig, OAuthConfig, OAuthConfig>
     with $Provider<OAuthConfig> {
-  /// OAuth configuration for the Keycast server
+  /// OAuth configuration for our login.divine.video server
   const OauthConfigProvider._()
     : super(
         from: null,
@@ -779,13 +779,8 @@ String _$oauthClientHash() => r'd7a61dbb44cb15f2ad9520e1251048469da85b20';
 const keycastAuthListenerProvider = KeycastAuthListenerProvider._();
 
 final class KeycastAuthListenerProvider
-    extends
-        $FunctionalProvider<
-          KeycastAuthListener,
-          KeycastAuthListener,
-          KeycastAuthListener
-        >
-    with $Provider<KeycastAuthListener> {
+    extends $FunctionalProvider<OAuthListener, OAuthListener, OAuthListener>
+    with $Provider<OAuthListener> {
   const KeycastAuthListenerProvider._()
     : super(
         from: null,
@@ -802,26 +797,25 @@ final class KeycastAuthListenerProvider
 
   @$internal
   @override
-  $ProviderElement<KeycastAuthListener> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  $ProviderElement<OAuthListener> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  KeycastAuthListener create(Ref ref) {
+  OAuthListener create(Ref ref) {
     return keycastAuthListener(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(KeycastAuthListener value) {
+  Override overrideWithValue(OAuthListener value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<KeycastAuthListener>(value),
+      providerOverride: $SyncValueProvider<OAuthListener>(value),
     );
   }
 }
 
 String _$keycastAuthListenerHash() =>
-    r'f6007e9c8429de55a577a31dc8c65d2b7b3b8bb5';
+    r'57363ddf5b18e0a69bd429be748b61d9c432f15c';
 
 /// Holds the PKCE verifier while the user is in the browser.
 

@@ -126,7 +126,7 @@
                     android:pathPrefix="/search"/>
             </intent-filter>
 
-            <!-- Deep link for Keycast oauth login -->
+            <!-- Deep link for oauth login -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
