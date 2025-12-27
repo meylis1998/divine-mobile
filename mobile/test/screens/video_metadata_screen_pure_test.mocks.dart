@@ -491,7 +491,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
   @override
   _i5.Future<void> signInAutomatically() =>
       (super.noSuchMethod(
-            Invocation.method(#acceptTermsOfService, []),
+            Invocation.method(#signInAutomatically, []),
             returnValue: _i5.Future<void>.value(),
             returnValueForMissingStub: _i5.Future<void>.value(),
           )
