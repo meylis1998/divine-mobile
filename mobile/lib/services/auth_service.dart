@@ -564,6 +564,7 @@ class AuthService {
     try {
       // Clear TOS acceptance on any logout - user must re-accept when logging back in
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kAuthSourceKey);
       await prefs.remove('age_verified_16_plus');
       await prefs.remove('terms_accepted_at');
 
@@ -607,15 +608,6 @@ class AuthService {
         name: 'AuthService',
         category: LogCategory.auth,
       );
-
-      if (deleteKeys) {
-        Log.info(
-          'Auto-creating new identity after key deletion',
-          name: 'AuthService',
-          category: LogCategory.auth,
-        );
-        await _checkExistingAuth();
-      }
     } catch (e) {
       Log.error(
         'Error during sign out: $e',
