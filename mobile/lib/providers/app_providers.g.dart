@@ -844,7 +844,7 @@ final class PendingVerifierProvider
   PendingVerifier create() => PendingVerifier();
 }
 
-String _$pendingVerifierHash() => r'4ca34a3cec65008cdd7f03774ec8f666e13cbee3';
+String _$pendingVerifierHash() => r'ae124f88b67f0c73e8205d37d0ba2371cfaf7470';
 
 /// Holds the PKCE verifier while the user is in the browser.
 
