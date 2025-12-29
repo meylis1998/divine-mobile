@@ -96,6 +96,7 @@ dependencies:
   flutter_cache_manager: ^3.3.1
   share_plus: ^12.0.0 # Cross-platform sharing
   google_fonts: ^6.3.2 # For using Google Fonts including Pacifico
+  flutter_svg: ^2.0.10+1 # For custom SVG icons
   blurhash_dart: ^1.2.1 # Generate blurhash for progressive image loading
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
@@ -208,6 +209,9 @@ flutter:
     - assets/icon/divine_icon_transparent.png
     - assets/icon/divine_wordmark.png
     - assets/icon/user-avatar.png
+    - assets/icon/menu.svg
+    - assets/icon/search.svg
+    - assets/icon/camera.svg
     - assets/seed_data/seed_events.sql
     - assets/seed_media/manifest.json
     - assets/seed_media/videos/

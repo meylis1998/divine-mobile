@@ -1,11 +1,13 @@
 // ABOUTME: AppShell widget providing bottom navigation and dynamic header
-// ABOUTME: Header title changes based on route with Pacifico font, includes camera button
+// ABOUTME: Header title uses Bricolage Grotesque font, includes camera button
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/vine_drawer.dart';
 import 'package:openvine/widgets/environment_indicator.dart';
@@ -172,12 +174,12 @@ class AppShell extends ConsumerWidget {
 
     final titleWidget = Text(
       title,
-      // Use Pacifico font only for 'Divine' on home feed, system font elsewhere
+      // Use Pacifico font for 'Divine' branding, Bricolage Grotesque for other titles
       style: title == 'Divine'
           ? GoogleFonts.pacifico(
               textStyle: const TextStyle(fontSize: 24, letterSpacing: 0.2),
             )
-          : const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          : VineTheme.titleFont(),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -247,6 +249,8 @@ class AppShell extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
+        toolbarHeight: 72,
+        leadingWidth: 72,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
             ? IconButton(
@@ -353,10 +357,31 @@ class AppShell extends ConsumerWidget {
               )
             : Builder(
                 // Hamburger menu in upper left when no back button
-                builder: (context) => IconButton(
-                  key: const Key('menu-icon-button'),
-                  tooltip: 'Menu',
-                  icon: const Icon(Icons.menu),
+                builder: (context) => Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: IconButton(
+                    key: const Key('menu-icon-button'),
+                    tooltip: 'Menu',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/menu.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
                   onPressed: () {
                     Log.info(
                       '👆 User tapped menu button',
@@ -371,7 +396,8 @@ class AppShell extends ConsumerWidget {
                     visibilityManager.pauseAllVideos();
 
                     Scaffold.of(context).openDrawer();
-                  },
+                    },
+                  ),
                 ),
               ),
         title: Row(
@@ -384,7 +410,26 @@ class AppShell extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Search',
-            icon: const Icon(Icons.search),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Container(
+              width: 48,
+              height: 48,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: VineTheme.iconButtonBackground,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SvgPicture.asset(
+                'assets/icon/search.svg',
+                width: 32,
+                height: 32,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
             onPressed: () {
               Log.info(
                 '👆 User tapped search button',
@@ -394,9 +439,29 @@ class AppShell extends ConsumerWidget {
               context.goSearch();
             },
           ),
+          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Open camera',
-            icon: const Icon(Icons.photo_camera_outlined),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Container(
+              width: 48,
+              height: 48,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: VineTheme.iconButtonBackground,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SvgPicture.asset(
+                'assets/icon/camera.svg',
+                width: 32,
+                height: 32,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
             onPressed: () {
               Log.info(
                 '👆 User tapped camera button',
@@ -406,6 +471,7 @@ class AppShell extends ConsumerWidget {
               context.pushCamera();
             },
           ),
+          const SizedBox(width: 12),
         ],
       ),
       drawer: const VineDrawer(),
