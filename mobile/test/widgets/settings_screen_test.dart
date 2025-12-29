@@ -83,6 +83,60 @@ void main() {
       // TODO(any): Fix and re-enable these tests
     }, skip: true);
 
+    testWidgets('Settings screen reorganizes dev and danger items', (
+      tester,
+    ) async {
+      // Developer mode is disabled by default (EnvironmentService not initialized)
+      when(mockAuthService.isAuthenticated).thenReturn(true);
+      when(mockAuthService.currentProfile).thenReturn(null);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
+        ),
+      );
+
+      // Let async version loader settle (PackageInfo)
+      await tester.pumpAndSettle();
+
+      // Sanity check: authenticated sections and core network tiles render
+      expect(find.text('ACCOUNT'), findsOneWidget);
+      expect(find.text('Log Out'), findsOneWidget);
+      expect(find.text('Relays'), findsOneWidget);
+      expect(find.text('Media Servers'), findsOneWidget);
+
+      Future<void> scrollUntilBuilt(Finder target) async {
+        final listFinder = find.byType(ListView);
+        for (var i = 0; i < 30 && target.evaluate().isEmpty; i++) {
+          await tester.drag(listFinder, const Offset(0, -300));
+          await tester.pump();
+        }
+      }
+
+      // Dev options should be visible even when developer mode is off
+      await scrollUntilBuilt(find.text('Developer Options'));
+      expect(find.text('Developer Options'), findsOneWidget);
+
+      // Destructive account actions should be moved to a bottom "Danger Zone"
+      await scrollUntilBuilt(find.text('DANGER ZONE'));
+      expect(find.text('DANGER ZONE'), findsOneWidget);
+
+      await scrollUntilBuilt(find.text('Remove Keys from Device'));
+      expect(find.text('Remove Keys from Device'), findsOneWidget);
+
+      await scrollUntilBuilt(find.text('Delete Account and Data'));
+      expect(find.text('Delete Account and Data'), findsOneWidget);
+
+      // Ensure ordering: Danger Zone is below Support
+      await scrollUntilBuilt(find.text('Save Logs'));
+      final supportY = tester.getTopLeft(find.text('SUPPORT')).dy;
+
+      await scrollUntilBuilt(find.text('DANGER ZONE'));
+      final dangerY = tester.getTopLeft(find.text('DANGER ZONE')).dy;
+      expect(dangerY, greaterThan(supportY));
+    });
+
     testWidgets('App bar displays correctly', (tester) async {
       await tester.pumpWidget(
         ProviderScope(

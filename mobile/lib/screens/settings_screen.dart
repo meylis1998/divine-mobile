@@ -25,8 +25,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _appVersion = '';
-  // Store notifier reference to safely call in deactivate
-  OverlayVisibility? _overlayNotifier;
 
   @override
   void initState() {
@@ -34,22 +32,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadAppVersion();
     // Mark settings as open to pause video playback
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _overlayNotifier = ref.read(overlayVisibilityProvider.notifier);
-      _overlayNotifier?.setSettingsOpen(true);
+      ref.read(overlayVisibilityProvider.notifier).setSettingsOpen(true);
     });
   }
 
   @override
   void deactivate() {
-    // Mark settings as closed when leaving
-    // Use cached notifier reference since ref is invalid during deactivate
-    // Must use Future to avoid modifying provider during widget tree build
-    final notifier = _overlayNotifier;
-    if (notifier != null) {
-      Future(() {
-        notifier.setSettingsOpen(false);
-      });
-    }
+    // Do not mutate providers in widget lifecycle methods.
+    // Closing is handled via PopScope in build.
     super.deactivate();
   }
 
@@ -64,104 +54,86 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final authService = ref.watch(authServiceProvider);
     final isAuthenticated = authService.isAuthenticated;
-    final isDeveloperMode = ref.watch(isDeveloperModeEnabledProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: VineTheme.vineGreen,
-        foregroundColor: VineTheme.whiteText,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-          tooltip: 'Back',
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          ref.read(overlayVisibilityProvider.notifier).setSettingsOpen(false);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          backgroundColor: VineTheme.vineGreen,
+          foregroundColor: VineTheme.whiteText,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+            tooltip: 'Back',
+          ),
         ),
-      ),
-      backgroundColor: Colors.black,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              // Profile Section
-              if (isAuthenticated) ...[
-                _buildSectionHeader('Profile'),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.person,
-                  title: 'Edit Profile',
-                  subtitle: 'Update your display name, bio, and avatar',
-                  onTap: () => context.push('/edit-profile'),
-                ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.key,
-                  title: 'Key Management',
-                  subtitle: 'Export, backup, and restore your Nostr keys',
-                  onTap: () => context.push('/key-management'),
-                ),
-              ],
+        backgroundColor: Colors.black,
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: ListView(
+              children: [
+                // Profile Section
+                if (isAuthenticated) ...[
+                  _buildSectionHeader('Profile'),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.person,
+                    title: 'Edit Profile',
+                    subtitle: 'Update your display name, bio, and avatar',
+                    onTap: () => context.push('/edit-profile'),
+                  ),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.key,
+                    title: 'Key Management',
+                    subtitle: 'Export, backup, and restore your Nostr keys',
+                    onTap: () => context.push('/key-management'),
+                  ),
+                ],
 
-              // Account Section (only show when authenticated)
-              if (isAuthenticated) ...[
-                _buildSectionHeader('Account'),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.logout,
-                  title: 'Log Out',
-                  subtitle: 'Sign out of your account (keeps your keys)',
-                  onTap: () => _handleLogout(context, ref),
-                ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.key_off,
-                  title: 'Remove Keys from Device',
-                  subtitle:
-                      'Delete your nsec from this device (content stays on relays)',
-                  onTap: () => _handleRemoveKeys(context, ref),
-                  iconColor: Colors.orange,
-                  titleColor: Colors.orange,
-                ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.delete_forever,
-                  title: 'Delete Account and Data',
-                  subtitle:
-                      'PERMANENTLY delete your account and all content from Nostr relays',
-                  onTap: () => _handleDeleteAllContent(context, ref),
-                  iconColor: Colors.red,
-                  titleColor: Colors.red,
-                ),
-              ],
+                // Account Section (only show when authenticated)
+                if (isAuthenticated) ...[
+                  _buildSectionHeader('Account'),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.logout,
+                    title: 'Log Out',
+                    subtitle: 'Sign out of your account (keeps your keys)',
+                    onTap: () => _handleLogout(context, ref),
+                  ),
+                ],
 
-              // Network Configuration
-              _buildSectionHeader('Network'),
-              _buildSettingsTile(
-                context,
-                icon: Icons.hub,
-                title: 'Relays',
-                subtitle: 'Manage Nostr relay connections',
-                onTap: () => context.push('/relay-settings'),
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.troubleshoot,
-                title: 'Relay Diagnostics',
-                subtitle: 'Debug relay connectivity and network issues',
-                onTap: () => context.push('/relay-diagnostic'),
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.cloud_upload,
-                title: 'Media Servers',
-                subtitle: 'Configure Blossom upload servers',
-                onTap: () => context.push('/blossom-settings'),
-              ),
+                // Network Configuration
+                _buildSectionHeader('Network'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.hub,
+                  title: 'Relays',
+                  subtitle: 'Manage Nostr relay connections',
+                  onTap: () => context.push('/relay-settings'),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.troubleshoot,
+                  title: 'Relay Diagnostics',
+                  subtitle: 'Debug relay connectivity and network issues',
+                  onTap: () => context.push('/relay-diagnostic'),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.cloud_upload,
+                  title: 'Media Servers',
+                  subtitle: 'Configure Blossom upload servers',
+                  onTap: () => context.push('/blossom-settings'),
+                ),
 
-              // Developer Options (only visible when developer mode is enabled)
-              if (isDeveloperMode) ...[
-                _buildSectionHeader('Developer'),
                 _buildSettingsTile(
                   context,
                   icon: Icons.developer_mode,
@@ -170,97 +142,123 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () => context.push('/developer-options'),
                   iconColor: Colors.orange,
                 ),
-              ],
 
-              // Preferences
-              _buildSectionHeader('Preferences'),
-              _buildSettingsTile(
-                context,
-                icon: Icons.notifications,
-                title: 'Notifications',
-                subtitle: 'Manage notification preferences',
-                onTap: () => context.push('/notification-settings'),
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.shield,
-                title: 'Safety & Privacy',
-                subtitle: 'Blocked users, muted content, and report history',
-                onTap: () => context.push('/safety-settings'),
-              ),
+                // Preferences
+                _buildSectionHeader('Preferences'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.notifications,
+                  title: 'Notifications',
+                  subtitle: 'Manage notification preferences',
+                  onTap: () => context.push('/notification-settings'),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.shield,
+                  title: 'Safety & Privacy',
+                  subtitle: 'Blocked users, muted content, and report history',
+                  onTap: () => context.push('/safety-settings'),
+                ),
 
-              // About
-              _buildSectionHeader('About'),
-              _buildVersionTile(context, ref),
+                // About
+                _buildSectionHeader('About'),
+                _buildVersionTile(context, ref),
 
-              // Support
-              _buildSectionHeader('Support'),
-              _buildSettingsTile(
-                context,
-                icon: Icons.verified_user,
-                title: 'ProofMode Info',
-                subtitle: 'Learn about ProofMode verification and authenticity',
-                onTap: () => _openProofModeInfo(context),
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.support_agent,
-                title: 'Contact Support',
-                subtitle: 'Get help or report an issue',
-                onTap: () async {
-                  // Try Zendesk first, fallback to email if not available
-                  if (ZendeskSupportService.isAvailable) {
-                    final success =
-                        await ZendeskSupportService.showNewTicketScreen(
-                          subject: 'Support Request',
-                          tags: ['mobile', 'support'],
-                        );
+                // Support
+                _buildSectionHeader('Support'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.verified_user,
+                  title: 'ProofMode Info',
+                  subtitle:
+                      'Learn about ProofMode verification and authenticity',
+                  onTap: () => _openProofModeInfo(context),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.support_agent,
+                  title: 'Contact Support',
+                  subtitle: 'Get help or report an issue',
+                  onTap: () async {
+                    // Try Zendesk first, fallback to email if not available
+                    if (ZendeskSupportService.isAvailable) {
+                      final success =
+                          await ZendeskSupportService.showNewTicketScreen(
+                            subject: 'Support Request',
+                            tags: ['mobile', 'support'],
+                          );
 
-                    if (!success && context.mounted) {
-                      // Zendesk failed, show fallback options
-                      _showSupportFallback(context, ref, authService);
+                      if (!success && context.mounted) {
+                        // Zendesk failed, show fallback options
+                        _showSupportFallback(context, ref, authService);
+                      }
+                    } else {
+                      // Zendesk not available, show fallback options
+                      if (context.mounted) {
+                        _showSupportFallback(context, ref, authService);
+                      }
                     }
-                  } else {
-                    // Zendesk not available, show fallback options
-                    if (context.mounted) {
-                      _showSupportFallback(context, ref, authService);
-                    }
-                  }
-                },
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.save,
-                title: 'Save Logs',
-                subtitle: 'Export logs to file for manual sending',
-                onTap: () async {
-                  final bugReportService = ref.read(bugReportServiceProvider);
-                  final userPubkey = authService.currentPublicKeyHex;
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.save,
+                  title: 'Save Logs',
+                  subtitle: 'Export logs to file for manual sending',
+                  onTap: () async {
+                    final bugReportService = ref.read(bugReportServiceProvider);
+                    final userPubkey = authService.currentPublicKeyHex;
 
-                  // Show loading indicator
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Exporting logs...'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-
-                  final success = await bugReportService.exportLogsToFile(
-                    currentScreen: 'SettingsScreen',
-                    userPubkey: userPubkey,
-                  );
-
-                  if (!success && context.mounted) {
+                    // Show loading indicator
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Failed to export logs'),
-                        backgroundColor: Colors.red,
+                        content: Text('Exporting logs...'),
+                        duration: Duration(seconds: 2),
                       ),
                     );
-                  }
-                },
-              ),
-            ],
+
+                    final success = await bugReportService.exportLogsToFile(
+                      currentScreen: 'SettingsScreen',
+                      userPubkey: userPubkey,
+                    );
+
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to export logs'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+                // Dangerous account actions live at the bottom to reduce accidents
+                if (isAuthenticated) ...[
+                  _buildSectionHeader('Danger Zone'),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.key_off,
+                    title: 'Remove Keys from Device',
+                    subtitle:
+                        'Delete your nsec from this device (content stays on relays)',
+                    onTap: () => _handleRemoveKeys(context, ref),
+                    iconColor: Colors.orange,
+                    titleColor: Colors.orange,
+                  ),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.delete_forever,
+                    title: 'Delete Account and Data',
+                    subtitle:
+                        'PERMANENTLY delete your account and all content from Nostr relays',
+                    onTap: () => _handleDeleteAllContent(context, ref),
+                    iconColor: Colors.red,
+                    titleColor: Colors.red,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
