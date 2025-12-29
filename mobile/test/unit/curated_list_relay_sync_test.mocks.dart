@@ -621,6 +621,33 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as bool);
 
   @override
+  _i3.AuthenticationSource get authenticationSource =>
+      (super.noSuchMethod(
+            Invocation.getter(#authenticationSource),
+            returnValue: _i3.AuthenticationSource.none,
+            returnValueForMissingStub: _i3.AuthenticationSource.none,
+          )
+          as _i3.AuthenticationSource);
+
+  @override
+  bool get isRegistered =>
+      (super.noSuchMethod(
+            Invocation.getter(#isRegistered),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
+          as bool);
+
+  @override
+  bool get isAnonymous =>
+      (super.noSuchMethod(
+            Invocation.getter(#isAnonymous),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
+          as bool);
+
+  @override
   Map<String, dynamic> get userStats =>
       (super.noSuchMethod(
             Invocation.getter(#userStats),

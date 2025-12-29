@@ -18,6 +18,8 @@ import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
+import 'package:openvine/screens/auth/login_options_screen.dart';
+import 'package:openvine/screens/auth/divine_auth_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/key_management_screen.dart';
@@ -84,6 +86,8 @@ int tabIndexFromLocation(String loc) {
     case 'setup-profile':
     case 'import-key':
     case 'welcome':
+    case 'login-options':
+    case 'auth-native':
     case 'camera':
     case 'clip-manager':
     case 'edit-video':
@@ -156,25 +160,40 @@ Future<bool> hasAnyFollowingInCache(SharedPreferences prefs) async {
   }
 }
 
-/// Listenable that notifies when auth state changes
+/// Listenable that notifies when auth state changes to/from authenticated
+/// Only notifies on meaningful state changes to avoid unnecessary router refreshes
 class _AuthStateListenable extends ChangeNotifier {
   _AuthStateListenable(this._authService) {
-    _authService.authStateStream.listen((_) {
-      notifyListeners();
+    _lastState = _authService.authState;
+    _authService.authStateStream.listen((newState) {
+      // Only notify when transitioning to or from authenticated state
+      // This prevents unnecessary router refreshes during init/login flow
+      final wasAuthenticated = _lastState == AuthState.authenticated;
+      final isAuthenticated = newState == AuthState.authenticated;
+
+      if (wasAuthenticated != isAuthenticated) {
+        _lastState = newState;
+        notifyListeners();
+      } else {
+        _lastState = newState;
+      }
     });
   }
 
   final AuthService _authService;
+  AuthState? _lastState;
 }
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  // Watch auth service to trigger router refresh on auth state changes
-  final authService = ref.watch(authServiceProvider);
+  // Use ref.read to avoid recreating the router on auth state changes
+  // The refreshListenable handles reacting to auth state changes
+  final authService = ref.read(authServiceProvider);
   final authListenable = _AuthStateListenable(authService);
 
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: '/home/0',
+    // Start at /welcome - redirect logic will navigate to appropriate route
+    initialLocation: '/welcome',
     observers: [
       VideoStopNavigatorObserver(),
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
@@ -202,14 +221,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       final authState = ref.read(authServiceProvider).authState;
       if (authState == AuthState.authenticated &&
-          (location == '/welcome' || location == '/import-key')) {
+          (location == '/welcome' ||
+              location == '/import-key' ||
+              location == '/login-options' ||
+              location == '/auth-native')) {
         debugPrint('[Router] Authenticated. moving to /home/0');
         return '/home/0';
       }
 
-      // Check TOS acceptance first (before any other routes except /welcome)
-      if (!location.startsWith('/welcome') &&
-          !location.startsWith('/import-key')) {
+      // Auth routes are allowed without TOS - user is in the process of logging in
+      final isAuthRoute =
+          location.startsWith('/welcome') ||
+          location.startsWith('/import-key') ||
+          location.startsWith('/login-options') ||
+          location.startsWith('/auth-native');
+
+      // Check TOS acceptance for non-auth routes
+      if (!isAuthRoute) {
         Log.debug(
           'Checking TOS for: $location',
           name: 'AppRouter',
@@ -222,9 +250,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           category: LogCategory.ui,
         );
 
-        if (!hasAcceptedTerms || authState == AuthState.unauthenticated) {
+        // Only redirect to welcome if TOS not accepted
+        // Auth state check is separate - users may be unauthenticated during login flow
+        if (!hasAcceptedTerms) {
           Log.debug(
-            'TOS not accepted or not authenticated, redirecting to /welcome',
+            'TOS not accepted, redirecting to /welcome',
+            name: 'AppRouter',
+            category: LogCategory.ui,
+          );
+          return '/welcome';
+        }
+
+        // If TOS is accepted but user is not authenticated, redirect to welcome
+        // This handles cases like expired sessions
+        if (authState == AuthState.unauthenticated) {
+          Log.debug(
+            'Not authenticated, redirecting to /welcome',
             name: 'AppRouter',
             category: LogCategory.ui,
           );
@@ -232,12 +273,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      // Redirect FROM /welcome TO /explore when TOS is accepted
+      // Redirect FROM /welcome TO /explore when TOS is accepted AND user is authenticated
       if (location.startsWith('/welcome')) {
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
-        if (hasAcceptedTerms) {
+        if (hasAcceptedTerms && authState == AuthState.authenticated) {
           Log.debug(
-            'TOS accepted, redirecting from /welcome to /explore',
+            'TOS accepted and authenticated, redirecting from /welcome to /explore',
             name: 'AppRouter',
             category: LogCategory.ui,
           );
@@ -477,6 +518,26 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/import-key',
         name: 'import-key',
         builder: (_, __) => const KeyImportScreen(),
+      ),
+      GoRoute(
+        path: '/login-options',
+        name: 'login-options',
+        builder: (_, __) => const LoginOptionsScreen(),
+      ),
+      GoRoute(
+        path: '/auth-native',
+        name: 'auth-native',
+        builder: (ctx, st) {
+          // Check for initialMode passed via extra or query param
+          AuthMode? mode = st.extra as AuthMode?;
+          if (mode == null) {
+            final modeParam = st.uri.queryParameters['mode'];
+            if (modeParam == 'register') {
+              mode = AuthMode.register;
+            }
+          }
+          return DivineAuthScreen(initialMode: mode ?? AuthMode.login);
+        },
       ),
       GoRoute(
         path: '/camera',

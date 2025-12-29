@@ -1,11 +1,12 @@
 // ABOUTME: Keycast OAuth client for authentication flow
-// ABOUTME: Handles authorization URL generation, callback parsing, and token exchange
+// ABOUTME: Handles authorization URL generation, callback parsing, token exchange, and headless auth
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'oauth_config.dart';
 import 'callback_result.dart';
+import 'headless_models.dart';
 import 'token_response.dart';
 import 'pkce.dart';
 import '../crypto/key_utils.dart';
@@ -28,8 +29,8 @@ class KeycastOAuth {
     required this.config,
     http.Client? httpClient,
     KeycastStorage? storage,
-  })  : _client = httpClient ?? http.Client(),
-        _storage = storage ?? MemoryKeycastStorage();
+  }) : _client = httpClient ?? http.Client(),
+       _storage = storage ?? MemoryKeycastStorage();
 
   /// Get stored session from storage
   /// Returns null if no session or session is expired
@@ -58,9 +59,7 @@ class KeycastOAuth {
   Future<void> logout() async {
     await _storage.delete(_storageKeySession);
     await _storage.delete(_storageKeyHandle);
-    await _client.post(
-      Uri.parse('${config.serverUrl}/api/auth/logout'),
-    );
+    await _client.post(Uri.parse('${config.serverUrl}/api/auth/logout'));
   }
 
   Future<void> _saveSession(KeycastSession session) async {
@@ -180,6 +179,254 @@ class KeycastOAuth {
     await _saveSession(session);
 
     return tokenResponse;
+  }
+
+  // ============================================================================
+  // HEADLESS AUTHENTICATION METHODS
+  // Native login/register flows without browser redirects
+  // ============================================================================
+
+  /// Register a new user with email and password (headless flow)
+  ///
+  /// Returns [HeadlessRegisterResult] with device_code for email verification polling.
+  /// After registration, poll [pollForCode] until email is verified, then [exchangeCode].
+  ///
+  /// [nsec] - Optional: import existing Nostr key instead of generating new one
+  Future<(HeadlessRegisterResult, String verifier)> headlessRegister({
+    required String email,
+    required String password,
+    String scope = 'policy:social',
+    String? nsec,
+    String? state,
+  }) async {
+    String? byokPubkey;
+    if (nsec != null) {
+      byokPubkey = KeyUtils.derivePublicKeyFromNsec(nsec);
+    }
+
+    final verifier = Pkce.generateVerifier(nsec: nsec);
+    final challenge = Pkce.generateChallenge(verifier);
+
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'password': password,
+        'client_id': config.clientId,
+        'redirect_uri': config.redirectUri,
+        'scope': scope,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+      };
+
+      if (byokPubkey != null) {
+        body['nsec'] = nsec;
+      }
+
+      if (state != null) {
+        body['state'] = state;
+      }
+
+      final response = await _client.post(
+        Uri.parse('${config.serverUrl}/api/headless/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      // Check for non-success status codes first
+      if (response.statusCode == 404) {
+        return (
+          HeadlessRegisterResult.error(
+            'Registration endpoint not available. Please try again later.',
+          ),
+          verifier,
+        );
+      }
+
+      if (response.statusCode >= 500) {
+        return (
+          HeadlessRegisterResult.error(
+            'Server error (${response.statusCode}). Please try again later.',
+          ),
+          verifier,
+        );
+      }
+
+      // Try to parse JSON response
+      Map<String, dynamic> json;
+      try {
+        json = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (e) {
+        return (
+          HeadlessRegisterResult.error(
+            'Invalid server response. Status: ${response.statusCode}',
+          ),
+          verifier,
+        );
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return (HeadlessRegisterResult.fromJson(json), verifier);
+      }
+
+      // Handle error responses
+      final error = json['error'] as String? ?? 'registration_failed';
+      final description =
+          json['error_description'] as String? ??
+          json['message'] as String? ??
+          'Registration failed';
+
+      return (HeadlessRegisterResult.error('$error: $description'), verifier);
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        return (
+          HeadlessRegisterResult.error(
+            'Cannot connect to server. Check your internet connection.',
+          ),
+          verifier,
+        );
+      }
+      return (HeadlessRegisterResult.error('Network error: $e'), verifier);
+    }
+  }
+
+  /// Login existing user with email and password (headless flow)
+  ///
+  /// Returns [HeadlessLoginResult] with authorization code directly (no polling needed).
+  /// After login, call [exchangeCode] with the returned code and verifier.
+  Future<(HeadlessLoginResult, String verifier)> headlessLogin({
+    required String email,
+    required String password,
+    String scope = 'policy:social',
+    String? state,
+  }) async {
+    final verifier = Pkce.generateVerifier();
+    final challenge = Pkce.generateChallenge(verifier);
+
+    try {
+      final body = <String, dynamic>{
+        'email': email,
+        'password': password,
+        'client_id': config.clientId,
+        'redirect_uri': config.redirectUri,
+        'scope': scope,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+      };
+
+      if (state != null) {
+        body['state'] = state;
+      }
+
+      final response = await _client.post(
+        Uri.parse('${config.serverUrl}/api/headless/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+
+      // Check for non-success status codes first
+      if (response.statusCode == 404) {
+        return (
+          HeadlessLoginResult.error(
+            'Login endpoint not available. Please try again later.',
+            code: 'endpoint_not_found',
+          ),
+          verifier,
+        );
+      }
+
+      if (response.statusCode >= 500) {
+        return (
+          HeadlessLoginResult.error(
+            'Server error (${response.statusCode}). Please try again later.',
+            code: 'server_error',
+          ),
+          verifier,
+        );
+      }
+
+      // Try to parse JSON response
+      Map<String, dynamic> json;
+      try {
+        json = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (e) {
+        return (
+          HeadlessLoginResult.error(
+            'Invalid server response. Status: ${response.statusCode}',
+            code: 'invalid_response',
+          ),
+          verifier,
+        );
+      }
+
+      if (response.statusCode == 200) {
+        return (HeadlessLoginResult.fromJson(json), verifier);
+      }
+
+      // Handle specific error codes
+      final error = json['error'] as String? ?? 'login_failed';
+      final description =
+          json['error_description'] as String? ??
+          json['message'] as String? ??
+          'Login failed';
+
+      return (HeadlessLoginResult.error(description, code: error), verifier);
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        return (
+          HeadlessLoginResult.error(
+            'Cannot connect to server. Check your internet connection.',
+            code: 'connection_error',
+          ),
+          verifier,
+        );
+      }
+      return (HeadlessLoginResult.error('Network error: $e'), verifier);
+    }
+  }
+
+  /// Poll for email verification completion
+  ///
+  /// Call this after [headlessRegister] to wait for the user to verify their email.
+  /// Returns [PollResult.complete] with authorization code when verified.
+  /// Returns [PollResult.pending] if still waiting.
+  /// Returns [PollResult.error] if something went wrong.
+  Future<PollResult> pollForCode(String deviceCode) async {
+    try {
+      final response = await _client.get(
+        Uri.parse(
+          '${config.serverUrl}/api/oauth/poll',
+        ).replace(queryParameters: {'device_code': deviceCode}),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final code = json['code'] as String?;
+        if (code != null) {
+          return PollResult.complete(code);
+        }
+        return PollResult.pending();
+      }
+
+      if (response.statusCode == 202) {
+        // Still pending
+        return PollResult.pending();
+      }
+
+      // Error
+      try {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final error = json['error'] as String? ?? 'poll_failed';
+        final description =
+            json['error_description'] as String? ?? 'Polling failed';
+        return PollResult.error('$error: $description');
+      } catch (_) {
+        return PollResult.error('HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      return PollResult.error('Network error: $e');
+    }
   }
 
   void close() {

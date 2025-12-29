@@ -266,7 +266,12 @@ class PendingVerifier extends _$PendingVerifier {
   // Use a persistent storage instance because it is possible that the
   // operating system kills the app while the user is in the browser logging
   // in. Use secure storage to avoid leaking the verifier.
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    mOptions: MacOsOptions(
+      // Use legacy keychain for non-sandboxed debug builds
+      useDataProtectionKeyChain: false,
+    ),
+  );
   static const _key = 'oauth_pkce_verifier';
 
   @override

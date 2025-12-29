@@ -144,6 +144,7 @@ dependencies:
   pro_video_editor: ^0.4.0
   flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
+  sensors_plus: ^7.0.0
 
 dependency_overrides:
   device_info_plus: ^10.1.2

@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/developer_mode_tap_provider.dart';
@@ -213,6 +215,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // Account and key management actions at the bottom
               if (isAuthenticated) ...[
                 _buildSectionHeader('Account'),
+                // Show register tile for anonymous users
+                // Only shown when headless auth feature is enabled
+                if (authService.isAnonymous &&
+                    ref.watch(
+                      isFeatureEnabledProvider(FeatureFlag.headlessAuth),
+                    ))
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.security,
+                    title: 'Secure Your Account',
+                    subtitle:
+                        'Add email & password to recover your account on any device',
+                    onTap: () => context.push('/auth-native?mode=register'),
+                    iconColor: VineTheme.vineGreen,
+                  ),
                 _buildSettingsTile(
                   context,
                   icon: Icons.logout,

@@ -155,6 +155,19 @@ class AuthService {
   /// Check if user is authenticated
   bool get isAuthenticated => _authState == AuthState.authenticated;
 
+  /// Authentication source used for current session
+  AuthenticationSource _authSource = AuthenticationSource.none;
+
+  /// Get the current authentication source
+  AuthenticationSource get authenticationSource => _authSource;
+
+  /// Check if user has registered with divine (email/password)
+  /// Returns true if authenticated via divine OAuth, false for anonymous/imported keys
+  bool get isRegistered => _authSource == AuthenticationSource.divineOAuth;
+
+  /// Check if user is using an anonymous auto-generated identity
+  bool get isAnonymous => _authSource == AuthenticationSource.automatic;
+
   /// Last authentication error
   String? get lastError => _lastError;
 
@@ -895,6 +908,7 @@ class AuthService {
     AuthenticationSource source,
   ) async {
     _currentKeyContainer = keyContainer;
+    _authSource = source;
 
     // Create user profile from secure container
     _currentProfile = UserProfile(

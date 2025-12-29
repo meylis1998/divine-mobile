@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/helpers/follow_actions_helper.dart';
 import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 import 'package:openvine/mixins/page_controller_sync_mixin.dart';
@@ -607,6 +609,71 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               ),
             ),
 
+          // Secure account banner for anonymous users (only on own profile)
+          // Only shown when headless auth feature is enabled
+          if (isOwnProfile &&
+              authService.isAnonymous &&
+              ref.watch(isFeatureEnabledProvider(FeatureFlag.headlessAuth)))
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [VineTheme.vineGreen, Color(0xFF2D8B6F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.security, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Secure Your Account',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Add email & password to recover your account on any device',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _registerAccount(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: VineTheme.vineGreen,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Register',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Profile picture and stats row
           Row(
             children: [
@@ -737,6 +804,11 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         builder: (context) => const ProfileSetupScreen(isNewUser: true),
       ),
     );
+  }
+
+  void _registerAccount(BuildContext context) {
+    // Navigate to the divine auth screen in register mode
+    context.push('/auth-native?mode=register');
   }
 
   Future<void> _editProfile() async {

@@ -47,6 +47,13 @@ class BuildConfiguration {
           'FF_ENABLE_VIDEO_EDITOR_V1',
           defaultValue: true,
         );
+      case FeatureFlag.headlessAuth:
+        // Native email/password auth - disabled until backend is ready
+        // Can be enabled by shaking the device
+        return const bool.fromEnvironment(
+          'FF_HEADLESS_AUTH',
+          defaultValue: false,
+        );
     }
   }
 
@@ -75,6 +82,8 @@ class BuildConfiguration {
         return 'FF_ROUTER_DRIVEN_HOME';
       case FeatureFlag.enableVideoEditorV1:
         return 'FF_ENABLE_VIDEO_EDITOR_V1';
+      case FeatureFlag.headlessAuth:
+        return 'FF_HEADLESS_AUTH';
     }
   }
 }

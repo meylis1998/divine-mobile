@@ -24,6 +24,8 @@ enum RouteType {
   clips, // Clip library screen (formerly drafts)
   welcome, // Welcome/onboarding screen
   developerOptions, // Developer options (hidden, unlock by tapping version 7x)
+  loginOptions, // Login options screen (choose login method)
+  authNative, // Native email/password auth screen
 }
 
 /// Structured representation of a route
@@ -187,6 +189,12 @@ RouteContext parseRoute(String path) {
     case 'developer-options':
       return const RouteContext(type: RouteType.developerOptions);
 
+    case 'login-options':
+      return const RouteContext(type: RouteType.loginOptions);
+
+    case 'auth-native':
+      return const RouteContext(type: RouteType.authNative);
+
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
   }
@@ -302,5 +310,11 @@ String buildRoute(RouteContext context) {
 
     case RouteType.developerOptions:
       return '/developer-options';
+
+    case RouteType.loginOptions:
+      return '/login-options';
+
+    case RouteType.authNative:
+      return '/auth-native';
   }
 }

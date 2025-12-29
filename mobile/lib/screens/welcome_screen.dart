@@ -5,10 +5,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/widgets/login/keycast_login_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -29,6 +30,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final authStateAsync = ref.watch(authStateStreamProvider);
     final authService = ref.watch(authServiceProvider);
 
+    // Check if headless auth feature is enabled (can be enabled by shaking)
+    final isHeadlessAuthEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.headlessAuth),
+    );
+
     // Handle stream loading/error states
     final authState = authStateAsync.when(
       data: (state) => state,
@@ -48,91 +54,118 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Column(
-                  children: [
-                    // No top margin on phones, keep margin on tablets
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width < 600 ? 0 : 40,
-                    ),
-                    // App branding - Divine icon (responsive sizing)
-                    Image.asset(
-                      'assets/icon/divine_icon_transparent.png',
-                      height: MediaQuery.of(context).size.width < 600
-                          ? 224
-                          : 320,
-                      fit: BoxFit.contain,
-                    ),
-                    // Wordmark logo - positioned close to icon above
-                    Image.asset(
-                      'assets/icon/divine_wordmark.png',
-                      width: MediaQuery.of(context).size.width < 600
-                          ? 130
-                          : 182,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Create and share short videos\non the decentralized web',
-                      style: TextStyle(fontSize: 18, color: Color(0xFFF5F6EA)),
-                      textAlign: TextAlign.center,
-                    ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = constraints.maxHeight < 700;
+              final iconSize = isSmallScreen ? 160.0 : 224.0;
+              final wordmarkWidth = isSmallScreen ? 100.0 : 130.0;
 
-                    // Spacer pushes content below to the bottom
-                    const Spacer(),
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Top section with branding
+                            Column(
+                              children: [
+                                // No top margin on phones, keep margin on tablets
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.width < 600
+                                      ? 0
+                                      : 40,
+                                ),
+                                // App branding - Divine icon (responsive sizing)
+                                Image.asset(
+                                  'assets/icon/divine_icon_transparent.png',
+                                  height: iconSize,
+                                  fit: BoxFit.contain,
+                                ),
+                                // Wordmark logo - positioned close to icon above
+                                Image.asset(
+                                  'assets/icon/divine_wordmark.png',
+                                  width: wordmarkWidth,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Create and share short videos\non the decentralized web',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFFF5F6EA),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
 
-                    // Age verification and TOS acceptance
-                    _TermsCheckboxSection(
-                      isOver16: _isOver16,
-                      agreedToTerms: _agreedToTerms,
-                      onOver16Changed: (value) =>
-                          setState(() => _isOver16 = value),
-                      onAgreedToTermsChanged: (value) =>
-                          setState(() => _agreedToTerms = value),
-                    ),
+                            // Bottom section with TOS and buttons
+                            Column(
+                              children: [
+                                // Age verification and TOS acceptance
+                                _TermsCheckboxSection(
+                                  isOver16: _isOver16,
+                                  agreedToTerms: _agreedToTerms,
+                                  onOver16Changed: (value) =>
+                                      setState(() => _isOver16 = value),
+                                  onAgreedToTermsChanged: (value) =>
+                                      setState(() => _agreedToTerms = value),
+                                ),
 
-                    const SizedBox(height: 16),
+                                const SizedBox(height: 32),
 
-                    KeycastLoginButton(enabled: _canProceed),
+                                // Main action buttons - show based on auth state
+                                _WelcomeActionSection(
+                                  authState: authState,
+                                  lastError: authService.lastError,
+                                  canProceed: _canProceed,
+                                  isAccepting: _isAccepting,
+                                  onContinue: () => _handleContinue(context),
+                                ),
 
-                    const SizedBox(height: 16),
+                                const SizedBox(height: 24),
 
-                    // Import existing keys option
-                    Center(
-                      child: GestureDetector(
-                        onTap: () =>
-                            _canProceed ? context.push('/import-key') : null,
-                        child: Text(
-                          'Already have keys? Import them here →',
-                          style: TextStyle(
-                            color: _canProceed
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.5),
-                            fontSize: 14,
-                            decoration: TextDecoration.underline,
-                          ),
+                                // Login option for existing users
+                                // Only shown when headless auth feature is enabled
+                                if (isHeadlessAuthEnabled)
+                                  TextButton(
+                                    onPressed: _canProceed
+                                        ? () => context.push('/login-options')
+                                        : null,
+                                    child: Text(
+                                      'Have an account? Log In',
+                                      style: TextStyle(
+                                        color: _canProceed
+                                            ? Colors.white
+                                            : Colors.white.withValues(
+                                                alpha: 0.5,
+                                              ),
+                                        fontSize: 16,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: _canProceed
+                                            ? Colors.white
+                                            : Colors.white.withValues(
+                                                alpha: 0.5,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 32),
-
-                    // Main action buttons - show based on auth state
-                    _WelcomeActionSection(
-                      authState: authState,
-                      lastError: authService.lastError,
-                      canProceed: _canProceed,
-                      isAccepting: _isAccepting,
-                      onContinue: () => _handleContinue(context),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
