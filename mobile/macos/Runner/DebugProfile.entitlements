@@ -35,5 +35,9 @@
 	<true/>
 	<key>com.apple.security.cs.disable-executable-page-protection</key>
 	<true/>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:divine.video</string>
+	</array>
 </dict>
 </plist>
