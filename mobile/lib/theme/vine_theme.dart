@@ -40,6 +40,18 @@ class VineTheme {
   static const Color navGreen = Color(0xFF00150D);
   static const Color iconButtonBackground = Color(0xFF032017);
   static const Color tabIconInactive = Color(0xFF40504A);
+  static const Color tabIndicatorGreen = Color(0xFF27C58B);
+
+  // Tab text style - Bricolage bold (800), 18px, 24px line height
+  static TextStyle tabTextStyle({
+    Color color = whiteText,
+  }) =>
+      GoogleFonts.bricolageGrotesque(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        height: 24 / 18,
+        color: color,
+      );
 
   // Background colors
   static const Color backgroundColor = Color(0xFF000000);
