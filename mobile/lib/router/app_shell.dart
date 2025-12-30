@@ -251,11 +251,34 @@ class AppShell extends ConsumerWidget {
         elevation: 0,
         toolbarHeight: 72,
         leadingWidth: 72,
+        centerTitle: false,
+        titleSpacing: 12,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
+            ? Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/CaretLeft.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
                   Log.info(
                     '👆 User tapped back button',
                     name: 'Navigation',
@@ -353,7 +376,8 @@ class AppShell extends ConsumerWidget {
                   }
 
                   // Already at home with no history - let system handle exit
-                },
+                  },
+                ),
               )
             : Builder(
                 // Hamburger menu in upper left when no back button
