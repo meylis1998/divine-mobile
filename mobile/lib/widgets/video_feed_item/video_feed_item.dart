@@ -11,6 +11,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/active_video_provider.dart'; // For isVideoActiveProvider (router-driven)
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/individual_video_providers.dart'; // For individualVideoControllerProvider only
+import 'package:openvine/providers/likes_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/ui/overlay_policy.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/badge_explanation_modal.dart';
@@ -29,6 +31,7 @@ import 'package:openvine/widgets/proofmode_badge_row.dart';
 import 'package:openvine/widgets/share_video_menu.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/video_error_overlay.dart';
+import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 import 'package:openvine/widgets/video_metrics_tracker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -72,6 +75,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
   int _playbackGeneration =
       0; // Prevents race conditions with rapid state changes
   DateTime? _lastTapTime; // Debounce rapid taps to prevent phantom pauses
+  DateTime?
+  _loadingStartTime; // Track when loading started for delayed indicator
 
   /// Stable video identifier for active state tracking
   String get _stableVideoId => widget.video.stableId;
@@ -610,92 +615,115 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                       );
                     }
 
-                    // Show loading state while video initializes
+                    // Track loading time for delayed indicator
                     if (!value.isInitialized) {
-                      Log.debug(
-                        '🖼️ SHOWING LOADING STATE [${video.id}] - video not initialized yet (initialized=${value.isInitialized}, playing=${value.isPlaying}, position=${value.position.inMilliseconds}ms)',
-                        name: 'VideoFeedItem',
-                        category: LogCategory.video,
-                      );
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Container(color: Colors.black),
-                          // Only show loading spinner for active video
-                          if (isActive)
-                            const Center(
-                              child: SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                        ],
+                      _loadingStartTime ??= DateTime.now();
+                    } else {
+                      _loadingStartTime = null;
+                    }
+
+                    // Only show loading indicator after 2 seconds
+                    final shouldShowIndicator =
+                        !value.isInitialized &&
+                        isActive &&
+                        _loadingStartTime != null &&
+                        DateTime.now()
+                                .difference(_loadingStartTime!)
+                                .inMilliseconds >
+                            2000;
+
+                    // Schedule rebuild after 2s if still loading
+                    if (!value.isInitialized &&
+                        isActive &&
+                        !shouldShowIndicator &&
+                        _loadingStartTime != null) {
+                      final elapsed = DateTime.now()
+                          .difference(_loadingStartTime!)
+                          .inMilliseconds;
+                      Future.delayed(
+                        Duration(milliseconds: 2100 - elapsed),
+                        () {
+                          if (mounted) setState(() {});
+                        },
                       );
                     }
 
-                    // Video is initialized - show first frame (even if not active)
-                    // This enables seeing the video during swipe transitions
+                    // Use video dimensions if available, otherwise placeholder
+                    final videoWidth = value.size.width > 0
+                        ? value.size.width
+                        : 1.0;
+                    final videoHeight = value.size.height > 0
+                        ? value.size.height
+                        : 1.0;
+
+                    // UNIFIED structure - use Offstage instead of conditional
+                    // widgets to maintain stable widget tree during scroll
                     return SizedBox.expand(
                       child: Container(
                         color: Colors.black,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          alignment: Alignment.topCenter,
-                          child: SizedBox(
-                            width: value.size.width == 0 ? 1 : value.size.width,
-                            height: value.size.height == 0
-                                ? 1
-                                : value.size.height,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                VideoPlayer(controller),
-                                if (value.isBuffering)
-                                  Positioned(
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
-                                    child: const LinearProgressIndicator(
-                                      minHeight: 12,
-                                      backgroundColor: Colors.transparent,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                // Show play button only when active AND paused
-                                // (inactive videos just show first frame silently)
-                                if (isActive && !value.isPlaying)
-                                  Center(
-                                    child: Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.6,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Semantics(
-                                        identifier: 'play_button',
-                                        container: true,
-                                        explicitChildNodes: true,
-                                        label: 'Play video',
-                                        child: const Icon(
-                                          Icons.play_arrow,
-                                          size: 56,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Video player - use Offstage to keep in tree
+                            Offstage(
+                              offstage: !value.isInitialized,
+                              child: FittedBox(
+                                fit: BoxFit.contain,
+                                alignment: Alignment.topCenter,
+                                child: SizedBox(
+                                  width: videoWidth,
+                                  height: videoHeight,
+                                  child: VideoPlayer(controller),
+                                ),
+                              ),
                             ),
-                          ),
+                            // Loading indicator after 2s delay
+                            Offstage(
+                              offstage: !shouldShowIndicator,
+                              child: const Center(
+                                child: BrandedLoadingIndicator(size: 60),
+                              ),
+                            ),
+                            // Buffering indicator
+                            if (value.isInitialized && value.isBuffering)
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: const LinearProgressIndicator(
+                                  minHeight: 12,
+                                  backgroundColor: Colors.transparent,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            // Play button when active and paused
+                            if (isActive &&
+                                value.isInitialized &&
+                                !value.isPlaying)
+                              Center(
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Semantics(
+                                    identifier: 'play_button',
+                                    container: true,
+                                    explicitChildNodes: true,
+                                    label: 'Play video',
+                                    child: const Icon(
+                                      Icons.play_arrow,
+                                      size: 56,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     );
@@ -839,10 +867,9 @@ class VideoOverlayActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!isVisible) return const SizedBox();
 
-    final socialState = ref.watch(socialProvider);
-    final isLiked = socialState.isLiked(video.id);
-    final isLikeInProgress = socialState.isLikeInProgress(video.id);
-    final likeCount = socialState.likeCounts[video.id] ?? 0;
+    final isLiked = ref.watch(isEventLikedProvider(video.id));
+    final isLikeInProgress = ref.watch(isLikeInProgressProvider(video.id));
+    final likeCount = ref.watch(likeCountProvider(video.id));
 
     // Check if there's meaningful text content to display
     final hasTextContent =
@@ -878,16 +905,6 @@ class VideoOverlayActions extends ConsumerWidget {
                       .fetchProfile(video.pubkey);
                 });
               }
-
-              final authService = ref.watch(authServiceProvider);
-              final currentUserPubkey = authService.currentPublicKeyHex;
-              final isOwnVideo = currentUserPubkey == video.pubkey;
-
-              final socialState = ref.watch(socialProvider);
-              final isFollowing = socialState.isFollowing(video.pubkey);
-              final isFollowInProgress = socialState.isFollowInProgress(
-                video.pubkey,
-              );
 
               return Row(
                 mainAxisSize: MainAxisSize.min,
@@ -932,70 +949,9 @@ class VideoOverlayActions extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  // Follow button next to username (only for other users' videos)
-                  if (!isOwnVideo) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: isFollowInProgress
-                          ? null
-                          : () async {
-                              Log.info(
-                                '👤 Follow button tapped for ${video.pubkey}',
-                                name: 'VideoFeedItem',
-                                category: LogCategory.ui,
-                              );
-                              if (isFollowing) {
-                                await ref
-                                    .read(socialProvider.notifier)
-                                    .unfollowUser(video.pubkey);
-                              } else {
-                                await ref
-                                    .read(socialProvider.notifier)
-                                    .followUser(video.pubkey);
-                              }
-                            },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              (isFollowing
-                                      ? Colors.grey[800]
-                                      : VineTheme.vineGreen)
-                                  ?.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color:
-                                (isFollowing
-                                        ? Colors.grey[600]
-                                        : VineTheme.vineGreen)
-                                    ?.withValues(alpha: 0.5) ??
-                                Colors.transparent,
-                            width: 1,
-                          ),
-                        ),
-                        child: isFollowInProgress
-                            ? const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                isFollowing ? 'Following' : 'Follow',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
+                  // Follow button (handles own video check internally)
+                  const SizedBox(width: 8),
+                  VideoFollowButton(pubkey: video.pubkey),
                 ],
               );
             },
@@ -1150,8 +1106,11 @@ class VideoOverlayActions extends ConsumerWidget {
                                     category: LogCategory.ui,
                                   );
                                   await ref
-                                      .read(socialProvider.notifier)
-                                      .toggleLike(video.id, video.pubkey);
+                                      .read(likesProvider.notifier)
+                                      .toggleLike(
+                                        eventId: video.id,
+                                        authorPubkey: video.pubkey,
+                                      );
                                 },
                           icon: isLikeInProgress
                               ? const SizedBox(
@@ -1292,15 +1251,19 @@ class VideoOverlayActions extends ConsumerWidget {
 
                   const SizedBox(height: 16),
 
-                  // Repost/Revine button with count
-                  Builder(
-                    builder: (context) {
+                  // Repost/Revine button - wrapped in Consumer to isolate rebuilds
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final socialState = ref.watch(socialProvider);
                       // Construct addressable ID for repost state check
                       final dTag = video.rawTags['d'];
                       final addressableId = dTag != null
                           ? '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:$dTag'
                           : video.id;
                       final isReposted = socialState.hasReposted(addressableId);
+                      final isRepostInProgress = socialState.isRepostInProgress(
+                        video.id,
+                      );
 
                       return Column(
                         children: [
@@ -1313,8 +1276,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                 ? 'Remove repost'
                                 : 'Repost video',
                             child: CircularIconButton(
-                              onPressed:
-                                  socialState.isRepostInProgress(video.id)
+                              onPressed: isRepostInProgress
                                   ? () {}
                                   : () async {
                                       Log.info(
@@ -1326,7 +1288,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                           .read(socialProvider.notifier)
                                           .toggleRepost(video);
                                     },
-                              icon: socialState.isRepostInProgress(video.id)
+                              icon: isRepostInProgress
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
