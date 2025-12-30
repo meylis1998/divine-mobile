@@ -39,6 +39,7 @@ class VineTheme {
   // Navigation colors
   static const Color navGreen = Color(0xFF00150D);
   static const Color iconButtonBackground = Color(0xFF032017);
+  static const Color tabIconInactive = Color(0xFF40504A);
 
   // Background colors
   static const Color backgroundColor = Color(0xFF000000);

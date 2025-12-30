@@ -213,6 +213,10 @@ flutter:
     - assets/icon/search.svg
     - assets/icon/camera.svg
     - assets/icon/CaretLeft.svg
+    - assets/icon/house.svg
+    - assets/icon/compass.svg
+    - assets/icon/bell.svg
+    - assets/icon/userCircle.svg
     - assets/seed_data/seed_events.sql
     - assets/seed_media/manifest.json
     - assets/seed_media/videos/

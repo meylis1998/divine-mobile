@@ -208,6 +208,34 @@ class AppShell extends ConsumerWidget {
     );
   }
 
+  /// Builds a tab button for the bottom navigation bar
+  Widget _buildTabButton(
+    BuildContext context,
+    WidgetRef ref,
+    String iconPath,
+    int tabIndex,
+    int currentIndex,
+  ) {
+    final isSelected = currentIndex == tabIndex;
+    final iconColor =
+        isSelected ? Colors.white : VineTheme.tabIconInactive;
+
+    return GestureDetector(
+      onTap: () => _handleTabTap(context, ref, tabIndex),
+      child: Container(
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(8),
+        child: SvgPicture.asset(
+          iconPath,
+          width: 32,
+          height: 32,
+          colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = _titleFor(ref);
@@ -502,19 +530,45 @@ class AppShell extends ConsumerWidget {
       body: child,
       // Bottom nav visible for all shell routes (search, tabs, etc.)
       // For search (currentIndex=-1), no tab is highlighted
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: currentIndex.clamp(0, 3),
-        onTap: (index) => _handleTabTap(context, ref, index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notifications',
+      bottomNavigationBar: Container(
+        color: VineTheme.navGreen,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/house.svg',
+                0,
+                currentIndex,
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/compass.svg',
+                1,
+                currentIndex,
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/bell.svg',
+                2,
+                currentIndex,
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/userCircle.svg',
+                3,
+                currentIndex,
+              ),
+            ],
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+        ),
       ),
     );
   }
