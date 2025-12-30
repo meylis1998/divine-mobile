@@ -283,9 +283,7 @@ class AppShell extends ConsumerWidget {
         titleSpacing: 12,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
-            ? Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: IconButton(
+            ? IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon: Container(
@@ -405,13 +403,10 @@ class AppShell extends ConsumerWidget {
 
                   // Already at home with no history - let system handle exit
                   },
-                ),
-              )
+                )
             : Builder(
                 // Hamburger menu in upper left when no back button
-                builder: (context) => Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: IconButton(
+                builder: (context) => IconButton(
                     key: const Key('menu-icon-button'),
                     tooltip: 'Menu',
                     padding: EdgeInsets.zero,
@@ -451,7 +446,6 @@ class AppShell extends ConsumerWidget {
                     },
                   ),
                 ),
-              ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
