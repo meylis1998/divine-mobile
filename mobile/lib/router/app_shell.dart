@@ -277,6 +277,7 @@ class AppShell extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
         toolbarHeight: 72,
         leadingWidth: 80,
         centerTitle: false,
