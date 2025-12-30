@@ -52,7 +52,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         toolbarHeight: 72,
         leadingWidth: 72,
         centerTitle: false,
-        titleSpacing: 12,
+        titleSpacing: 4,
         backgroundColor: VineTheme.navGreen,
         leading: IconButton(
           padding: EdgeInsets.zero,

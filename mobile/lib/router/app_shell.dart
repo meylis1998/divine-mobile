@@ -280,7 +280,7 @@ class AppShell extends ConsumerWidget {
         toolbarHeight: 72,
         leadingWidth: 72,
         centerTitle: false,
-        titleSpacing: 12,
+        titleSpacing: 4,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
             ? IconButton(
