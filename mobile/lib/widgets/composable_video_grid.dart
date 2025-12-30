@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/likes_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -403,14 +403,11 @@ class _VideoInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final duration = video.duration;
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Duration badge if available
-        if (duration != null) _VideoDurationBadge(duration: duration),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           color: VineTheme.cardBackground,
@@ -443,30 +440,6 @@ class _VideoInfoSection extends StatelessWidget {
       ],
     );
   }
-}
-
-class _VideoDurationBadge extends StatelessWidget {
-  const _VideoDurationBadge({required this.duration});
-
-  final int duration;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.all(4),
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-    decoration: BoxDecoration(
-      color: VineTheme.darkOverlay,
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: Text(
-      '${duration}s',
-      style: TextStyle(
-        color: VineTheme.whiteText,
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-  );
 }
 
 class _VideoThumbnail extends StatelessWidget {
@@ -522,8 +495,7 @@ class _VideoStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final socialState = ref.watch(socialProvider);
-    final newLikeCount = socialState.likeCounts[video.id] ?? 0;
+    final newLikeCount = ref.watch(likeCountProvider(video.id));
     final totalLikes = newLikeCount + (video.originalLikes ?? 0);
     final originalLoops = video.originalLoops;
 
