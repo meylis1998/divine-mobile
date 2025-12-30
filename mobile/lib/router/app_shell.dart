@@ -246,8 +246,12 @@ class AppShell extends ConsumerWidget {
     // Initialize relay statistics bridge to record connection events
     ref.watch(relayStatisticsBridgeProvider);
 
-    // Watch page context to determine if back button should show
+    // Watch page context to determine if back button should show and if on search route
     final pageCtxAsync = ref.watch(pageContextProvider);
+    final isSearchRoute = pageCtxAsync.maybeWhen(
+      data: (ctx) => ctx.type == RouteType.search,
+      orElse: () => false,
+    );
     final showBackButton = pageCtxAsync.maybeWhen(
       data: (ctx) {
         if (ctx.type == RouteType.hashtag || ctx.type == RouteType.search) {
@@ -454,72 +458,74 @@ class AppShell extends ConsumerWidget {
             const EnvironmentBadge(),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: Container(
-              width: 48,
-              height: 48,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: VineTheme.iconButtonBackground,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SvgPicture.asset(
-                'assets/icon/search.svg',
-                width: 32,
-                height: 32,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
+        actions: isSearchRoute
+            ? null
+            : [
+                IconButton(
+                  tooltip: 'Search',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/search.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
+                    Log.info(
+                      '👆 User tapped search button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.goSearch();
+                  },
                 ),
-              ),
-            ),
-            onPressed: () {
-              Log.info(
-                '👆 User tapped search button',
-                name: 'Navigation',
-                category: LogCategory.ui,
-              );
-              context.goSearch();
-            },
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Open camera',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: Container(
-              width: 48,
-              height: 48,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: VineTheme.iconButtonBackground,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SvgPicture.asset(
-                'assets/icon/camera.svg',
-                width: 32,
-                height: 32,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Open camera',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/camera.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
+                    Log.info(
+                      '👆 User tapped camera button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.pushCamera();
+                  },
                 ),
-              ),
-            ),
-            onPressed: () {
-              Log.info(
-                '👆 User tapped camera button',
-                name: 'Navigation',
-                category: LogCategory.ui,
-              );
-              context.pushCamera();
-            },
-          ),
-          const SizedBox(width: 16),
-        ],
+                const SizedBox(width: 16),
+              ],
       ),
       drawer: const VineDrawer(),
       body: child,
