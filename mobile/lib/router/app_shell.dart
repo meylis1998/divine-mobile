@@ -278,9 +278,9 @@ class AppShell extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: 72,
-        leadingWidth: 72,
+        leadingWidth: 80,
         centerTitle: false,
-        titleSpacing: 4,
+        titleSpacing: 0,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
             ? IconButton(
@@ -517,7 +517,7 @@ class AppShell extends ConsumerWidget {
               context.pushCamera();
             },
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
         ],
       ),
       drawer: const VineDrawer(),

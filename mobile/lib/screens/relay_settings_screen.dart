@@ -94,9 +94,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         toolbarHeight: 72,
-        leadingWidth: 72,
+        leadingWidth: 80,
         centerTitle: false,
-        titleSpacing: 4,
+        titleSpacing: 0,
         backgroundColor: VineTheme.navGreen,
         leading: IconButton(
           padding: EdgeInsets.zero,
