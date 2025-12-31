@@ -26,6 +26,8 @@ enum RouteType {
   developerOptions, // Developer options (hidden, unlock by tapping version 7x)
   loginOptions, // Login options screen (choose login method)
   authNative, // Native email/password auth screen
+  following, // Following list screen
+  followers, // Followers list screen
 }
 
 /// Structured representation of a route
@@ -194,6 +196,13 @@ RouteContext parseRoute(String path) {
 
     case 'auth-native':
       return const RouteContext(type: RouteType.authNative);
+    case 'following':
+      final followingPubkey = Uri.decodeComponent(segments[1]);
+      return RouteContext(type: RouteType.following, npub: followingPubkey);
+
+    case 'followers':
+      final followersPubkey = Uri.decodeComponent(segments[1]);
+      return RouteContext(type: RouteType.followers, npub: followersPubkey);
 
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
@@ -316,5 +325,10 @@ String buildRoute(RouteContext context) {
 
     case RouteType.authNative:
       return '/auth-native';
+    case RouteType.following:
+      return '/following/${context.npub ?? ''}';
+
+    case RouteType.followers:
+      return '/followers/${context.npub ?? ''}';
   }
 }

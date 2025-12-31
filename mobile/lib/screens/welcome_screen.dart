@@ -10,6 +10,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -238,9 +239,7 @@ class _LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: VineTheme.vineGreen),
-    );
+    return const Center(child: BrandedLoadingIndicator(size: 120));
   }
 }
 

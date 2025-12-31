@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:comments_repository/comments_repository.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -871,6 +872,24 @@ BugReportService bugReportService(Ref ref) {
   );
 
   return BugReportService(nip17MessageService: nip17Service);
+}
+
+// =============================================================================
+// COMMENTS REPOSITORY
+// =============================================================================
+
+/// Provider for CommentsRepository instance
+///
+/// Creates a CommentsRepository for managing comments on events.
+/// Viewing comments works without authentication.
+/// Posting comments requires authentication (handled by AuthService in BLoC).
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+@Riverpod(keepAlive: true)
+CommentsRepository commentsRepository(Ref ref) {
+  final nostrClient = ref.watch(nostrServiceProvider);
+  return CommentsRepository(nostrClient: nostrClient);
 }
 
 // =============================================================================
