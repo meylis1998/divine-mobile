@@ -11,25 +11,23 @@ class VineTheme {
     double fontSize = 22,
     double? height,
     Color color = whiteText,
-  }) =>
-      GoogleFonts.bricolageGrotesque(
-        fontSize: fontSize,
-        fontWeight: FontWeight.w800,
-        height: height ?? 28 / 22,
-        color: color,
-      );
+  }) => GoogleFonts.bricolageGrotesque(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w800,
+    height: height ?? 28 / 22,
+    color: color,
+  );
 
   // Inter for body and small text
   static TextStyle bodyFont({
     double fontSize = 16,
     FontWeight fontWeight = FontWeight.w400,
     Color color = primaryText,
-  }) =>
-      GoogleFonts.inter(
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        color: color,
-      );
+  }) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    color: color,
+  );
 
   // Classic Vine green color palette
   static const Color vineGreen = Color(0xFF00B488);
@@ -43,9 +41,7 @@ class VineTheme {
   static const Color tabIndicatorGreen = Color(0xFF27C58B);
 
   // Tab text style - Bricolage bold (800), 18px, 24px line height
-  static TextStyle tabTextStyle({
-    Color color = whiteText,
-  }) =>
+  static TextStyle tabTextStyle({Color color = whiteText}) =>
       GoogleFonts.bricolageGrotesque(
         fontSize: 18,
         fontWeight: FontWeight.w800,

@@ -53,10 +53,7 @@ class _NotificationSettingsScreenState
             'assets/icon/CaretLeft.svg',
             width: 32,
             height: 32,
-            colorFilter: const ColorFilter.mode(
-              Colors.white,
-              BlendMode.srcIn,
-            ),
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
           ),
         ),
         onPressed: () => Navigator.pop(context),

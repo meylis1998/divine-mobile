@@ -338,7 +338,9 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         style: const TextStyle(color: VineTheme.whiteText),
         decoration: InputDecoration(
           hintText: 'Find something cool...',
-          hintStyle: TextStyle(color: VineTheme.whiteText.withValues(alpha: 0.6)),
+          hintStyle: TextStyle(
+            color: VineTheme.whiteText.withValues(alpha: 0.6),
+          ),
           filled: true,
           fillColor: VineTheme.iconButtonBackground,
           border: OutlineInputBorder(

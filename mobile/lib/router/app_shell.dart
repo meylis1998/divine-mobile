@@ -219,8 +219,7 @@ class AppShell extends ConsumerWidget {
     String semanticIdentifier,
   ) {
     final isSelected = currentIndex == tabIndex;
-    final iconColor =
-        isSelected ? Colors.white : VineTheme.tabIconInactive;
+    final iconColor = isSelected ? Colors.white : VineTheme.tabIconInactive;
 
     return Semantics(
       identifier: semanticIdentifier,
@@ -301,27 +300,27 @@ class AppShell extends ConsumerWidget {
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
             ? IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: VineTheme.iconButtonBackground,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: SvgPicture.asset(
-                      'assets/icon/CaretLeft.svg',
-                      width: 32,
-                      height: 32,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
-                      ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Container(
+                  width: 48,
+                  height: 48,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: VineTheme.iconButtonBackground,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/icon/CaretLeft.svg',
+                    width: 32,
+                    height: 32,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
                     ),
                   ),
-                  onPressed: () {
+                ),
+                onPressed: () {
                   Log.info(
                     '👆 User tapped back button',
                     name: 'Navigation',
@@ -423,16 +422,16 @@ class AppShell extends ConsumerWidget {
                   }
 
                   // Already at home with no history - let system handle exit
-                  },
-                )
+                },
+              )
             : Builder(
                 // Hamburger menu in upper left when no back button
                 builder: (context) => IconButton(
-                    key: const Key('menu-icon-button'),
-                    tooltip: 'Menu',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Container(
+                  key: const Key('menu-icon-button'),
+                  tooltip: 'Menu',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
                     width: 48,
                     height: 48,
                     padding: const EdgeInsets.all(8),
@@ -459,9 +458,9 @@ class AppShell extends ConsumerWidget {
                     // Drawer open state is tracked via onDrawerChanged callback
                     // which triggers overlay visibility provider to pause videos
                     Scaffold.of(context).openDrawer();
-                    },
-                  ),
+                  },
                 ),
+              ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
