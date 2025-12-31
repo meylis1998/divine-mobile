@@ -12,8 +12,10 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/popular_videos_tab.dart';
 
+import '../helpers/test_provider_overrides.dart';
 import '../test_data/video_test_data.dart';
 import 'popular_videos_tab_test.mocks.dart';
 
@@ -88,6 +90,7 @@ void main() {
     }) {
       return ProviderScope(
         overrides: [
+          ...getStandardTestOverrides(),
           nostrServiceProvider.overrideWithValue(mockNostrService),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           videoEventsProvider.overrideWith(videoEventsBuilder),
@@ -104,7 +107,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
     });
 
     testWidgets('shows error message when loading fails', (tester) async {

@@ -13,6 +13,7 @@ import 'package:openvine/widgets/vine_drawer.dart';
 import 'package:openvine/widgets/environment_indicator.dart';
 import 'package:openvine/providers/active_video_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -215,22 +216,26 @@ class AppShell extends ConsumerWidget {
     String iconPath,
     int tabIndex,
     int currentIndex,
+    String semanticIdentifier,
   ) {
     final isSelected = currentIndex == tabIndex;
     final iconColor =
         isSelected ? Colors.white : VineTheme.tabIconInactive;
 
-    return GestureDetector(
-      onTap: () => _handleTabTap(context, ref, tabIndex),
-      child: Container(
-        width: 48,
-        height: 48,
-        padding: const EdgeInsets.all(8),
-        child: SvgPicture.asset(
-          iconPath,
-          width: 32,
-          height: 32,
-          colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+    return Semantics(
+      identifier: semanticIdentifier,
+      child: GestureDetector(
+        onTap: () => _handleTabTap(context, ref, tabIndex),
+        child: Container(
+          width: 48,
+          height: 48,
+          padding: const EdgeInsets.all(8),
+          child: SvgPicture.asset(
+            iconPath,
+            width: 32,
+            height: 32,
+            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+          ),
         ),
       ),
     );
@@ -254,23 +259,26 @@ class AppShell extends ConsumerWidget {
     );
     final showBackButton = pageCtxAsync.maybeWhen(
       data: (ctx) {
-        if (ctx.type == RouteType.hashtag || ctx.type == RouteType.search) {
-          return true;
-        }
+        final isSubRoute =
+            ctx.type == RouteType.hashtag || ctx.type == RouteType.search;
+        final isExploreVideo =
+            ctx.type == RouteType.explore && ctx.videoIndex != null;
+        // Notifications base state is index 0, not null
+        final isNotificationVideo =
+            ctx.type == RouteType.notifications &&
+            ctx.videoIndex != null &&
+            ctx.videoIndex != 0;
+        final isOtherUserProfile =
+            ctx.type == RouteType.profile &&
+            ctx.npub != ref.read(authServiceProvider).currentNpub;
+        final isProfileVideo =
+            ctx.type == RouteType.profile && ctx.videoIndex != null;
 
-        if (ctx.type == RouteType.explore ||
-            ctx.type == RouteType.notifications) {
-          return true;
-        }
-
-        if (ctx.type == RouteType.profile) {
-          final authService = ref.read(authServiceProvider);
-          final currentNpub = authService.currentNpub;
-
-          return ctx.npub != currentNpub;
-        }
-
-        return false;
+        return isSubRoute ||
+            isExploreVideo ||
+            isNotificationVideo ||
+            isOtherUserProfile ||
+            isProfileVideo;
       },
       orElse: () => false,
     );
@@ -279,6 +287,10 @@ class AppShell extends ConsumerWidget {
     final environment = ref.watch(currentEnvironmentProvider);
 
     return Scaffold(
+      onDrawerChanged: (isOpen) {
+        // Track drawer visibility for video pause/resume
+        ref.read(overlayVisibilityProvider.notifier).setDrawerOpen(isOpen);
+      },
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -335,33 +347,37 @@ class AppShell extends ConsumerWidget {
 
                   // For routes with videoIndex (feed mode), go to grid mode first
                   // This handles page-internal navigation before tab switching
-                  // For explore: go to grid mode (null index)
-                  // For notifications: go to index 0 (notifications always has an index)
-                  // For other routes: go to grid mode (null index)
-                  if (ctx.videoIndex != null && ctx.videoIndex != 0) {
-                    RouteContext gridCtx;
-                    if (ctx.type == RouteType.notifications) {
-                      // Notifications always has an index, go to index 0
-                      gridCtx = RouteContext(
-                        type: ctx.type,
-                        hashtag: ctx.hashtag,
-                        searchTerm: ctx.searchTerm,
-                        npub: ctx.npub,
-                        videoIndex: 0,
-                      );
-                    } else {
-                      // For explore and other routes, go to grid mode (null index)
-                      gridCtx = RouteContext(
+                  // For explore/profile: any videoIndex (including 0) should go to grid (null)
+                  // For notifications: videoIndex > 0 should go to index 0
+                  if (ctx.videoIndex != null) {
+                    // For Explore and Profile, grid mode is null
+                    if (ctx.type == RouteType.explore ||
+                        ctx.type == RouteType.profile) {
+                      final gridCtx = RouteContext(
                         type: ctx.type,
                         hashtag: ctx.hashtag,
                         searchTerm: ctx.searchTerm,
                         npub: ctx.npub,
                         videoIndex: null,
                       );
+                      final newRoute = buildRoute(gridCtx);
+                      context.go(newRoute);
+                      return;
                     }
-                    final newRoute = buildRoute(gridCtx);
-                    context.go(newRoute);
-                    return;
+                    // For Notifications, index 0 is the base state
+                    if (ctx.type == RouteType.notifications &&
+                        ctx.videoIndex != 0) {
+                      final gridCtx = RouteContext(
+                        type: ctx.type,
+                        hashtag: ctx.hashtag,
+                        searchTerm: ctx.searchTerm,
+                        npub: ctx.npub,
+                        videoIndex: 0,
+                      );
+                      final newRoute = buildRoute(gridCtx);
+                      context.go(newRoute);
+                      return;
+                    }
                   }
 
                   // Check tab history for navigation
@@ -440,13 +456,8 @@ class AppShell extends ConsumerWidget {
                       name: 'Navigation',
                       category: LogCategory.ui,
                     );
-
-                    // Pause all videos when drawer opens
-                    final visibilityManager = ref.read(
-                      videoVisibilityManagerProvider,
-                    );
-                    visibilityManager.pauseAllVideos();
-
+                    // Drawer open state is tracked via onDrawerChanged callback
+                    // which triggers overlay visibility provider to pause videos
                     Scaffold.of(context).openDrawer();
                     },
                   ),
@@ -545,6 +556,7 @@ class AppShell extends ConsumerWidget {
                 'assets/icon/house.svg',
                 0,
                 currentIndex,
+                'home_tab',
               ),
               _buildTabButton(
                 context,
@@ -552,6 +564,7 @@ class AppShell extends ConsumerWidget {
                 'assets/icon/compass.svg',
                 1,
                 currentIndex,
+                'explore_tab',
               ),
               _buildTabButton(
                 context,
@@ -559,6 +572,7 @@ class AppShell extends ConsumerWidget {
                 'assets/icon/bell.svg',
                 2,
                 currentIndex,
+                'notifications_tab',
               ),
               _buildTabButton(
                 context,
@@ -566,6 +580,7 @@ class AppShell extends ConsumerWidget {
                 'assets/icon/userCircle.svg',
                 3,
                 currentIndex,
+                'profile_tab',
               ),
             ],
           ),

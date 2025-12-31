@@ -22,6 +22,7 @@ import 'package:openvine/services/feed_performance_tracker.dart';
 import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/popular_videos_tab.dart';
 import 'package:openvine/widgets/list_card.dart';
@@ -364,8 +365,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           ],
         );
       },
-      loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+      loading: () => const Center(child: BrandedLoadingIndicator(size: 80)),
       error: (e, s) => Center(
         child: Text('Error: $e', style: TextStyle(color: VineTheme.likeRed)),
       ),
@@ -688,11 +688,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ],
               );
             },
-            loading: () => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: CircularProgressIndicator(color: VineTheme.vineGreen),
-              ),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: BrandedLoadingIndicator(size: 60)),
             ),
             error: (error, stack) => Padding(
               padding: const EdgeInsets.all(16),
@@ -741,9 +739,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               ],
             ),
             const SizedBox(height: 8),
-            Center(
-              child: CircularProgressIndicator(color: VineTheme.vineGreen),
-            ),
+            const Center(child: BrandedLoadingIndicator(size: 60)),
           ],
         ),
       );
@@ -929,9 +925,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           }
         }
 
-        return Center(
-          child: CircularProgressIndicator(color: VineTheme.vineGreen),
-        );
+        return const Center(child: BrandedLoadingIndicator(size: 80));
       },
       error: (error, stackTrace) {
         Log.error(
