@@ -427,6 +427,8 @@ class AppShell extends ConsumerWidget {
           BottomNavigationBarItem(
             icon: Semantics(
               identifier: 'home_tab',
+              container: true,
+              explicitChildNodes: true,
               child: const Icon(Icons.home),
             ),
             label: 'Home',
@@ -434,6 +436,8 @@ class AppShell extends ConsumerWidget {
           BottomNavigationBarItem(
             icon: Semantics(
               identifier: 'explore_tab',
+              container: true,
+              explicitChildNodes: true,
               child: const Icon(Icons.explore),
             ),
             label: 'Explore',
@@ -441,6 +445,8 @@ class AppShell extends ConsumerWidget {
           BottomNavigationBarItem(
             icon: Semantics(
               identifier: 'notifications_tab',
+              container: true,
+              explicitChildNodes: true,
               child: const Icon(Icons.notifications),
             ),
             label: 'Notifications',
@@ -448,6 +454,8 @@ class AppShell extends ConsumerWidget {
           BottomNavigationBarItem(
             icon: Semantics(
               identifier: 'profile_tab',
+              container: true,
+              explicitChildNodes: true,
               child: const Icon(Icons.person),
             ),
             label: 'Profile',
