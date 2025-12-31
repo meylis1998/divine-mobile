@@ -22,6 +22,7 @@ void main() {
     setUp(() {
       mockAuthService = MockAuthService();
       when(mockAuthService.isAuthenticated).thenReturn(true);
+      when(mockAuthService.isAnonymous).thenReturn(false);
     });
 
     testWidgets('SettingsScreen has Vine green AppBar', (tester) async {

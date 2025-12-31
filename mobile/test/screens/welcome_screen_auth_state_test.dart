@@ -6,12 +6,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/welcome_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @GenerateMocks([AuthService])
 import 'welcome_screen_auth_state_test.mocks.dart';
@@ -19,8 +21,11 @@ import 'welcome_screen_auth_state_test.mocks.dart';
 void main() {
   group('WelcomeScreen Auth State Tests', () {
     late MockAuthService mockAuthService;
+    late SharedPreferences sharedPreferences;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      sharedPreferences = await SharedPreferences.getInstance();
       mockAuthService = MockAuthService();
     });
 
@@ -36,6 +41,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             authStateStreamProvider.overrideWith(
               (ref) => Stream.value(AuthState.checking),
@@ -68,6 +74,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             authStateStreamProvider.overrideWith(
               (ref) => Stream.value(AuthState.authenticating),
@@ -98,6 +105,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             authStateStreamProvider.overrideWith(
               (ref) => Stream.value(AuthState.authenticated),
@@ -128,7 +136,10 @@ void main() {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              authServiceProvider.overrideWithValue(mockAuthService),
+            ],
             child: const MaterialApp(home: WelcomeScreen()),
           ),
         );
@@ -160,6 +171,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             authStateStreamProvider.overrideWith(
               (ref) => Stream.value(AuthState.authenticated),
@@ -198,6 +210,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
               authServiceProvider.overrideWithValue(mockAuthService),
               authStateStreamProvider.overrideWith(
                 (ref) => authStateController.stream,
