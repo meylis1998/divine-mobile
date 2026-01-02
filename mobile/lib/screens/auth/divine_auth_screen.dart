@@ -299,10 +299,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
         _pendingEmail = null;
       });
 
-      // Navigate to home
-      if (mounted) {
-        context.go('/home/0');
-      }
+      // Navigation will be handled by auth state listener
     } on OAuthException catch (e) {
       setState(() {
         _errorMessage = e.message;
