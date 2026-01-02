@@ -314,7 +314,10 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     if (value == null || value.isEmpty) {
       return 'Email is required';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email';
     }
