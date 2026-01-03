@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -24,7 +25,6 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/badge_explanation_modal.dart';
-import 'package:openvine/widgets/circular_icon_button.dart';
 import 'package:openvine/widgets/clickable_hashtag_text.dart';
 import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/widgets/proofmode_badge_row.dart';
@@ -973,7 +973,7 @@ class VideoOverlayActions extends ConsumerWidget {
         // Only show if there's actual text content
         if (hasTextContent)
           Positioned(
-            bottom: hasBottomNavigation ? 80 : 16,
+            bottom: 16,
             left: 16,
             right: 80, // Leave space for action buttons
             child: AnimatedOpacity(
@@ -1078,7 +1078,7 @@ class VideoOverlayActions extends ConsumerWidget {
           ),
         // Action buttons at bottom right
         Positioned(
-          bottom: hasBottomNavigation ? 80 : 16,
+          bottom: 16,
           right: 16,
           child: AnimatedOpacity(
             opacity: isActive ? 1.0 : 0.0,
@@ -1087,81 +1087,235 @@ class VideoOverlayActions extends ConsumerWidget {
               ignoring: false, // Action buttons SHOULD receive taps
               child: Column(
                 children: [
-                  // Like button
+                  // Flag/Report button for content moderation
                   Column(
                     children: [
                       Semantics(
-                        identifier: 'like_button',
+                        identifier: 'report_button',
                         container: true,
                         explicitChildNodes: true,
                         button: true,
-                        label: isLiked ? 'Unlike video' : 'Like video',
-                        child: CircularIconButton(
-                          onPressed: isLikeInProgress
-                              ? () {}
-                              : () async {
-                                  Log.info(
-                                    '❤️ Like button tapped for ${video.id}',
-                                    name: 'VideoFeedItem',
-                                    category: LogCategory.ui,
-                                  );
-                                  await ref
-                                      .read(likesProvider.notifier)
-                                      .toggleLike(
-                                        eventId: video.id,
-                                        authorPubkey: video.pubkey,
-                                      );
-                                },
-                          icon: isLikeInProgress
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Icon(
-                                  isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_outline,
-                                  color: isLiked ? Colors.red : Colors.white,
-                                  size: 32,
+                        label: 'Report video',
+                        child: IconButton(
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 48,
+                          ),
+                          style: IconButton.styleFrom(
+                            highlightColor: Colors.transparent,
+                            splashFactory: NoSplash.splashFactory,
+                          ),
+                          onPressed: () {
+                            Log.info(
+                              '🚩 Report button tapped for ${video.id}',
+                              name: 'VideoFeedItem',
+                              category: LogCategory.ui,
+                            );
+                            showDialog(
+                              context: context,
+                              builder: (context) =>
+                                  ReportContentDialog(video: video),
+                            );
+                          },
+                          icon: DecoratedBox(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 1,
                                 ),
+                              ],
+                            ),
+                            child: SvgPicture.asset(
+                              'assets/icon/content-controls/flag.svg',
+                              width: 32,
+                              height: 32,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      // Show total like count: new likes + original Vine likes
-                      if (likeCount > 0 ||
-                          (video.originalLikes != null &&
-                              video.originalLikes! > 0)) ...[
-                        const SizedBox(height: 0),
-                        Text(
-                          StringUtils.formatCompactNumber(
-                            likeCount + (video.originalLikes ?? 0),
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(0, 0),
-                                blurRadius: 6,
-                                color: Colors.black,
-                              ),
-                              Shadow(
-                                offset: Offset(1, 1),
-                                blurRadius: 3,
-                                color: Colors.black,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
+
+                  // Share button
+                  Column(
+                    children: [
+                      Semantics(
+                        identifier: 'share_button',
+                        container: true,
+                        explicitChildNodes: true,
+                        button: true,
+                        label: 'Share video',
+                        child: IconButton(
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 48,
+                          ),
+                          style: IconButton.styleFrom(
+                            highlightColor: Colors.transparent,
+                            splashFactory: NoSplash.splashFactory,
+                          ),
+                          onPressed: () {
+                            Log.info(
+                              '📤 Share button tapped for ${video.id}',
+                              name: 'VideoFeedItem',
+                              category: LogCategory.ui,
+                            );
+                            _showShareMenu(context, ref, video);
+                          },
+                          icon: DecoratedBox(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: SvgPicture.asset(
+                              'assets/icon/content-controls/share.svg',
+                              width: 32,
+                              height: 32,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // Repost/Revine button - wrapped in Consumer to isolate rebuilds
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final socialState = ref.watch(socialProvider);
+                      // Construct addressable ID for repost state check
+                      final dTag = video.rawTags['d'];
+                      final addressableId = dTag != null
+                          ? '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:$dTag'
+                          : video.id;
+                      final isReposted = socialState.hasReposted(addressableId);
+                      final isRepostInProgress = socialState.isRepostInProgress(
+                        video.id,
+                      );
+
+                      return Column(
+                        children: [
+                          Semantics(
+                            identifier: 'repost_button',
+                            container: true,
+                            explicitChildNodes: true,
+                            button: true,
+                            label: isReposted
+                                ? 'Remove repost'
+                                : 'Repost video',
+                            child: IconButton(
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints.tightFor(
+                                width: 48,
+                                height: 48,
+                              ),
+                              style: IconButton.styleFrom(
+                                highlightColor: Colors.transparent,
+                                splashFactory: NoSplash.splashFactory,
+                              ),
+                              onPressed: isRepostInProgress
+                                  ? null
+                                  : () async {
+                                      Log.info(
+                                        '🔁 Repost button tapped for ${video.id}',
+                                        name: 'VideoFeedItem',
+                                        category: LogCategory.ui,
+                                      );
+                                      await ref
+                                          .read(socialProvider.notifier)
+                                          .toggleRepost(video);
+                                    },
+                              icon: isRepostInProgress
+                                  ? const SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.15),
+                                            blurRadius: 15,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                      child: SvgPicture.asset(
+                                        'assets/icon/content-controls/repost.svg',
+                                        width: 32,
+                                        height: 32,
+                                        colorFilter: ColorFilter.mode(
+                                          isReposted
+                                              ? VineTheme.vineGreen
+                                              : Colors.white,
+                                          BlendMode.srcIn,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          // Show original repost count if available
+                          if (video.originalReposts != null &&
+                              video.originalReposts! > 0) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                StringUtils.formatCompactNumber(
+                                  video.originalReposts!,
+                                ),
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1,
+                                  letterSpacing: 0.5,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(0, 0),
+                                      blurRadius: 6,
+                                      color: Colors.black,
+                                    ),
+                                    Shadow(
+                                      offset: Offset(1, 1),
+                                      blurRadius: 3,
+                                      color: Colors.black,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 4),
 
                   // Comment button with count
                   Column(
@@ -1172,7 +1326,16 @@ class VideoOverlayActions extends ConsumerWidget {
                         explicitChildNodes: true,
                         button: true,
                         label: 'View comments',
-                        child: CircularIconButton(
+                        child: IconButton(
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 48,
+                          ),
+                          style: IconButton.styleFrom(
+                            highlightColor: Colors.transparent,
+                            splashFactory: NoSplash.splashFactory,
+                          ),
                           onPressed: () {
                             Log.info(
                               '💬 Comment button tapped for ${video.id}',
@@ -1212,235 +1375,163 @@ class VideoOverlayActions extends ConsumerWidget {
                             }
                             context.pushComments(video);
                           },
-                          icon: const Icon(
-                            Icons.comment_outlined,
-                            color: Colors.white,
-                            size: 32,
+                          icon: DecoratedBox(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: SvgPicture.asset(
+                              'assets/icon/content-controls/comment.svg',
+                              width: 32,
+                              height: 32,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                       // Show original comment count if available
                       if (video.originalComments != null &&
                           video.originalComments! > 0) ...[
-                        const SizedBox(height: 0),
-                        Text(
-                          StringUtils.formatCompactNumber(
-                            video.originalComments!,
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(0, 0),
-                                blurRadius: 6,
-                                color: Colors.black,
-                              ),
-                              Shadow(
-                                offset: Offset(1, 1),
-                                blurRadius: 3,
-                                color: Colors.black,
-                              ),
-                            ],
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            StringUtils.formatCompactNumber(
+                              video.originalComments!,
+                            ),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
+                              letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(0, 0),
+                                  blurRadius: 6,
+                                  color: Colors.black,
+                                ),
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
 
-                  // Repost/Revine button - wrapped in Consumer to isolate rebuilds
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final socialState = ref.watch(socialProvider);
-                      // Construct addressable ID for repost state check
-                      final dTag = video.rawTags['d'];
-                      final addressableId = dTag != null
-                          ? '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:$dTag'
-                          : video.id;
-                      final isReposted = socialState.hasReposted(addressableId);
-                      final isRepostInProgress = socialState.isRepostInProgress(
-                        video.id,
-                      );
-
-                      return Column(
-                        children: [
-                          Semantics(
-                            identifier: 'repost_button',
-                            container: true,
-                            explicitChildNodes: true,
-                            button: true,
-                            label: isReposted
-                                ? 'Remove repost'
-                                : 'Repost video',
-                            child: CircularIconButton(
-                              onPressed: isRepostInProgress
-                                  ? () {}
-                                  : () async {
-                                      Log.info(
-                                        '🔁 Repost button tapped for ${video.id}',
-                                        name: 'VideoFeedItem',
-                                        category: LogCategory.ui,
+                  // Like button
+                  Column(
+                    children: [
+                      Semantics(
+                        identifier: 'like_button',
+                        container: true,
+                        explicitChildNodes: true,
+                        button: true,
+                        label: isLiked ? 'Unlike video' : 'Like video',
+                        child: IconButton(
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 48,
+                            height: 48,
+                          ),
+                          style: IconButton.styleFrom(
+                            highlightColor: Colors.transparent,
+                            splashFactory: NoSplash.splashFactory,
+                          ),
+                          onPressed: isLikeInProgress
+                              ? null
+                              : () async {
+                                  Log.info(
+                                    '❤️ Like button tapped for ${video.id}',
+                                    name: 'VideoFeedItem',
+                                    category: LogCategory.ui,
+                                  );
+                                  await ref
+                                      .read(likesProvider.notifier)
+                                      .toggleLike(
+                                        eventId: video.id,
+                                        authorPubkey: video.pubkey,
                                       );
-                                      await ref
-                                          .read(socialProvider.notifier)
-                                          .toggleRepost(video);
-                                    },
-                              icon: isRepostInProgress
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                                },
+                          icon: isLikeInProgress
+                              ? const SizedBox(
+                                  width: 32,
+                                  height: 32,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.15),
+                                        blurRadius: 15,
+                                        spreadRadius: 1,
                                       ),
-                                    )
-                                  : Icon(
-                                      Icons.repeat,
-                                      color: isReposted
-                                          ? VineTheme.vineGreen
-                                          : Colors.white,
-                                      size: 32,
+                                    ],
+                                  ),
+                                  child: SvgPicture.asset(
+                                    'assets/icon/content-controls/like.svg',
+                                    width: 32,
+                                    height: 32,
+                                    colorFilter: ColorFilter.mode(
+                                      isLiked ? Colors.red : Colors.white,
+                                      BlendMode.srcIn,
                                     ),
-                            ),
-                          ),
-                          // Show original repost count if available
-                          if (video.originalReposts != null &&
-                              video.originalReposts! > 0) ...[
-                            const SizedBox(height: 0),
-                            Text(
-                              StringUtils.formatCompactNumber(
-                                video.originalReposts!,
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                    offset: Offset(0, 0),
-                                    blurRadius: 6,
-                                    color: Colors.black,
                                   ),
-                                  Shadow(
-                                    offset: Offset(1, 1),
-                                    blurRadius: 3,
-                                    color: Colors.black,
-                                  ),
-                                ],
-                              ),
+                                ),
+                        ),
+                      ),
+                      // Show total like count: new likes + original Vine likes
+                      if (likeCount > 0 ||
+                          (video.originalLikes != null &&
+                              video.originalLikes! > 0)) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            StringUtils.formatCompactNumber(
+                              likeCount + (video.originalLikes ?? 0),
                             ),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Share button with label
-                  Column(
-                    children: [
-                      Semantics(
-                        identifier: 'share_button',
-                        container: true,
-                        explicitChildNodes: true,
-                        button: true,
-                        label: 'Share video',
-                        child: CircularIconButton(
-                          onPressed: () {
-                            Log.info(
-                              '📤 Share button tapped for ${video.id}',
-                              name: 'VideoFeedItem',
-                              category: LogCategory.ui,
-                            );
-                            _showShareMenu(context, ref, video);
-                          },
-                          icon: const Icon(
-                            Icons.share_outlined,
-                            color: Colors.white,
-                            size: 32,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
+                              letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(0, 0),
+                                  blurRadius: 6,
+                                  color: Colors.black,
+                                ),
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 0),
-                      const Text(
-                        'Share',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 0),
-                              blurRadius: 6,
-                              color: Colors.black,
-                            ),
-                            Shadow(
-                              offset: Offset(1, 1),
-                              blurRadius: 3,
-                              color: Colors.black,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Flag/Report button for content moderation
-                  Column(
-                    children: [
-                      Semantics(
-                        identifier: 'report_button',
-                        container: true,
-                        explicitChildNodes: true,
-                        button: true,
-                        label: 'Report video',
-                        child: CircularIconButton(
-                          onPressed: () {
-                            Log.info(
-                              '🚩 Report button tapped for ${video.id}',
-                              name: 'VideoFeedItem',
-                              category: LogCategory.ui,
-                            );
-                            showDialog(
-                              context: context,
-                              builder: (context) =>
-                                  ReportContentDialog(video: video),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.flag_outlined,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 0),
-                      const Text(
-                        'Report',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 0),
-                              blurRadius: 6,
-                              color: Colors.black,
-                            ),
-                            Shadow(
-                              offset: Offset(1, 1),
-                              blurRadius: 3,
-                              color: Colors.black,
-                            ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ],
                   ),
 
