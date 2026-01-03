@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
@@ -109,12 +110,15 @@ class AuthService {
     required UserDataCleanupService userDataCleanupService,
     SecureKeyStorage? keyStorage,
     KeycastOAuth? oauthClient,
+    FlutterSecureStorage? flutterSecureStorage,
   }) : _keyStorage = keyStorage ?? SecureKeyStorage(),
        _userDataCleanupService = userDataCleanupService,
-       _oauthClient = oauthClient;
+       _oauthClient = oauthClient,
+       _flutterSecureStorage = flutterSecureStorage;
   final SecureKeyStorage _keyStorage;
   final UserDataCleanupService _userDataCleanupService;
   final KeycastOAuth? _oauthClient;
+  final FlutterSecureStorage? _flutterSecureStorage;
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
@@ -196,7 +200,7 @@ class AuthService {
 
         case AuthenticationSource.divineOAuth:
           // Try to load authorized session from secure storage
-          final session = await KeycastSession.load();
+          final session = await KeycastSession.load(_flutterSecureStorage);
           if (session != null && session.hasRpcAccess) {
             await signInWithDivineOAuth(session);
             return;
@@ -610,7 +614,7 @@ class AuthService {
         if (_oauthClient != null) {
           await _oauthClient.logout();
         } else {
-          await KeycastSession.clear();
+          await KeycastSession.clear(_flutterSecureStorage);
         }
       } catch (_) {}
 

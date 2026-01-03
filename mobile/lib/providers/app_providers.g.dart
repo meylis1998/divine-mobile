@@ -686,6 +686,54 @@ final class OauthConfigProvider
 
 String _$oauthConfigHash() => r'2d26760b0a845d9e0c2dd0362a4c26363be1786f';
 
+@ProviderFor(flutterSecureStorage)
+const flutterSecureStorageProvider = FlutterSecureStorageProvider._();
+
+final class FlutterSecureStorageProvider
+    extends
+        $FunctionalProvider<
+          FlutterSecureStorage,
+          FlutterSecureStorage,
+          FlutterSecureStorage
+        >
+    with $Provider<FlutterSecureStorage> {
+  const FlutterSecureStorageProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'flutterSecureStorageProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$flutterSecureStorageHash();
+
+  @$internal
+  @override
+  $ProviderElement<FlutterSecureStorage> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  FlutterSecureStorage create(Ref ref) {
+    return flutterSecureStorage(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FlutterSecureStorage value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FlutterSecureStorage>(value),
+    );
+  }
+}
+
+String _$flutterSecureStorageHash() =>
+    r'5be8817de87a006e56f25bca80abfc39a48777cd';
+
 @ProviderFor(secureKeycastStorage)
 const secureKeycastStorageProvider = SecureKeycastStorageProvider._();
 
@@ -732,7 +780,7 @@ final class SecureKeycastStorageProvider
 }
 
 String _$secureKeycastStorageHash() =>
-    r'd33b1dfe3e6467c3c4794c7c1fa6c0eb60c10cd3';
+    r'c57c0ec02e36cd1a0cc8b850c450af2eb4c496b3';
 
 @ProviderFor(oauthClient)
 const oauthClientProvider = OauthClientProvider._();
@@ -844,7 +892,7 @@ final class PendingVerifierProvider
   PendingVerifier create() => PendingVerifier();
 }
 
-String _$pendingVerifierHash() => r'5d57eab54de63a678e147ed0709c2c65faa483ae';
+String _$pendingVerifierHash() => r'a23857977eddec4dad51ab0234415e0f1a79cd8e';
 
 /// Holds the PKCE verifier while the user is in the browser.
 
@@ -1524,7 +1572,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'cecb42ef448634104e7e3bd237984ecbb2e8d43a';
+String _$authServiceHash() => r'a5fdab46c67b6110ee0d34f2d27332a7c9aa7737';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds

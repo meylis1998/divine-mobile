@@ -240,7 +240,17 @@ OAuthConfig oauthConfig(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-SecureKeycastStorage secureKeycastStorage(Ref ref) => SecureKeycastStorage();
+FlutterSecureStorage flutterSecureStorage(Ref ref) => FlutterSecureStorage(
+  aOptions: const AndroidOptions(
+    encryptedSharedPreferences: true,
+    resetOnError: true,
+  ),
+  mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+);
+
+@Riverpod(keepAlive: true)
+SecureKeycastStorage secureKeycastStorage(Ref ref) =>
+    SecureKeycastStorage(ref.watch(flutterSecureStorageProvider));
 
 @Riverpod(keepAlive: true)
 KeycastOAuth oauthClient(Ref ref) {
@@ -267,27 +277,25 @@ class PendingVerifier extends _$PendingVerifier {
   // Use a persistent storage instance because it is possible that the
   // operating system kills the app while the user is in the browser logging
   // in. Use secure storage to avoid leaking the verifier.
-  final _storage = const FlutterSecureStorage(
-    mOptions: MacOsOptions(
-      // Use legacy keychain for non-sandboxed debug builds
-      useDataProtectionKeyChain: false,
-    ),
-  );
+
   static const _key = 'oauth_pkce_verifier';
 
   @override
   Future<String?> build() async {
-    final result = await _storage.read(key: _key);
+    final storage = ref.read(flutterSecureStorageProvider);
+    final result = await storage.read(key: _key);
     return result;
   }
 
   Future<void> set(String verifier) async {
-    await _storage.write(key: _key, value: verifier);
+    final storage = ref.read(flutterSecureStorageProvider);
+    await storage.write(key: _key, value: verifier);
     ref.invalidateSelf();
   }
 
   Future<void> clear() async {
-    await _storage.delete(key: _key);
+    final storage = ref.read(flutterSecureStorageProvider);
+    await storage.delete(key: _key);
     ref.invalidateSelf();
   }
 }
@@ -411,10 +419,12 @@ AuthService authService(Ref ref) {
   final keyStorage = ref.watch(secureKeyStorageProvider);
   final userDataCleanupService = ref.watch(userDataCleanupServiceProvider);
   final oauthClient = ref.watch(oauthClientProvider);
+  final flutterSecureStorage = ref.watch(flutterSecureStorageProvider);
   return AuthService(
     userDataCleanupService: userDataCleanupService,
     keyStorage: keyStorage,
     oauthClient: oauthClient,
+    flutterSecureStorage: flutterSecureStorage,
   );
 }
 
