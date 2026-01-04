@@ -180,8 +180,12 @@ class HomeFeed extends _$HomeFeed {
       category: LogCategory.video,
     );
 
-    if (followingPubkeys.isEmpty) {
-      // Return empty state if not following anyone
+    // Even if not following anyone, we might have videos from subscribed lists
+    // So we need to wait for the cache to sync before declaring empty
+    final hasSubscribedLists = subscribedListCacheForListener != null;
+
+    if (followingPubkeys.isEmpty && !hasSubscribedLists) {
+      // Return empty state only if not following anyone AND no subscribed list cache
       keepAliveLink.close();
       return VideoFeedState(
         videos: [],
@@ -192,77 +196,139 @@ class HomeFeed extends _$HomeFeed {
       );
     }
 
-    // Subscribe to home feed videos from followed authors using dedicated subscription type
-    // NostrService now handles deduplication automatically
-    // Request server-side sorting by created_at (newest first) if relay supports it
-    // Use force: true to ensure new subscription even if params seem similar
-    Log.info(
-      '🏠 HomeFeed: Subscribing with ${followingPubkeys.length} authors',
-      name: 'HomeFeedProvider',
-      category: LogCategory.video,
-    );
-
     // Emit initial loading state so UI shows loading indicator instead of empty state
     state = const AsyncData(
       VideoFeedState(videos: [], hasMoreContent: false, isInitialLoad: true),
     );
 
-    await videoEventService.subscribeToHomeFeed(
-      followingPubkeys,
-      limit: 100,
-      sortBy: VideoSortField.createdAt, // Newest videos first (timeline order)
-      force: true,
-    );
-    Log.info(
-      '🏠 HomeFeed: After subscribe, cache has ${videoEventService.homeFeedVideos.length} videos',
-      name: 'HomeFeedProvider',
-      category: LogCategory.video,
-    );
+    // Only subscribe to home feed if we have following pubkeys
+    if (followingPubkeys.isNotEmpty) {
+      // Subscribe to home feed videos from followed authors using dedicated subscription type
+      // NostrService now handles deduplication automatically
+      // Request server-side sorting by created_at (newest first) if relay supports it
+      // Use force: true to ensure new subscription even if params seem similar
+      Log.info(
+        '🏠 HomeFeed: Subscribing with ${followingPubkeys.length} authors',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
 
-    // Wait for initial batch of videos to arrive from relay
-    // Videos arrive in rapid succession, so we wait for the count to stabilize
-    final completer = Completer<void>();
-    int stableCount = -1; // Start at -1 so first check always triggers timer
-    Timer? stabilityTimer;
+      await videoEventService.subscribeToHomeFeed(
+        followingPubkeys,
+        limit: 100,
+        sortBy: VideoSortField.createdAt, // Newest videos first (timeline order)
+        force: true,
+      );
+      Log.info(
+        '🏠 HomeFeed: After subscribe, cache has ${videoEventService.homeFeedVideos.length} videos',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
 
-    void checkStability() {
-      final currentCount = videoEventService.homeFeedVideos.length;
-      if (currentCount != stableCount) {
-        // Count changed, reset stability timer
-        stableCount = currentCount;
-        stabilityTimer?.cancel();
-        stabilityTimer = Timer(const Duration(milliseconds: 300), () {
-          // Count stable for 300ms, we're done
+      // Wait for initial batch of videos to arrive from relay
+      // Videos arrive in rapid succession, so we wait for the count to stabilize
+      final completer = Completer<void>();
+      int stableCount = -1; // Start at -1 so first check always triggers timer
+      Timer? stabilityTimer;
+
+      void checkStability() {
+        final currentCount = videoEventService.homeFeedVideos.length;
+        if (currentCount != stableCount) {
+          // Count changed, reset stability timer
+          stableCount = currentCount;
+          stabilityTimer?.cancel();
+          stabilityTimer = Timer(const Duration(milliseconds: 300), () {
+            // Count stable for 300ms, we're done
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          });
+        }
+      }
+
+      videoEventService.addListener(checkStability);
+
+      // Also set a maximum wait time
+      Timer(const Duration(seconds: 3), () {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+
+      // Trigger initial check
+      checkStability();
+
+      await completer.future;
+
+      // Clean up
+      videoEventService.removeListener(checkStability);
+      stabilityTimer?.cancel();
+
+      Log.info(
+        '🏠 HomeFeed: After stability wait, cache has ${videoEventService.homeFeedVideos.length} videos',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
+    } else {
+      // Not following anyone - wait for subscribed list cache to sync
+      Log.info(
+        '🏠 HomeFeed: Not following anyone, waiting for subscribed list cache',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
+
+      // Wait for subscribed list cache to have videos (up to 5 seconds)
+      final completer = Completer<void>();
+      Timer? checkTimer;
+
+      void checkCache() {
+        final videos = subscribedListCacheForListener?.getVideos() ?? [];
+        if (videos.isNotEmpty) {
+          checkTimer?.cancel();
           if (!completer.isCompleted) {
             completer.complete();
           }
+        }
+      }
+
+      // Check periodically
+      checkTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        checkCache();
+      });
+
+      // Also listen for cache updates
+      if (subscribedListCacheForListener != null) {
+        void onCacheUpdate() {
+          checkCache();
+        }
+        subscribedListCacheForListener.addListener(onCacheUpdate);
+
+        // Clean up listener when done
+        completer.future.then((_) {
+          subscribedListCacheForListener.removeListener(onCacheUpdate);
         });
       }
+
+      // Maximum wait time of 5 seconds
+      Timer(const Duration(seconds: 5), () {
+        checkTimer?.cancel();
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+
+      // Check immediately
+      checkCache();
+
+      await completer.future;
+      checkTimer?.cancel();
+
+      Log.info(
+        '🏠 HomeFeed: Done waiting for subscribed list cache, has ${subscribedListCacheForListener?.getVideos().length ?? 0} videos',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
     }
-
-    videoEventService.addListener(checkStability);
-
-    // Also set a maximum wait time
-    Timer(const Duration(seconds: 3), () {
-      if (!completer.isCompleted) {
-        completer.complete();
-      }
-    });
-
-    // Trigger initial check
-    checkStability();
-
-    await completer.future;
-
-    // Clean up
-    videoEventService.removeListener(checkStability);
-    stabilityTimer?.cancel();
-
-    Log.info(
-      '🏠 HomeFeed: After stability wait, cache has ${videoEventService.homeFeedVideos.length} videos',
-      name: 'HomeFeedProvider',
-      category: LogCategory.video,
-    );
 
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
