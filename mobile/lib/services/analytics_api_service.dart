@@ -695,6 +695,18 @@ class AnalyticsApiService {
     }).toList();
   }
 
+  /// Get trending hashtags synchronously (returns cached or defaults)
+  ///
+  /// This is a synchronous method for use in providers that need immediate
+  /// results. Returns cached hashtags if available, otherwise defaults.
+  /// Call [fetchTrendingHashtags] to refresh from the API.
+  List<TrendingHashtag> getTrendingHashtags({int limit = 25}) {
+    if (_trendingHashtagsCache.isNotEmpty) {
+      return _trendingHashtagsCache.take(limit).toList();
+    }
+    return _getDefaultHashtags(limit);
+  }
+
   /// Clear all caches
   void clearCache() {
     _trendingVideosCache.clear();
