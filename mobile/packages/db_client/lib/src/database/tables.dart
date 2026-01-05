@@ -352,3 +352,123 @@ class PersonalReactions extends Table {
     ),
   ];
 }
+
+/// Stores DM conversation metadata for NIP-17 private messages.
+///
+/// Each conversation is uniquely identified by the combination of owner pubkey
+/// (the current user) and peer pubkey (the other party). Supports multi-account
+/// scenarios where different users may have the same peer conversations.
+@DataClassName('DmConversationRow')
+class DmConversations extends Table {
+  @override
+  String get tableName => 'dm_conversations';
+
+  /// Current user's pubkey (supports multi-account)
+  TextColumn get ownerPubkey => text().named('owner_pubkey')();
+
+  /// Other party's pubkey in the conversation
+  TextColumn get peerPubkey => text().named('peer_pubkey')();
+
+  /// Timestamp of the most recent message
+  DateTimeColumn get lastMessageAt => dateTime().named('last_message_at')();
+
+  /// Number of unread messages in this conversation
+  IntColumn get unreadCount =>
+      integer().withDefault(const Constant(0)).named('unread_count')();
+
+  /// Preview text of the most recent message (truncated)
+  TextColumn get lastMessagePreview =>
+      text().nullable().named('last_message_preview')();
+
+  /// Whether notifications are muted for this conversation
+  BoolColumn get isMuted =>
+      boolean().withDefault(const Constant(false)).named('is_muted')();
+
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, peerPubkey};
+
+  List<Index> get indexes => [
+    // Index for listing conversations for a user sorted by recency
+    Index(
+      'idx_dm_conversations_owner_last_message',
+      'CREATE INDEX IF NOT EXISTS idx_dm_conversations_owner_last_message '
+          'ON dm_conversations (owner_pubkey, last_message_at DESC)',
+    ),
+    // Index for unread count queries
+    Index(
+      'idx_dm_conversations_owner_unread',
+      'CREATE INDEX IF NOT EXISTS idx_dm_conversations_owner_unread '
+          'ON dm_conversations (owner_pubkey, unread_count)',
+    ),
+  ];
+}
+
+/// Stores decrypted DM messages for NIP-17 private messages.
+///
+/// Messages are stored after decryption with the rumor event ID as the
+/// primary identifier (for deduplication). The gift wrap ID is stored
+/// for reference but the rumor ID is used for threading and dedup.
+@DataClassName('DmMessageRow')
+class DmMessages extends Table {
+  @override
+  String get tableName => 'dm_messages';
+
+  /// Rumor event ID (inner event ID used for dedup/threading)
+  TextColumn get rumorId => text().named('rumor_id')();
+
+  /// Gift wrap event ID (outer event ID)
+  TextColumn get giftWrapId => text().named('gift_wrap_id')();
+
+  /// Current user's pubkey (supports multi-account)
+  TextColumn get ownerPubkey => text().named('owner_pubkey')();
+
+  /// Conversation partner's pubkey
+  TextColumn get peerPubkey => text().named('peer_pubkey')();
+
+  /// Pubkey of message sender (either owner or peer)
+  TextColumn get senderPubkey => text().named('sender_pubkey')();
+
+  /// Decrypted message content
+  TextColumn get content => text()();
+
+  /// Message creation timestamp
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  /// Whether the message has been read
+  BoolColumn get isRead =>
+      boolean().withDefault(const Constant(false)).named('is_read')();
+
+  /// Message type (text, video, etc.)
+  TextColumn get messageType =>
+      text().withDefault(const Constant('text')).named('message_type')();
+
+  /// JSON metadata for rich content (video refs, etc.)
+  TextColumn get metadata => text().nullable()();
+
+  /// Whether this is an outgoing message from the owner
+  BoolColumn get isOutgoing => boolean().named('is_outgoing')();
+
+  @override
+  Set<Column> get primaryKey => {rumorId, ownerPubkey};
+
+  List<Index> get indexes => [
+    // Index for fetching messages in a conversation sorted by time
+    Index(
+      'idx_dm_messages_conversation',
+      'CREATE INDEX IF NOT EXISTS idx_dm_messages_conversation '
+          'ON dm_messages (owner_pubkey, peer_pubkey, created_at DESC)',
+    ),
+    // Index for unread message queries
+    Index(
+      'idx_dm_messages_unread',
+      'CREATE INDEX IF NOT EXISTS idx_dm_messages_unread '
+          'ON dm_messages (owner_pubkey, peer_pubkey, is_read)',
+    ),
+    // Index for gift wrap ID lookups (for processing incoming events)
+    Index(
+      'idx_dm_messages_gift_wrap',
+      'CREATE INDEX IF NOT EXISTS idx_dm_messages_gift_wrap '
+          'ON dm_messages (gift_wrap_id)',
+    ),
+  ];
+}

@@ -5190,6 +5190,1174 @@ class PersonalReactionsCompanion extends UpdateCompanion<PersonalReactionRow> {
   }
 }
 
+class $DmConversationsTable extends DmConversations
+    with TableInfo<$DmConversationsTable, DmConversationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DmConversationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _peerPubkeyMeta = const VerificationMeta(
+    'peerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> peerPubkey = GeneratedColumn<String>(
+    'peer_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastMessageAtMeta = const VerificationMeta(
+    'lastMessageAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastMessageAt =
+      GeneratedColumn<DateTime>(
+        'last_message_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _unreadCountMeta = const VerificationMeta(
+    'unreadCount',
+  );
+  @override
+  late final GeneratedColumn<int> unreadCount = GeneratedColumn<int>(
+    'unread_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastMessagePreviewMeta =
+      const VerificationMeta('lastMessagePreview');
+  @override
+  late final GeneratedColumn<String> lastMessagePreview =
+      GeneratedColumn<String>(
+        'last_message_preview',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isMutedMeta = const VerificationMeta(
+    'isMuted',
+  );
+  @override
+  late final GeneratedColumn<bool> isMuted = GeneratedColumn<bool>(
+    'is_muted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_muted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerPubkey,
+    peerPubkey,
+    lastMessageAt,
+    unreadCount,
+    lastMessagePreview,
+    isMuted,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dm_conversations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DmConversationRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('peer_pubkey')) {
+      context.handle(
+        _peerPubkeyMeta,
+        peerPubkey.isAcceptableOrUnknown(data['peer_pubkey']!, _peerPubkeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_peerPubkeyMeta);
+    }
+    if (data.containsKey('last_message_at')) {
+      context.handle(
+        _lastMessageAtMeta,
+        lastMessageAt.isAcceptableOrUnknown(
+          data['last_message_at']!,
+          _lastMessageAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastMessageAtMeta);
+    }
+    if (data.containsKey('unread_count')) {
+      context.handle(
+        _unreadCountMeta,
+        unreadCount.isAcceptableOrUnknown(
+          data['unread_count']!,
+          _unreadCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_preview')) {
+      context.handle(
+        _lastMessagePreviewMeta,
+        lastMessagePreview.isAcceptableOrUnknown(
+          data['last_message_preview']!,
+          _lastMessagePreviewMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_muted')) {
+      context.handle(
+        _isMutedMeta,
+        isMuted.isAcceptableOrUnknown(data['is_muted']!, _isMutedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, peerPubkey};
+  @override
+  DmConversationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DmConversationRow(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      peerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}peer_pubkey'],
+      )!,
+      lastMessageAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_message_at'],
+      )!,
+      unreadCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unread_count'],
+      )!,
+      lastMessagePreview: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_preview'],
+      ),
+      isMuted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_muted'],
+      )!,
+    );
+  }
+
+  @override
+  $DmConversationsTable createAlias(String alias) {
+    return $DmConversationsTable(attachedDatabase, alias);
+  }
+}
+
+class DmConversationRow extends DataClass
+    implements Insertable<DmConversationRow> {
+  /// Current user's pubkey (supports multi-account)
+  final String ownerPubkey;
+
+  /// Other party's pubkey in the conversation
+  final String peerPubkey;
+
+  /// Timestamp of the most recent message
+  final DateTime lastMessageAt;
+
+  /// Number of unread messages in this conversation
+  final int unreadCount;
+
+  /// Preview text of the most recent message (truncated)
+  final String? lastMessagePreview;
+
+  /// Whether notifications are muted for this conversation
+  final bool isMuted;
+  const DmConversationRow({
+    required this.ownerPubkey,
+    required this.peerPubkey,
+    required this.lastMessageAt,
+    required this.unreadCount,
+    this.lastMessagePreview,
+    required this.isMuted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['peer_pubkey'] = Variable<String>(peerPubkey);
+    map['last_message_at'] = Variable<DateTime>(lastMessageAt);
+    map['unread_count'] = Variable<int>(unreadCount);
+    if (!nullToAbsent || lastMessagePreview != null) {
+      map['last_message_preview'] = Variable<String>(lastMessagePreview);
+    }
+    map['is_muted'] = Variable<bool>(isMuted);
+    return map;
+  }
+
+  DmConversationsCompanion toCompanion(bool nullToAbsent) {
+    return DmConversationsCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      peerPubkey: Value(peerPubkey),
+      lastMessageAt: Value(lastMessageAt),
+      unreadCount: Value(unreadCount),
+      lastMessagePreview: lastMessagePreview == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessagePreview),
+      isMuted: Value(isMuted),
+    );
+  }
+
+  factory DmConversationRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DmConversationRow(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      peerPubkey: serializer.fromJson<String>(json['peerPubkey']),
+      lastMessageAt: serializer.fromJson<DateTime>(json['lastMessageAt']),
+      unreadCount: serializer.fromJson<int>(json['unreadCount']),
+      lastMessagePreview: serializer.fromJson<String?>(
+        json['lastMessagePreview'],
+      ),
+      isMuted: serializer.fromJson<bool>(json['isMuted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'peerPubkey': serializer.toJson<String>(peerPubkey),
+      'lastMessageAt': serializer.toJson<DateTime>(lastMessageAt),
+      'unreadCount': serializer.toJson<int>(unreadCount),
+      'lastMessagePreview': serializer.toJson<String?>(lastMessagePreview),
+      'isMuted': serializer.toJson<bool>(isMuted),
+    };
+  }
+
+  DmConversationRow copyWith({
+    String? ownerPubkey,
+    String? peerPubkey,
+    DateTime? lastMessageAt,
+    int? unreadCount,
+    Value<String?> lastMessagePreview = const Value.absent(),
+    bool? isMuted,
+  }) => DmConversationRow(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    peerPubkey: peerPubkey ?? this.peerPubkey,
+    lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+    unreadCount: unreadCount ?? this.unreadCount,
+    lastMessagePreview: lastMessagePreview.present
+        ? lastMessagePreview.value
+        : this.lastMessagePreview,
+    isMuted: isMuted ?? this.isMuted,
+  );
+  DmConversationRow copyWithCompanion(DmConversationsCompanion data) {
+    return DmConversationRow(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      peerPubkey: data.peerPubkey.present
+          ? data.peerPubkey.value
+          : this.peerPubkey,
+      lastMessageAt: data.lastMessageAt.present
+          ? data.lastMessageAt.value
+          : this.lastMessageAt,
+      unreadCount: data.unreadCount.present
+          ? data.unreadCount.value
+          : this.unreadCount,
+      lastMessagePreview: data.lastMessagePreview.present
+          ? data.lastMessagePreview.value
+          : this.lastMessagePreview,
+      isMuted: data.isMuted.present ? data.isMuted.value : this.isMuted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DmConversationRow(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('peerPubkey: $peerPubkey, ')
+          ..write('lastMessageAt: $lastMessageAt, ')
+          ..write('unreadCount: $unreadCount, ')
+          ..write('lastMessagePreview: $lastMessagePreview, ')
+          ..write('isMuted: $isMuted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerPubkey,
+    peerPubkey,
+    lastMessageAt,
+    unreadCount,
+    lastMessagePreview,
+    isMuted,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DmConversationRow &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.peerPubkey == this.peerPubkey &&
+          other.lastMessageAt == this.lastMessageAt &&
+          other.unreadCount == this.unreadCount &&
+          other.lastMessagePreview == this.lastMessagePreview &&
+          other.isMuted == this.isMuted);
+}
+
+class DmConversationsCompanion extends UpdateCompanion<DmConversationRow> {
+  final Value<String> ownerPubkey;
+  final Value<String> peerPubkey;
+  final Value<DateTime> lastMessageAt;
+  final Value<int> unreadCount;
+  final Value<String?> lastMessagePreview;
+  final Value<bool> isMuted;
+  final Value<int> rowid;
+  const DmConversationsCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.peerPubkey = const Value.absent(),
+    this.lastMessageAt = const Value.absent(),
+    this.unreadCount = const Value.absent(),
+    this.lastMessagePreview = const Value.absent(),
+    this.isMuted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DmConversationsCompanion.insert({
+    required String ownerPubkey,
+    required String peerPubkey,
+    required DateTime lastMessageAt,
+    this.unreadCount = const Value.absent(),
+    this.lastMessagePreview = const Value.absent(),
+    this.isMuted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       peerPubkey = Value(peerPubkey),
+       lastMessageAt = Value(lastMessageAt);
+  static Insertable<DmConversationRow> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? peerPubkey,
+    Expression<DateTime>? lastMessageAt,
+    Expression<int>? unreadCount,
+    Expression<String>? lastMessagePreview,
+    Expression<bool>? isMuted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (peerPubkey != null) 'peer_pubkey': peerPubkey,
+      if (lastMessageAt != null) 'last_message_at': lastMessageAt,
+      if (unreadCount != null) 'unread_count': unreadCount,
+      if (lastMessagePreview != null)
+        'last_message_preview': lastMessagePreview,
+      if (isMuted != null) 'is_muted': isMuted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DmConversationsCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? peerPubkey,
+    Value<DateTime>? lastMessageAt,
+    Value<int>? unreadCount,
+    Value<String?>? lastMessagePreview,
+    Value<bool>? isMuted,
+    Value<int>? rowid,
+  }) {
+    return DmConversationsCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      peerPubkey: peerPubkey ?? this.peerPubkey,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      unreadCount: unreadCount ?? this.unreadCount,
+      lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
+      isMuted: isMuted ?? this.isMuted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (peerPubkey.present) {
+      map['peer_pubkey'] = Variable<String>(peerPubkey.value);
+    }
+    if (lastMessageAt.present) {
+      map['last_message_at'] = Variable<DateTime>(lastMessageAt.value);
+    }
+    if (unreadCount.present) {
+      map['unread_count'] = Variable<int>(unreadCount.value);
+    }
+    if (lastMessagePreview.present) {
+      map['last_message_preview'] = Variable<String>(lastMessagePreview.value);
+    }
+    if (isMuted.present) {
+      map['is_muted'] = Variable<bool>(isMuted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DmConversationsCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('peerPubkey: $peerPubkey, ')
+          ..write('lastMessageAt: $lastMessageAt, ')
+          ..write('unreadCount: $unreadCount, ')
+          ..write('lastMessagePreview: $lastMessagePreview, ')
+          ..write('isMuted: $isMuted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DmMessagesTable extends DmMessages
+    with TableInfo<$DmMessagesTable, DmMessageRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DmMessagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _rumorIdMeta = const VerificationMeta(
+    'rumorId',
+  );
+  @override
+  late final GeneratedColumn<String> rumorId = GeneratedColumn<String>(
+    'rumor_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _giftWrapIdMeta = const VerificationMeta(
+    'giftWrapId',
+  );
+  @override
+  late final GeneratedColumn<String> giftWrapId = GeneratedColumn<String>(
+    'gift_wrap_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _peerPubkeyMeta = const VerificationMeta(
+    'peerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> peerPubkey = GeneratedColumn<String>(
+    'peer_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _senderPubkeyMeta = const VerificationMeta(
+    'senderPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> senderPubkey = GeneratedColumn<String>(
+    'sender_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+    'is_read',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_read" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _messageTypeMeta = const VerificationMeta(
+    'messageType',
+  );
+  @override
+  late final GeneratedColumn<String> messageType = GeneratedColumn<String>(
+    'message_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('text'),
+  );
+  static const VerificationMeta _metadataMeta = const VerificationMeta(
+    'metadata',
+  );
+  @override
+  late final GeneratedColumn<String> metadata = GeneratedColumn<String>(
+    'metadata',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isOutgoingMeta = const VerificationMeta(
+    'isOutgoing',
+  );
+  @override
+  late final GeneratedColumn<bool> isOutgoing = GeneratedColumn<bool>(
+    'is_outgoing',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_outgoing" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    rumorId,
+    giftWrapId,
+    ownerPubkey,
+    peerPubkey,
+    senderPubkey,
+    content,
+    createdAt,
+    isRead,
+    messageType,
+    metadata,
+    isOutgoing,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'dm_messages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DmMessageRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('rumor_id')) {
+      context.handle(
+        _rumorIdMeta,
+        rumorId.isAcceptableOrUnknown(data['rumor_id']!, _rumorIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rumorIdMeta);
+    }
+    if (data.containsKey('gift_wrap_id')) {
+      context.handle(
+        _giftWrapIdMeta,
+        giftWrapId.isAcceptableOrUnknown(
+          data['gift_wrap_id']!,
+          _giftWrapIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_giftWrapIdMeta);
+    }
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('peer_pubkey')) {
+      context.handle(
+        _peerPubkeyMeta,
+        peerPubkey.isAcceptableOrUnknown(data['peer_pubkey']!, _peerPubkeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_peerPubkeyMeta);
+    }
+    if (data.containsKey('sender_pubkey')) {
+      context.handle(
+        _senderPubkeyMeta,
+        senderPubkey.isAcceptableOrUnknown(
+          data['sender_pubkey']!,
+          _senderPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_senderPubkeyMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('is_read')) {
+      context.handle(
+        _isReadMeta,
+        isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta),
+      );
+    }
+    if (data.containsKey('message_type')) {
+      context.handle(
+        _messageTypeMeta,
+        messageType.isAcceptableOrUnknown(
+          data['message_type']!,
+          _messageTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('metadata')) {
+      context.handle(
+        _metadataMeta,
+        metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
+      );
+    }
+    if (data.containsKey('is_outgoing')) {
+      context.handle(
+        _isOutgoingMeta,
+        isOutgoing.isAcceptableOrUnknown(data['is_outgoing']!, _isOutgoingMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isOutgoingMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {rumorId, ownerPubkey};
+  @override
+  DmMessageRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DmMessageRow(
+      rumorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rumor_id'],
+      )!,
+      giftWrapId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gift_wrap_id'],
+      )!,
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      peerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}peer_pubkey'],
+      )!,
+      senderPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sender_pubkey'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      isRead: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_read'],
+      )!,
+      messageType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}message_type'],
+      )!,
+      metadata: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}metadata'],
+      ),
+      isOutgoing: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_outgoing'],
+      )!,
+    );
+  }
+
+  @override
+  $DmMessagesTable createAlias(String alias) {
+    return $DmMessagesTable(attachedDatabase, alias);
+  }
+}
+
+class DmMessageRow extends DataClass implements Insertable<DmMessageRow> {
+  /// Rumor event ID (inner event ID used for dedup/threading)
+  final String rumorId;
+
+  /// Gift wrap event ID (outer event ID)
+  final String giftWrapId;
+
+  /// Current user's pubkey (supports multi-account)
+  final String ownerPubkey;
+
+  /// Conversation partner's pubkey
+  final String peerPubkey;
+
+  /// Pubkey of message sender (either owner or peer)
+  final String senderPubkey;
+
+  /// Decrypted message content
+  final String content;
+
+  /// Message creation timestamp
+  final DateTime createdAt;
+
+  /// Whether the message has been read
+  final bool isRead;
+
+  /// Message type (text, video, etc.)
+  final String messageType;
+
+  /// JSON metadata for rich content (video refs, etc.)
+  final String? metadata;
+
+  /// Whether this is an outgoing message from the owner
+  final bool isOutgoing;
+  const DmMessageRow({
+    required this.rumorId,
+    required this.giftWrapId,
+    required this.ownerPubkey,
+    required this.peerPubkey,
+    required this.senderPubkey,
+    required this.content,
+    required this.createdAt,
+    required this.isRead,
+    required this.messageType,
+    this.metadata,
+    required this.isOutgoing,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['rumor_id'] = Variable<String>(rumorId);
+    map['gift_wrap_id'] = Variable<String>(giftWrapId);
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['peer_pubkey'] = Variable<String>(peerPubkey);
+    map['sender_pubkey'] = Variable<String>(senderPubkey);
+    map['content'] = Variable<String>(content);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['is_read'] = Variable<bool>(isRead);
+    map['message_type'] = Variable<String>(messageType);
+    if (!nullToAbsent || metadata != null) {
+      map['metadata'] = Variable<String>(metadata);
+    }
+    map['is_outgoing'] = Variable<bool>(isOutgoing);
+    return map;
+  }
+
+  DmMessagesCompanion toCompanion(bool nullToAbsent) {
+    return DmMessagesCompanion(
+      rumorId: Value(rumorId),
+      giftWrapId: Value(giftWrapId),
+      ownerPubkey: Value(ownerPubkey),
+      peerPubkey: Value(peerPubkey),
+      senderPubkey: Value(senderPubkey),
+      content: Value(content),
+      createdAt: Value(createdAt),
+      isRead: Value(isRead),
+      messageType: Value(messageType),
+      metadata: metadata == null && nullToAbsent
+          ? const Value.absent()
+          : Value(metadata),
+      isOutgoing: Value(isOutgoing),
+    );
+  }
+
+  factory DmMessageRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DmMessageRow(
+      rumorId: serializer.fromJson<String>(json['rumorId']),
+      giftWrapId: serializer.fromJson<String>(json['giftWrapId']),
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      peerPubkey: serializer.fromJson<String>(json['peerPubkey']),
+      senderPubkey: serializer.fromJson<String>(json['senderPubkey']),
+      content: serializer.fromJson<String>(json['content']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
+      messageType: serializer.fromJson<String>(json['messageType']),
+      metadata: serializer.fromJson<String?>(json['metadata']),
+      isOutgoing: serializer.fromJson<bool>(json['isOutgoing']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'rumorId': serializer.toJson<String>(rumorId),
+      'giftWrapId': serializer.toJson<String>(giftWrapId),
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'peerPubkey': serializer.toJson<String>(peerPubkey),
+      'senderPubkey': serializer.toJson<String>(senderPubkey),
+      'content': serializer.toJson<String>(content),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'isRead': serializer.toJson<bool>(isRead),
+      'messageType': serializer.toJson<String>(messageType),
+      'metadata': serializer.toJson<String?>(metadata),
+      'isOutgoing': serializer.toJson<bool>(isOutgoing),
+    };
+  }
+
+  DmMessageRow copyWith({
+    String? rumorId,
+    String? giftWrapId,
+    String? ownerPubkey,
+    String? peerPubkey,
+    String? senderPubkey,
+    String? content,
+    DateTime? createdAt,
+    bool? isRead,
+    String? messageType,
+    Value<String?> metadata = const Value.absent(),
+    bool? isOutgoing,
+  }) => DmMessageRow(
+    rumorId: rumorId ?? this.rumorId,
+    giftWrapId: giftWrapId ?? this.giftWrapId,
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    peerPubkey: peerPubkey ?? this.peerPubkey,
+    senderPubkey: senderPubkey ?? this.senderPubkey,
+    content: content ?? this.content,
+    createdAt: createdAt ?? this.createdAt,
+    isRead: isRead ?? this.isRead,
+    messageType: messageType ?? this.messageType,
+    metadata: metadata.present ? metadata.value : this.metadata,
+    isOutgoing: isOutgoing ?? this.isOutgoing,
+  );
+  DmMessageRow copyWithCompanion(DmMessagesCompanion data) {
+    return DmMessageRow(
+      rumorId: data.rumorId.present ? data.rumorId.value : this.rumorId,
+      giftWrapId: data.giftWrapId.present
+          ? data.giftWrapId.value
+          : this.giftWrapId,
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      peerPubkey: data.peerPubkey.present
+          ? data.peerPubkey.value
+          : this.peerPubkey,
+      senderPubkey: data.senderPubkey.present
+          ? data.senderPubkey.value
+          : this.senderPubkey,
+      content: data.content.present ? data.content.value : this.content,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      messageType: data.messageType.present
+          ? data.messageType.value
+          : this.messageType,
+      metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      isOutgoing: data.isOutgoing.present
+          ? data.isOutgoing.value
+          : this.isOutgoing,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DmMessageRow(')
+          ..write('rumorId: $rumorId, ')
+          ..write('giftWrapId: $giftWrapId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('peerPubkey: $peerPubkey, ')
+          ..write('senderPubkey: $senderPubkey, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('isRead: $isRead, ')
+          ..write('messageType: $messageType, ')
+          ..write('metadata: $metadata, ')
+          ..write('isOutgoing: $isOutgoing')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    rumorId,
+    giftWrapId,
+    ownerPubkey,
+    peerPubkey,
+    senderPubkey,
+    content,
+    createdAt,
+    isRead,
+    messageType,
+    metadata,
+    isOutgoing,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DmMessageRow &&
+          other.rumorId == this.rumorId &&
+          other.giftWrapId == this.giftWrapId &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.peerPubkey == this.peerPubkey &&
+          other.senderPubkey == this.senderPubkey &&
+          other.content == this.content &&
+          other.createdAt == this.createdAt &&
+          other.isRead == this.isRead &&
+          other.messageType == this.messageType &&
+          other.metadata == this.metadata &&
+          other.isOutgoing == this.isOutgoing);
+}
+
+class DmMessagesCompanion extends UpdateCompanion<DmMessageRow> {
+  final Value<String> rumorId;
+  final Value<String> giftWrapId;
+  final Value<String> ownerPubkey;
+  final Value<String> peerPubkey;
+  final Value<String> senderPubkey;
+  final Value<String> content;
+  final Value<DateTime> createdAt;
+  final Value<bool> isRead;
+  final Value<String> messageType;
+  final Value<String?> metadata;
+  final Value<bool> isOutgoing;
+  final Value<int> rowid;
+  const DmMessagesCompanion({
+    this.rumorId = const Value.absent(),
+    this.giftWrapId = const Value.absent(),
+    this.ownerPubkey = const Value.absent(),
+    this.peerPubkey = const Value.absent(),
+    this.senderPubkey = const Value.absent(),
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.messageType = const Value.absent(),
+    this.metadata = const Value.absent(),
+    this.isOutgoing = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DmMessagesCompanion.insert({
+    required String rumorId,
+    required String giftWrapId,
+    required String ownerPubkey,
+    required String peerPubkey,
+    required String senderPubkey,
+    required String content,
+    required DateTime createdAt,
+    this.isRead = const Value.absent(),
+    this.messageType = const Value.absent(),
+    this.metadata = const Value.absent(),
+    required bool isOutgoing,
+    this.rowid = const Value.absent(),
+  }) : rumorId = Value(rumorId),
+       giftWrapId = Value(giftWrapId),
+       ownerPubkey = Value(ownerPubkey),
+       peerPubkey = Value(peerPubkey),
+       senderPubkey = Value(senderPubkey),
+       content = Value(content),
+       createdAt = Value(createdAt),
+       isOutgoing = Value(isOutgoing);
+  static Insertable<DmMessageRow> custom({
+    Expression<String>? rumorId,
+    Expression<String>? giftWrapId,
+    Expression<String>? ownerPubkey,
+    Expression<String>? peerPubkey,
+    Expression<String>? senderPubkey,
+    Expression<String>? content,
+    Expression<DateTime>? createdAt,
+    Expression<bool>? isRead,
+    Expression<String>? messageType,
+    Expression<String>? metadata,
+    Expression<bool>? isOutgoing,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (rumorId != null) 'rumor_id': rumorId,
+      if (giftWrapId != null) 'gift_wrap_id': giftWrapId,
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (peerPubkey != null) 'peer_pubkey': peerPubkey,
+      if (senderPubkey != null) 'sender_pubkey': senderPubkey,
+      if (content != null) 'content': content,
+      if (createdAt != null) 'created_at': createdAt,
+      if (isRead != null) 'is_read': isRead,
+      if (messageType != null) 'message_type': messageType,
+      if (metadata != null) 'metadata': metadata,
+      if (isOutgoing != null) 'is_outgoing': isOutgoing,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DmMessagesCompanion copyWith({
+    Value<String>? rumorId,
+    Value<String>? giftWrapId,
+    Value<String>? ownerPubkey,
+    Value<String>? peerPubkey,
+    Value<String>? senderPubkey,
+    Value<String>? content,
+    Value<DateTime>? createdAt,
+    Value<bool>? isRead,
+    Value<String>? messageType,
+    Value<String?>? metadata,
+    Value<bool>? isOutgoing,
+    Value<int>? rowid,
+  }) {
+    return DmMessagesCompanion(
+      rumorId: rumorId ?? this.rumorId,
+      giftWrapId: giftWrapId ?? this.giftWrapId,
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      peerPubkey: peerPubkey ?? this.peerPubkey,
+      senderPubkey: senderPubkey ?? this.senderPubkey,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      isRead: isRead ?? this.isRead,
+      messageType: messageType ?? this.messageType,
+      metadata: metadata ?? this.metadata,
+      isOutgoing: isOutgoing ?? this.isOutgoing,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (rumorId.present) {
+      map['rumor_id'] = Variable<String>(rumorId.value);
+    }
+    if (giftWrapId.present) {
+      map['gift_wrap_id'] = Variable<String>(giftWrapId.value);
+    }
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (peerPubkey.present) {
+      map['peer_pubkey'] = Variable<String>(peerPubkey.value);
+    }
+    if (senderPubkey.present) {
+      map['sender_pubkey'] = Variable<String>(senderPubkey.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
+    if (messageType.present) {
+      map['message_type'] = Variable<String>(messageType.value);
+    }
+    if (metadata.present) {
+      map['metadata'] = Variable<String>(metadata.value);
+    }
+    if (isOutgoing.present) {
+      map['is_outgoing'] = Variable<bool>(isOutgoing.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DmMessagesCompanion(')
+          ..write('rumorId: $rumorId, ')
+          ..write('giftWrapId: $giftWrapId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('peerPubkey: $peerPubkey, ')
+          ..write('senderPubkey: $senderPubkey, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('isRead: $isRead, ')
+          ..write('messageType: $messageType, ')
+          ..write('metadata: $metadata, ')
+          ..write('isOutgoing: $isOutgoing, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5202,6 +6370,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PendingUploadsTable pendingUploads = $PendingUploadsTable(this);
   late final $PersonalReactionsTable personalReactions =
       $PersonalReactionsTable(this);
+  late final $DmConversationsTable dmConversations = $DmConversationsTable(
+    this,
+  );
+  late final $DmMessagesTable dmMessages = $DmMessagesTable(this);
   late final UserProfilesDao userProfilesDao = UserProfilesDao(
     this as AppDatabase,
   );
@@ -5226,6 +6398,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PersonalReactionsDao personalReactionsDao = PersonalReactionsDao(
     this as AppDatabase,
   );
+  late final DmConversationsDao dmConversationsDao = DmConversationsDao(
+    this as AppDatabase,
+  );
+  late final DmMessagesDao dmMessagesDao = DmMessagesDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5239,6 +6415,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notifications,
     pendingUploads,
     personalReactions,
+    dmConversations,
+    dmMessages,
   ];
 }
 
@@ -7733,6 +8911,567 @@ typedef $$PersonalReactionsTableProcessedTableManager =
       PersonalReactionRow,
       PrefetchHooks Function()
     >;
+typedef $$DmConversationsTableCreateCompanionBuilder =
+    DmConversationsCompanion Function({
+      required String ownerPubkey,
+      required String peerPubkey,
+      required DateTime lastMessageAt,
+      Value<int> unreadCount,
+      Value<String?> lastMessagePreview,
+      Value<bool> isMuted,
+      Value<int> rowid,
+    });
+typedef $$DmConversationsTableUpdateCompanionBuilder =
+    DmConversationsCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> peerPubkey,
+      Value<DateTime> lastMessageAt,
+      Value<int> unreadCount,
+      Value<String?> lastMessagePreview,
+      Value<bool> isMuted,
+      Value<int> rowid,
+    });
+
+class $$DmConversationsTableFilterComposer
+    extends Composer<_$AppDatabase, $DmConversationsTable> {
+  $$DmConversationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastMessageAt => $composableBuilder(
+    column: $table.lastMessageAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessagePreview => $composableBuilder(
+    column: $table.lastMessagePreview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isMuted => $composableBuilder(
+    column: $table.isMuted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DmConversationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DmConversationsTable> {
+  $$DmConversationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastMessageAt => $composableBuilder(
+    column: $table.lastMessageAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastMessagePreview => $composableBuilder(
+    column: $table.lastMessagePreview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isMuted => $composableBuilder(
+    column: $table.isMuted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DmConversationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DmConversationsTable> {
+  $$DmConversationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastMessageAt => $composableBuilder(
+    column: $table.lastMessageAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessagePreview => $composableBuilder(
+    column: $table.lastMessagePreview,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isMuted =>
+      $composableBuilder(column: $table.isMuted, builder: (column) => column);
+}
+
+class $$DmConversationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DmConversationsTable,
+          DmConversationRow,
+          $$DmConversationsTableFilterComposer,
+          $$DmConversationsTableOrderingComposer,
+          $$DmConversationsTableAnnotationComposer,
+          $$DmConversationsTableCreateCompanionBuilder,
+          $$DmConversationsTableUpdateCompanionBuilder,
+          (
+            DmConversationRow,
+            BaseReferences<
+              _$AppDatabase,
+              $DmConversationsTable,
+              DmConversationRow
+            >,
+          ),
+          DmConversationRow,
+          PrefetchHooks Function()
+        > {
+  $$DmConversationsTableTableManager(
+    _$AppDatabase db,
+    $DmConversationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DmConversationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DmConversationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DmConversationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> peerPubkey = const Value.absent(),
+                Value<DateTime> lastMessageAt = const Value.absent(),
+                Value<int> unreadCount = const Value.absent(),
+                Value<String?> lastMessagePreview = const Value.absent(),
+                Value<bool> isMuted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DmConversationsCompanion(
+                ownerPubkey: ownerPubkey,
+                peerPubkey: peerPubkey,
+                lastMessageAt: lastMessageAt,
+                unreadCount: unreadCount,
+                lastMessagePreview: lastMessagePreview,
+                isMuted: isMuted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String peerPubkey,
+                required DateTime lastMessageAt,
+                Value<int> unreadCount = const Value.absent(),
+                Value<String?> lastMessagePreview = const Value.absent(),
+                Value<bool> isMuted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DmConversationsCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                peerPubkey: peerPubkey,
+                lastMessageAt: lastMessageAt,
+                unreadCount: unreadCount,
+                lastMessagePreview: lastMessagePreview,
+                isMuted: isMuted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DmConversationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DmConversationsTable,
+      DmConversationRow,
+      $$DmConversationsTableFilterComposer,
+      $$DmConversationsTableOrderingComposer,
+      $$DmConversationsTableAnnotationComposer,
+      $$DmConversationsTableCreateCompanionBuilder,
+      $$DmConversationsTableUpdateCompanionBuilder,
+      (
+        DmConversationRow,
+        BaseReferences<_$AppDatabase, $DmConversationsTable, DmConversationRow>,
+      ),
+      DmConversationRow,
+      PrefetchHooks Function()
+    >;
+typedef $$DmMessagesTableCreateCompanionBuilder =
+    DmMessagesCompanion Function({
+      required String rumorId,
+      required String giftWrapId,
+      required String ownerPubkey,
+      required String peerPubkey,
+      required String senderPubkey,
+      required String content,
+      required DateTime createdAt,
+      Value<bool> isRead,
+      Value<String> messageType,
+      Value<String?> metadata,
+      required bool isOutgoing,
+      Value<int> rowid,
+    });
+typedef $$DmMessagesTableUpdateCompanionBuilder =
+    DmMessagesCompanion Function({
+      Value<String> rumorId,
+      Value<String> giftWrapId,
+      Value<String> ownerPubkey,
+      Value<String> peerPubkey,
+      Value<String> senderPubkey,
+      Value<String> content,
+      Value<DateTime> createdAt,
+      Value<bool> isRead,
+      Value<String> messageType,
+      Value<String?> metadata,
+      Value<bool> isOutgoing,
+      Value<int> rowid,
+    });
+
+class $$DmMessagesTableFilterComposer
+    extends Composer<_$AppDatabase, $DmMessagesTable> {
+  $$DmMessagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get rumorId => $composableBuilder(
+    column: $table.rumorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get giftWrapId => $composableBuilder(
+    column: $table.giftWrapId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get senderPubkey => $composableBuilder(
+    column: $table.senderPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get messageType => $composableBuilder(
+    column: $table.messageType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isOutgoing => $composableBuilder(
+    column: $table.isOutgoing,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DmMessagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DmMessagesTable> {
+  $$DmMessagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get rumorId => $composableBuilder(
+    column: $table.rumorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get giftWrapId => $composableBuilder(
+    column: $table.giftWrapId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get senderPubkey => $composableBuilder(
+    column: $table.senderPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get messageType => $composableBuilder(
+    column: $table.messageType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isOutgoing => $composableBuilder(
+    column: $table.isOutgoing,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DmMessagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DmMessagesTable> {
+  $$DmMessagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get rumorId =>
+      $composableBuilder(column: $table.rumorId, builder: (column) => column);
+
+  GeneratedColumn<String> get giftWrapId => $composableBuilder(
+    column: $table.giftWrapId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get peerPubkey => $composableBuilder(
+    column: $table.peerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get senderPubkey => $composableBuilder(
+    column: $table.senderPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<String> get messageType => $composableBuilder(
+    column: $table.messageType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get metadata =>
+      $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOutgoing => $composableBuilder(
+    column: $table.isOutgoing,
+    builder: (column) => column,
+  );
+}
+
+class $$DmMessagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DmMessagesTable,
+          DmMessageRow,
+          $$DmMessagesTableFilterComposer,
+          $$DmMessagesTableOrderingComposer,
+          $$DmMessagesTableAnnotationComposer,
+          $$DmMessagesTableCreateCompanionBuilder,
+          $$DmMessagesTableUpdateCompanionBuilder,
+          (
+            DmMessageRow,
+            BaseReferences<_$AppDatabase, $DmMessagesTable, DmMessageRow>,
+          ),
+          DmMessageRow,
+          PrefetchHooks Function()
+        > {
+  $$DmMessagesTableTableManager(_$AppDatabase db, $DmMessagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DmMessagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DmMessagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DmMessagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> rumorId = const Value.absent(),
+                Value<String> giftWrapId = const Value.absent(),
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> peerPubkey = const Value.absent(),
+                Value<String> senderPubkey = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
+                Value<String> messageType = const Value.absent(),
+                Value<String?> metadata = const Value.absent(),
+                Value<bool> isOutgoing = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DmMessagesCompanion(
+                rumorId: rumorId,
+                giftWrapId: giftWrapId,
+                ownerPubkey: ownerPubkey,
+                peerPubkey: peerPubkey,
+                senderPubkey: senderPubkey,
+                content: content,
+                createdAt: createdAt,
+                isRead: isRead,
+                messageType: messageType,
+                metadata: metadata,
+                isOutgoing: isOutgoing,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String rumorId,
+                required String giftWrapId,
+                required String ownerPubkey,
+                required String peerPubkey,
+                required String senderPubkey,
+                required String content,
+                required DateTime createdAt,
+                Value<bool> isRead = const Value.absent(),
+                Value<String> messageType = const Value.absent(),
+                Value<String?> metadata = const Value.absent(),
+                required bool isOutgoing,
+                Value<int> rowid = const Value.absent(),
+              }) => DmMessagesCompanion.insert(
+                rumorId: rumorId,
+                giftWrapId: giftWrapId,
+                ownerPubkey: ownerPubkey,
+                peerPubkey: peerPubkey,
+                senderPubkey: senderPubkey,
+                content: content,
+                createdAt: createdAt,
+                isRead: isRead,
+                messageType: messageType,
+                metadata: metadata,
+                isOutgoing: isOutgoing,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DmMessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DmMessagesTable,
+      DmMessageRow,
+      $$DmMessagesTableFilterComposer,
+      $$DmMessagesTableOrderingComposer,
+      $$DmMessagesTableAnnotationComposer,
+      $$DmMessagesTableCreateCompanionBuilder,
+      $$DmMessagesTableUpdateCompanionBuilder,
+      (
+        DmMessageRow,
+        BaseReferences<_$AppDatabase, $DmMessagesTable, DmMessageRow>,
+      ),
+      DmMessageRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7753,4 +9492,8 @@ class $AppDatabaseManager {
       $$PendingUploadsTableTableManager(_db, _db.pendingUploads);
   $$PersonalReactionsTableTableManager get personalReactions =>
       $$PersonalReactionsTableTableManager(_db, _db.personalReactions);
+  $$DmConversationsTableTableManager get dmConversations =>
+      $$DmConversationsTableTableManager(_db, _db.dmConversations);
+  $$DmMessagesTableTableManager get dmMessages =>
+      $$DmMessagesTableTableManager(_db, _db.dmMessages);
 }

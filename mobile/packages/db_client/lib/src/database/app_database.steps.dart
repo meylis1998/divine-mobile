@@ -1132,9 +1132,395 @@ final class Schema3 extends i0.VersionedSchema {
   );
 }
 
+// Schema4 adds DM tables for NIP-17 private messages
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    event,
+    userProfiles,
+    videoMetrics,
+    profileStatistics,
+    hashtagStats,
+    notifications,
+    pendingUploads,
+    personalReactions,
+    dmConversations,
+    dmMessages,
+  ];
+  late final Shape0 event = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'event',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 userProfiles = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'user_profiles',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [
+        _column_1,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+        _column_2,
+        _column_19,
+        _column_20,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape2 videoMetrics = Shape2(
+    source: i0.VersionedTable(
+      entityName: 'video_metrics',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(event_id)',
+        'FOREIGN KEY(event_id)REFERENCES event(id)ON DELETE CASCADE',
+      ],
+      columns: [
+        _column_19,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+        _column_26,
+        _column_27,
+        _column_28,
+        _column_29,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 profileStatistics = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'profile_statistics',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(pubkey)'],
+      columns: [
+        _column_1,
+        _column_30,
+        _column_31,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_35,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 hashtagStats = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'hashtag_stats',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(hashtag)'],
+      columns: [_column_36, _column_30, _column_33, _column_34, _column_35],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 notifications = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'notifications',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_37,
+        _column_38,
+        _column_39,
+        _column_40,
+        _column_41,
+        _column_42,
+        _column_43,
+        _column_35,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 pendingUploads = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'pending_uploads',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_44,
+        _column_45,
+        _column_46,
+        _column_2,
+        _column_47,
+        _column_48,
+        _column_49,
+        _column_50,
+        _column_51,
+        _column_52,
+        _column_53,
+        _column_54,
+        _column_55,
+        _column_56,
+        _column_57,
+        _column_58,
+        _column_59,
+        _column_60,
+        _column_61,
+        _column_62,
+        _column_63,
+        _column_64,
+        _column_65,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 personalReactions = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'personal_reactions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(target_event_id, user_pubkey)'],
+      columns: [_column_66, _column_67, _column_68, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 dmConversations = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'dm_conversations',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(owner_pubkey, peer_pubkey)'],
+      columns: [
+        _column_69,
+        _column_70,
+        _column_71,
+        _column_72,
+        _column_73,
+        _column_74,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 dmMessages = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'dm_messages',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(rumor_id, owner_pubkey)'],
+      columns: [
+        _column_75,
+        _column_76,
+        _column_69,
+        _column_70,
+        _column_77,
+        _column_5,
+        _column_2,
+        _column_78,
+        _column_79,
+        _column_80,
+        _column_81,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+}
+
+// Shape8 for dm_conversations table
+class Shape8 extends i0.VersionedTable {
+  Shape8({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get ownerPubkey =>
+      columnsByName['owner_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get peerPubkey =>
+      columnsByName['peer_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get lastMessageAt =>
+      columnsByName['last_message_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get unreadCount =>
+      columnsByName['unread_count']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get lastMessagePreview =>
+      columnsByName['last_message_preview']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isMuted =>
+      columnsByName['is_muted']! as i1.GeneratedColumn<int>;
+}
+
+// Shape9 for dm_messages table
+class Shape9 extends i0.VersionedTable {
+  Shape9({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get rumorId =>
+      columnsByName['rumor_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get giftWrapId =>
+      columnsByName['gift_wrap_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get ownerPubkey =>
+      columnsByName['owner_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get peerPubkey =>
+      columnsByName['peer_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get senderPubkey =>
+      columnsByName['sender_pubkey']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get content =>
+      columnsByName['content']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isRead =>
+      columnsByName['is_read']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get messageType =>
+      columnsByName['message_type']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get metadata =>
+      columnsByName['metadata']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isOutgoing =>
+      columnsByName['is_outgoing']! as i1.GeneratedColumn<int>;
+}
+
+// Column definitions for dm_conversations
+i1.GeneratedColumn<String> _column_69(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'owner_pubkey',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_70(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'peer_pubkey',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_71(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'last_message_at',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_72(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'unread_count',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<String> _column_73(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'last_message_preview',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_74(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_muted',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_muted IN (0, 1))',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+
+// Column definitions for dm_messages
+i1.GeneratedColumn<String> _column_75(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'rumor_id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_76(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'gift_wrap_id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_77(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'sender_pubkey',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_78(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_read',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_read IN (0, 1))',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<String> _column_79(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'message_type',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: "NOT NULL DEFAULT 'text'",
+      defaultValue: const i1.CustomExpression("'text'"),
+    );
+i1.GeneratedColumn<String> _column_80(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'metadata',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_81(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_outgoing',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL CHECK (is_outgoing IN (0, 1))',
+    );
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -1148,6 +1534,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -1157,6 +1548,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );

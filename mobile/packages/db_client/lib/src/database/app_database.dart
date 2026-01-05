@@ -25,6 +25,8 @@ const _notificationRetentionDays = 7;
     Notifications,
     PendingUploads,
     PersonalReactions,
+    DmConversations,
+    DmMessages,
   ],
   daos: [
     UserProfilesDao,
@@ -35,6 +37,8 @@ const _notificationRetentionDays = 7;
     NotificationsDao,
     PendingUploadsDao,
     PersonalReactionsDao,
+    DmConversationsDao,
+    DmMessagesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -45,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -254,6 +258,37 @@ class AppDatabase extends _$AppDatabase {
         PRIMARY KEY("target_event_id", "user_pubkey")
       )
     ''');
+
+    // dm_conversations - NIP-17 DM conversation metadata
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS "dm_conversations" (
+        "owner_pubkey" TEXT NOT NULL,
+        "peer_pubkey" TEXT NOT NULL,
+        "last_message_at" INTEGER NOT NULL,
+        "unread_count" INTEGER NOT NULL DEFAULT 0,
+        "last_message_preview" TEXT NULL,
+        "is_muted" INTEGER NOT NULL DEFAULT 0 CHECK (is_muted IN (0, 1)),
+        PRIMARY KEY("owner_pubkey", "peer_pubkey")
+      )
+    ''');
+
+    // dm_messages - NIP-17 decrypted DM messages
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS "dm_messages" (
+        "rumor_id" TEXT NOT NULL,
+        "gift_wrap_id" TEXT NOT NULL,
+        "owner_pubkey" TEXT NOT NULL,
+        "peer_pubkey" TEXT NOT NULL,
+        "sender_pubkey" TEXT NOT NULL,
+        "content" TEXT NOT NULL,
+        "created_at" INTEGER NOT NULL,
+        "is_read" INTEGER NOT NULL DEFAULT 0 CHECK (is_read IN (0, 1)),
+        "message_type" TEXT NOT NULL DEFAULT 'text',
+        "metadata" TEXT NULL,
+        "is_outgoing" INTEGER NOT NULL CHECK (is_outgoing IN (0, 1)),
+        PRIMARY KEY("rumor_id", "owner_pubkey")
+      )
+    ''');
   }
 
   /// Runs cleanup of expired data from all tables.
@@ -347,6 +382,13 @@ extension Migrations on GeneratedDatabase {
           "cached_at" INTEGER NOT NULL
         )
       ''');
+    },
+    from3To4: (m, schema) async {
+      // Create dm_conversations table for NIP-17 DM conversation metadata
+      await m.createTable(schema.dmConversations);
+
+      // Create dm_messages table for NIP-17 decrypted messages
+      await m.createTable(schema.dmMessages);
     },
   );
 }

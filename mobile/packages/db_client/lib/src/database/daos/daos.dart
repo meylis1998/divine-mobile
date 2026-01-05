@@ -1,3 +1,5 @@
+export 'dm_conversations_dao.dart';
+export 'dm_messages_dao.dart';
 export 'hashtag_stats_dao.dart';
 export 'nostr_events_dao.dart';
 export 'notifications_dao.dart';
