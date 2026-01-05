@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/dm_models.dart';
+import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/dm_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/conversation_screen.dart';
@@ -143,9 +144,21 @@ class _ConversationListItem extends ConsumerWidget {
       fetchUserProfileProvider(conversation.peerPubkey),
     );
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
+    // Build semantic label for accessibility
+    // Use display name or generic fallback (never truncate Nostr IDs)
+    final displayName =
+        profileAsync.value?.bestDisplayName ?? 'this user';
+    final unreadLabel = conversation.hasUnread
+        ? ', ${conversation.unreadCount} unread message${conversation.unreadCount > 1 ? 's' : ''}'
+        : '';
+    final previewLabel = conversation.lastMessagePreview ?? '';
+
+    return Semantics(
+      label: 'Conversation with $displayName$unreadLabel. $previewLabel',
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: VineTheme.cardBackground,
@@ -211,15 +224,16 @@ class _ConversationListItem extends ConsumerWidget {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 
   /// Build the avatar widget from profile data or placeholder.
-  Widget _buildAvatar(AsyncValue<dynamic> profileAsync) {
+  Widget _buildAvatar(AsyncValue<UserProfile?> profileAsync) {
     return profileAsync.when(
       data: (profile) {
-        final imageUrl = profile?.picture as String?;
+        final imageUrl = profile?.picture;
         if (imageUrl != null && imageUrl.isNotEmpty) {
           return CircleAvatar(
             radius: 24,
@@ -254,10 +268,10 @@ class _ConversationListItem extends ConsumerWidget {
   }
 
   /// Build the display name widget from profile data or pubkey.
-  Widget _buildDisplayName(AsyncValue<dynamic> profileAsync) {
+  Widget _buildDisplayName(AsyncValue<UserProfile?> profileAsync) {
     return profileAsync.when(
       data: (profile) {
-        final displayName = profile?.bestDisplayName as String?;
+        final displayName = profile?.bestDisplayName;
         if (displayName != null && displayName.isNotEmpty) {
           return Text(
             displayName,
