@@ -1,5 +1,6 @@
 // ABOUTME: Comments list widget with loading, error, and empty states
 // ABOUTME: Renders threaded comments using CommentThread widget
+// ABOUTME: Uses reversed list so new comments appear at bottom without shifting
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,10 +35,16 @@ class CommentsList extends StatelessWidget {
 
         return ListView.builder(
           controller: scrollController,
-          padding: const EdgeInsets.only(bottom: 80),
+          reverse: true,
+          padding: const EdgeInsets.only(top: 80),
           itemCount: state.topLevelComments.length,
-          itemBuilder: (context, index) =>
-              CommentThread(node: state.topLevelComments[index]),
+          itemBuilder: (context, index) {
+            // Reverse index: ListView renders bottom-to-top with reverse:true
+            // So we access from end to show newest at top, oldest at bottom
+            final reversedIndex = state.topLevelComments.length - 1 - index;
+            final node = state.topLevelComments[reversedIndex];
+            return CommentThread(key: ValueKey(node.comment.id), node: node);
+          },
         );
       },
     );
