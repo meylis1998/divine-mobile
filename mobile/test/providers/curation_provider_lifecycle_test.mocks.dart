@@ -1820,12 +1820,20 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i6.Future<List<_i9.VideoEvent>>);
 
   @override
-  List<_i16.TrendingHashtag> getTrendingHashtags({int? limit = 20}) =>
+  _i6.Future<List<_i16.TrendingHashtag>> fetchTrendingHashtags({
+    int? limit = 20,
+    bool? forceRefresh = false,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getTrendingHashtags, [], {#limit: limit}),
-            returnValue: <_i16.TrendingHashtag>[],
+            Invocation.method(#fetchTrendingHashtags, [], {
+              #limit: limit,
+              #forceRefresh: forceRefresh,
+            }),
+            returnValue: _i6.Future<List<_i16.TrendingHashtag>>.value(
+              <_i16.TrendingHashtag>[],
+            ),
           )
-          as List<_i16.TrendingHashtag>);
+          as _i6.Future<List<_i16.TrendingHashtag>>);
 
   @override
   void clearCache() => super.noSuchMethod(
