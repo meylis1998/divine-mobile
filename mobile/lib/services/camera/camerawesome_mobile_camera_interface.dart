@@ -220,6 +220,12 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
 
   @override
   Future<String?> stopRecordingSegment() async {
+    Log.info(
+      '🎥 stopRecordingSegment called: _cameraState=${_cameraState != null ? "exists" : "null"}, _isRecording=$_isRecording',
+      name: 'CamerAwesomeCamera',
+      category: LogCategory.system,
+    );
+
     if (_cameraState == null) {
       throw Exception('Camera not initialized');
     }
