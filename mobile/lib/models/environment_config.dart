@@ -39,11 +39,12 @@ class EnvironmentConfig {
   }
 
   /// Get REST API base URL for video analytics (funnel service)
-  /// Only available for production and staging (funnelcake)
+  /// Only available for staging (funnelcake) until production is ready
   String? get apiBaseUrl {
     switch (environment) {
       case AppEnvironment.production:
-        return 'https://relay.divine.video';
+        // TODO: Enable when funnelcake is deployed to production
+        return null;
       case AppEnvironment.staging:
         return 'https://funnelcake.staging.dvines.org';
       case AppEnvironment.dev:
