@@ -27,7 +27,9 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(
         mockAuthService.currentPublicKeyHex,
-      ).thenReturn('test_pubkey_' + '0' * 54);
+      ).thenReturn(
+        'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+      );
 
       unreadCountController = StreamController<int>();
     });
