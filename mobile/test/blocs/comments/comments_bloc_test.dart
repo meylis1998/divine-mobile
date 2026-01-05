@@ -211,6 +211,119 @@ void main() {
       );
     });
 
+    group('CommentsStreamUpdated', () {
+      blocTest<CommentsBloc, CommentsState>(
+        'does not emit when thread is empty',
+        seed: () {
+          final comment = Comment(
+            id: validId('existing'),
+            content: 'Existing comment',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          return CommentsState(
+            status: CommentsStatus.success,
+            topLevelComments: [CommentNode(comment: comment)],
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(
+          CommentsStreamUpdated(CommentThread.empty(validId('root'))),
+        ),
+        expect: () => <CommentsState>[],
+      );
+
+      blocTest<CommentsBloc, CommentsState>(
+        'updates state when thread has more comments',
+        seed: () {
+          final comment = Comment(
+            id: validId('existing'),
+            content: 'Existing comment',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          return CommentsState(
+            status: CommentsStatus.success,
+            topLevelComments: [CommentNode(comment: comment)],
+          );
+        },
+        build: createBloc,
+        act: (bloc) {
+          final comment1 = Comment(
+            id: validId('comment1'),
+            content: 'First',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          final comment2 = Comment(
+            id: validId('comment2'),
+            content: 'Second',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          final thread = CommentThread(
+            rootEventId: validId('root'),
+            topLevelComments: [
+              CommentNode(comment: comment1),
+              CommentNode(comment: comment2),
+            ],
+            totalCount: 2,
+            commentCache: {comment1.id: comment1, comment2.id: comment2},
+          );
+          bloc.add(CommentsStreamUpdated(thread));
+        },
+        expect: () => [
+          isA<CommentsState>()
+              .having((s) => s.topLevelComments.length, 'comments count', 2),
+        ],
+      );
+
+      blocTest<CommentsBloc, CommentsState>(
+        'does not emit when thread has same comment count',
+        seed: () {
+          final comment = Comment(
+            id: validId('existing'),
+            content: 'Existing comment',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          return CommentsState(
+            status: CommentsStatus.success,
+            topLevelComments: [CommentNode(comment: comment)],
+          );
+        },
+        build: createBloc,
+        act: (bloc) {
+          final comment = Comment(
+            id: validId('same'),
+            content: 'Same count',
+            authorPubkey: validId('author'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          final thread = CommentThread(
+            rootEventId: validId('root'),
+            topLevelComments: [CommentNode(comment: comment)],
+            totalCount: 1,
+            commentCache: {comment.id: comment},
+          );
+          bloc.add(CommentsStreamUpdated(thread));
+        },
+        expect: () => <CommentsState>[],
+      );
+    });
+
     group('CommentTextChanged', () {
       blocTest<CommentsBloc, CommentsState>(
         'updates main input text when commentId is null',

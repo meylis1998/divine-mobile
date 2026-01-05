@@ -2,6 +2,8 @@
 // ABOUTME: Provides loading, posting, and streaming of threaded comments.
 // ABOUTME: Uses NostrClient for relay operations and builds thread trees.
 
+import 'dart:async';
+
 import 'package:comments_repository/src/exceptions.dart';
 import 'package:comments_repository/src/models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -86,8 +88,7 @@ class CommentsRepository {
   /// - [rootEventKind]: The kind of the root event (e.g., 34236 for videos)
   /// - [limit]: Maximum number of comments to fetch (default: 100)
   ///
-  /// Note: Stream management (deduplication, cleanup) is handled by
-  /// NostrClient. Use [NostrClient.unsubscribe] to stop watching.
+  /// The stream automatically unsubscribes from the Nostr relay when cancelled.
   Stream<CommentThread> watchComments({
     required String rootEventId,
     required int rootEventKind,
@@ -100,9 +101,17 @@ class CommentsRepository {
       limit: limit,
     );
 
-    // NostrClient handles subscription deduplication internally
-    return _nostrClient
-        .subscribe([filter])
+    // Generate unique subscription ID for cleanup
+    final subscriptionId = 'comments_$rootEventId';
+
+    // Create controller that unsubscribes on cancel
+    final controller = StreamController<CommentThread>.broadcast(
+      onCancel: () => _nostrClient.unsubscribe(subscriptionId),
+    );
+
+    // Subscribe with explicit ID for cleanup tracking
+    _nostrClient
+        .subscribe([filter], subscriptionId: subscriptionId)
         .map((event) => _eventToComment(event, rootEventId, rootEventKind))
         .whereNotNull()
         .scan<Map<String, Comment>>(
@@ -110,7 +119,14 @@ class CommentsRepository {
           <String, Comment>{},
         )
         .map((commentMap) => _buildThreadFromComments(commentMap, rootEventId))
-        .startWith(CommentThread.empty(rootEventId));
+        .startWith(CommentThread.empty(rootEventId))
+        .listen(
+          controller.add,
+          onError: controller.addError,
+          onDone: controller.close,
+        );
+
+    return controller.stream;
   }
 
   /// Posts a new comment using NIP-22 format.

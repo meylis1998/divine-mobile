@@ -36,6 +36,8 @@ void main() {
     setUp(() {
       mockNostrClient = MockNostrClient();
       when(() => mockNostrClient.publicKey).thenReturn(testUserPubkey);
+      // Default stub for unsubscribe (called in watchComments onCancel)
+      when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
       repository = CommentsRepository(nostrClient: mockNostrClient);
     });
 
@@ -286,7 +288,10 @@ void main() {
         final controller = StreamController<Event>.broadcast();
 
         when(
-          () => mockNostrClient.subscribe(any()),
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
         ).thenAnswer((_) => controller.stream);
 
         final stream = repository.watchComments(
@@ -309,7 +314,10 @@ void main() {
         final controller = StreamController<Event>.broadcast();
 
         when(
-          () => mockNostrClient.subscribe(any()),
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
         ).thenAnswer((_) => controller.stream);
 
         final stream = repository.watchComments(
@@ -359,7 +367,10 @@ void main() {
         final controller = StreamController<Event>.broadcast();
 
         when(
-          () => mockNostrClient.subscribe(any()),
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
         ).thenAnswer((_) => controller.stream);
 
         repository.watchComments(
@@ -369,13 +380,69 @@ void main() {
         );
 
         final captured = verify(
-          () => mockNostrClient.subscribe(captureAny()),
+          () => mockNostrClient.subscribe(
+            captureAny(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
         ).captured;
 
         final filters = captured.first as List<Filter>;
         expect(filters.first.kinds, contains(_commentKind));
         expect(filters.first.uppercaseE, contains(testRootEventId));
         expect(filters.first.limit, equals(50));
+
+        await controller.close();
+      });
+
+      test('uses subscription ID based on root event ID', () async {
+        final controller = StreamController<Event>.broadcast();
+
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => controller.stream);
+
+        repository.watchComments(
+          rootEventId: testRootEventId,
+          rootEventKind: _testRootEventKind,
+        );
+
+        verify(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: 'comments_$testRootEventId',
+          ),
+        ).called(1);
+
+        await controller.close();
+      });
+
+      test('unsubscribes from NostrClient when stream is cancelled', () async {
+        final controller = StreamController<Event>.broadcast();
+
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => controller.stream);
+
+        final stream = repository.watchComments(
+          rootEventId: testRootEventId,
+          rootEventKind: _testRootEventKind,
+        );
+
+        final subscription = stream.listen((_) {});
+
+        // Cancel the subscription
+        await subscription.cancel();
+
+        // Verify unsubscribe was called with correct ID
+        verify(
+          () => mockNostrClient.unsubscribe('comments_$testRootEventId'),
+        ).called(1);
 
         await controller.close();
       });
