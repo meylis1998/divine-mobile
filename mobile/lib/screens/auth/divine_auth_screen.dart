@@ -399,7 +399,6 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           autocorrect: false,
-                          style: const TextStyle(color: Colors.white),
                           decoration: _buildInputDecoration(
                             label: 'Email',
                             icon: Icons.email_outlined,
@@ -412,7 +411,6 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white),
                           decoration: _buildInputDecoration(
                             label: 'Password',
                             icon: Icons.lock_outlined,
@@ -441,9 +439,6 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                                     TextFormField(
                                       controller: _confirmPasswordController,
                                       obscureText: _obscureConfirmPassword,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
                                       decoration: _buildInputDecoration(
                                         label: 'Confirm Password',
                                         icon: Icons.lock_outlined,
@@ -536,14 +531,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                         // Forgot password (login only)
                         if (_tabController.index == 0)
                           TextButton(
-                            onPressed: () {
-                              // TODO: Implement forgot password
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Password reset coming soon'),
-                                ),
-                              );
-                            },
+                            onPressed: _showForgotPasswordDialog,
                             child: const Text(
                               'Forgot Password?',
                               style: TextStyle(color: Colors.white70),
@@ -561,6 +549,99 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     );
   }
 
+  void _showForgotPasswordDialog() {
+    // Pre-fill from the main email controller
+    final resetEmailController = TextEditingController(
+      text: _emailController.text,
+    );
+    final dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: VineTheme.cardBackground,
+        title: const Text(
+          'Reset Password',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Form(
+          key: dialogFormKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Enter your email address and we\'ll send you a link to reset your password.',
+                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: resetEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  decoration: _buildInputDecoration(
+                    label: 'Email Address',
+                    icon: Icons.email_outlined,
+                  ),
+                  validator: _validateEmail,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white60),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: VineTheme.vineGreen,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              if (dialogFormKey.currentState!.validate()) {
+                final email = resetEmailController.text.trim();
+                Navigator.pop(context); // Close dialog
+                await _performPasswordReset(email);
+              }
+            },
+            child: const Text('Email Reset Link'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performPasswordReset(String email) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // TODO: Implement password reset via diVine OAuth
+      //final oauth = ref.read(oauthClientProvider);
+      //await oauth.sendPasswordResetEmail(email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Not yet implemented.'),
+            backgroundColor: VineTheme.vineGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Failed to send reset email.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   InputDecoration _buildInputDecoration({
     required String label,
     required IconData icon,
@@ -568,32 +649,8 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
   }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
-      prefixIcon: Icon(icon, color: Colors.white70),
+      prefixIcon: Icon(icon),
       suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.1),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white24),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
-      ),
-      errorStyle: const TextStyle(color: Colors.red),
     );
   }
 }
