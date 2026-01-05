@@ -33,6 +33,7 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
 import 'package:openvine/screens/clip_manager_screen.dart';
 import 'package:openvine/screens/clip_library_screen.dart';
+import 'package:openvine/screens/conversation_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
@@ -99,6 +100,7 @@ int tabIndexFromLocation(String loc) {
     case 'followers':
     case 'following':
     case 'sound':
+    case 'conversation':
       return -1; // Non-tab routes - no bottom nav
     case 'list':
       return 1; // List keeps explore tab active (like hashtag)
@@ -682,6 +684,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             );
           }
           return VideoDetailScreen(videoId: videoId);
+        },
+      ),
+      // DM conversation route (NIP-17 direct messages)
+      GoRoute(
+        path: '/conversation/:pubkey',
+        name: 'conversation',
+        builder: (ctx, st) {
+          final pubkey = st.pathParameters['pubkey'];
+          if (pubkey == null || pubkey.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('Invalid conversation')),
+            );
+          }
+          return ConversationScreen(peerPubkey: pubkey);
         },
       ),
       // Sound detail route (for audio reuse feature)

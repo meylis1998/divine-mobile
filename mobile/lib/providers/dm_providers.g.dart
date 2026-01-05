@@ -325,3 +325,65 @@ final class ConversationMessagesFamily extends $Family
   @override
   String toString() => r'conversationMessagesProvider';
 }
+
+/// Provider for NIP17MessageService instance.
+///
+/// Creates a message service for sending encrypted NIP-17 gift-wrapped DMs.
+/// Requires [NostrKeyManager] and [NostrClient] dependencies.
+
+@ProviderFor(nip17MessageService)
+const nip17MessageServiceProvider = Nip17MessageServiceProvider._();
+
+/// Provider for NIP17MessageService instance.
+///
+/// Creates a message service for sending encrypted NIP-17 gift-wrapped DMs.
+/// Requires [NostrKeyManager] and [NostrClient] dependencies.
+
+final class Nip17MessageServiceProvider
+    extends
+        $FunctionalProvider<
+          NIP17MessageService,
+          NIP17MessageService,
+          NIP17MessageService
+        >
+    with $Provider<NIP17MessageService> {
+  /// Provider for NIP17MessageService instance.
+  ///
+  /// Creates a message service for sending encrypted NIP-17 gift-wrapped DMs.
+  /// Requires [NostrKeyManager] and [NostrClient] dependencies.
+  const Nip17MessageServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'nip17MessageServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$nip17MessageServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<NIP17MessageService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  NIP17MessageService create(Ref ref) {
+    return nip17MessageService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(NIP17MessageService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<NIP17MessageService>(value),
+    );
+  }
+}
+
+String _$nip17MessageServiceHash() =>
+    r'370a4e40b2233c915f86977f4c89d4b1cadbd920';

@@ -8,6 +8,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/dm_repository.dart';
 import 'package:openvine/services/nip17_inbox_service.dart';
+import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -95,4 +96,16 @@ Stream<List<Conversation>> dmConversations(Ref ref) {
 Stream<List<DmMessage>> conversationMessages(Ref ref, String peerPubkey) {
   final repo = ref.watch(dmRepositoryProvider);
   return repo.watchMessages(peerPubkey);
+}
+
+/// Provider for NIP17MessageService instance.
+///
+/// Creates a message service for sending encrypted NIP-17 gift-wrapped DMs.
+/// Requires [NostrKeyManager] and [NostrClient] dependencies.
+@Riverpod(keepAlive: true)
+NIP17MessageService nip17MessageService(Ref ref) {
+  final keyManager = ref.watch(nostrKeyManagerProvider);
+  final nostrClient = ref.watch(nostrServiceProvider);
+
+  return NIP17MessageService(keyManager: keyManager, nostrService: nostrClient);
 }
