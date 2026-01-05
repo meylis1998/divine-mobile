@@ -1,5 +1,5 @@
 // ABOUTME: Environment configuration model for dev/staging/production switching
-// ABOUTME: Each environment maps to exactly one relay URL
+// ABOUTME: Each environment maps to exactly one relay URL and optional API base URL
 
 /// Available app environments
 enum AppEnvironment { production, staging, dev }
@@ -20,12 +20,13 @@ class EnvironmentConfig {
   );
 
   /// Get relay URL for current environment (always exactly one)
+  /// Staging uses Divine Funnelcake relay (cake service)
   String get relayUrl {
     switch (environment) {
       case AppEnvironment.production:
         return 'wss://relay.divine.video';
       case AppEnvironment.staging:
-        return 'wss://staging-relay.divine.video';
+        return 'wss://funnelcake.staging.dvines.org';
       case AppEnvironment.dev:
         switch (devRelay) {
           case DevRelay.umbra:
@@ -34,6 +35,19 @@ class EnvironmentConfig {
           case DevRelay.shugur:
             return 'wss://shugur.poc.dvines.org';
         }
+    }
+  }
+
+  /// Get REST API base URL for video analytics (funnel service)
+  /// Only available for production and staging (funnelcake)
+  String? get apiBaseUrl {
+    switch (environment) {
+      case AppEnvironment.production:
+        return 'https://relay.divine.video';
+      case AppEnvironment.staging:
+        return 'https://funnelcake.staging.dvines.org';
+      case AppEnvironment.dev:
+        return null; // No REST API in dev environments
     }
   }
 
@@ -49,7 +63,7 @@ class EnvironmentConfig {
       case AppEnvironment.production:
         return 'Production';
       case AppEnvironment.staging:
-        return 'Staging';
+        return 'Staging (Funnelcake)';
       case AppEnvironment.dev:
         switch (devRelay) {
           case DevRelay.umbra:
