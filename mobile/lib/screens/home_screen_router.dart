@@ -312,7 +312,7 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                     key: ValueKey('video-${videos[index].id}'),
                     video: videos[index],
                     index: index,
-                    hasBottomNavigation: true,
+                    hasBottomNavigation: false,
                     contextTitle: '', // Home feed has no context title
                   );
                 },
