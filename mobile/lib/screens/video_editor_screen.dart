@@ -2,6 +2,7 @@
 // ABOUTME: Dark-themed interface with video preview, text editing, and sound selection
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:path_provider/path_provider.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/text_overlay_renderer.dart';
 import 'package:openvine/services/video_export_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -335,6 +338,47 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   Future<void> _handleDone() async {
     // Stop audio preview before processing
     await _audioPlayer?.stop();
+    await _videoController?.pause();
+
+    // Get the current editor state for text overlays and sound
+    final editorState = ref.read(videoEditorProvider(widget.videoPath));
+
+    // Show loading dialog if we have processing to do
+    final needsProcessing =
+        editorState.textOverlays.isNotEmpty ||
+        editorState.selectedSoundId != null ||
+        widget.externalAudioUrl != null ||
+        widget.externalAudioAssetPath != null;
+
+    if (needsProcessing && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Processing video...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     try {
       Log.info(
@@ -342,8 +386,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         category: LogCategory.video,
       );
 
-      // Get the current editor state for text overlays and sound
-      final editorState = ref.read(videoEditorProvider(widget.videoPath));
       String finalVideoPath = widget.videoPath;
 
       Log.info(
@@ -519,6 +561,47 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       final recordingState = ref.read(vineRecordingProvider);
       final aspectRatio = recordingState.aspectRatio;
 
+      // Generate ProofMode proof for the final video
+      String? proofManifestJson;
+      try {
+        final isAvailable = await NativeProofModeService.isAvailable();
+        if (isAvailable) {
+          Log.info(
+            '🔐 Generating ProofMode proof for final video: $finalVideoPath',
+            category: LogCategory.video,
+          );
+
+          final proofHash = await NativeProofModeService.generateProof(
+            finalVideoPath,
+          );
+
+          if (proofHash != null) {
+            final metadata = await NativeProofModeService.readProofMetadata(
+              proofHash,
+            );
+
+            if (metadata != null) {
+              final proofData = NativeProofData.fromMetadata(metadata);
+              proofManifestJson = jsonEncode(proofData.toJson());
+              Log.info(
+                '🔐 ProofMode proof generated: ${proofData.verificationLevel}',
+                category: LogCategory.video,
+              );
+            }
+          }
+        } else {
+          Log.info(
+            '🔐 ProofMode not available on this platform',
+            category: LogCategory.video,
+          );
+        }
+      } catch (e) {
+        Log.warning(
+          '🔐 ProofMode generation failed (non-fatal): $e',
+          category: LogCategory.video,
+        );
+      }
+
       // Create a draft for the edited video (with overlays burned in)
       final draft = VineDraft.create(
         videoFile: File(finalVideoPath),
@@ -528,6 +611,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         frameCount: 0,
         selectedApproach: 'video',
         aspectRatio: aspectRatio,
+        proofManifestJson: proofManifestJson,
       );
 
       await draftService.saveDraft(draft);
