@@ -281,8 +281,11 @@ void main() {
           bloc.add(CommentsStreamUpdated(thread));
         },
         expect: () => [
-          isA<CommentsState>()
-              .having((s) => s.topLevelComments.length, 'comments count', 2),
+          isA<CommentsState>().having(
+            (s) => s.topLevelComments.length,
+            'comments count',
+            2,
+          ),
         ],
       );
 
