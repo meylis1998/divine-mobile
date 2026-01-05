@@ -174,11 +174,9 @@ class AnalyticsApiService {
   final Map<String, List<VideoStats>> _hashtagSearchCache = {};
   final Map<String, DateTime> _hashtagSearchCacheTime = {};
 
-  AnalyticsApiService({
-    required String? baseUrl,
-    http.Client? httpClient,
-  })  : _baseUrl = baseUrl,
-        _httpClient = httpClient ?? http.Client();
+  AnalyticsApiService({required String? baseUrl, http.Client? httpClient})
+    : _baseUrl = baseUrl,
+      _httpClient = httpClient ?? http.Client();
 
   /// Whether the API is available (has a configured base URL)
   bool get isAvailable => _baseUrl != null && _baseUrl!.isNotEmpty;
@@ -693,10 +691,7 @@ class AnalyticsApiService {
     return defaultTags.asMap().entries.map((entry) {
       final index = entry.key;
       final tag = entry.value;
-      return TrendingHashtag(
-        tag: tag,
-        videoCount: 50 - (index * 2),
-      );
+      return TrendingHashtag(tag: tag, videoCount: 50 - (index * 2));
     }).toList();
   }
 

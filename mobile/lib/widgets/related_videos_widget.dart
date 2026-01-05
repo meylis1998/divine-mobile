@@ -70,8 +70,10 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
         );
 
         // Filter out the current video
-        videos =
-            videos.where((v) => v.id != widget.currentVideo.id).take(20).toList();
+        videos = videos
+            .where((v) => v.id != widget.currentVideo.id)
+            .take(20)
+            .toList();
       }
 
       if (mounted) {
