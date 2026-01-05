@@ -5,8 +5,8 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:test/test.dart';
 
 void main() {
   late AppDatabase database;
@@ -155,17 +155,22 @@ void main() {
       );
 
       test(
-        'throws for repost events (kind 16) due to VideoEvent parsing',
+        'does not upsert video metrics for repost events (kind 16)',
         () async {
           final event = createEvent(kind: 16);
 
-          // upsertEvent stores the event first, then tries to parse metrics
-          // VideoEvent.fromNostrEvent() throws for non-34236 kinds
-          // The event is inserted but the method throws on metrics parsing
-          expect(
-            () => dao.upsertEvent(event),
-            throwsA(isA<ArgumentError>()),
-          );
+          // Kind 16 reposts reference videos but don't contain video metadata
+          // So they should be inserted without video metrics (no error thrown)
+          await dao.upsertEvent(event);
+
+          // Event should be inserted
+          final retrieved = await dao.getEventById(event.id);
+          expect(retrieved, isNotNull);
+          expect(retrieved!.kind, equals(16));
+
+          // But no video metrics should be created
+          final metrics = await appDbClient.getVideoMetrics(event.id);
+          expect(metrics, isNull);
         },
       );
 
@@ -1154,12 +1159,12 @@ void main() {
       /// Helper to get current Unix timestamp
       int nowUnix() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-      group('upsertEventWithExpiry', () {
+      group('upsertEvent with expiry', () {
         test('inserts event with expiry timestamp', () async {
           final event = createEvent(content: 'expiring event');
           final expireAt = nowUnix() + 3600; // 1 hour from now
 
-          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
+          await dao.upsertEvent(event, expireAt: expireAt);
 
           final result = await dao.getEventById(event.id);
           expect(result, isNotNull);
@@ -1174,7 +1179,7 @@ void main() {
           );
           final expireAt = nowUnix() + 3600;
 
-          await dao.upsertEventWithExpiry(profile, expireAt: expireAt);
+          await dao.upsertEvent(profile, expireAt: expireAt);
 
           final result = await dao.getProfileByPubkey(testPubkey);
           expect(result, isNotNull);
@@ -1185,7 +1190,7 @@ void main() {
           final video = createVideoEvent(loops: 100);
           final expireAt = nowUnix() + 3600;
 
-          await dao.upsertEventWithExpiry(video, expireAt: expireAt);
+          await dao.upsertEvent(video, expireAt: expireAt);
 
           final result = await dao.getEventById(video.id);
           expect(result, isNotNull);
@@ -1213,24 +1218,6 @@ void main() {
         });
       });
 
-      group('clearEventExpiry', () {
-        test('removes expiry from event', () async {
-          final event = createEvent();
-          final expireAt = nowUnix() + 3600;
-          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
-
-          final success = await dao.clearEventExpiry(event.id);
-
-          expect(success, isTrue);
-        });
-
-        test('returns false for non-existent event', () async {
-          final success = await dao.clearEventExpiry('nonexistent_id');
-
-          expect(success, isFalse);
-        });
-      });
-
       group('deleteExpiredEvents', () {
         test(
           'deletes events with expired timestamps using current time',
@@ -1248,8 +1235,8 @@ void main() {
               createdAt: 3000,
             );
 
-            await dao.upsertEventWithExpiry(expiredEvent, expireAt: pastExpiry);
-            await dao.upsertEventWithExpiry(validEvent, expireAt: futureExpiry);
+            await dao.upsertEvent(expiredEvent, expireAt: pastExpiry);
+            await dao.upsertEvent(validEvent, expireAt: futureExpiry);
             await dao.upsertEvent(noExpiryEvent);
 
             final deletedCount = await dao.deleteExpiredEvents(null);
@@ -1274,9 +1261,9 @@ void main() {
           final event2 = createEvent(content: 'event 2', createdAt: 2000);
           final event3 = createEvent(content: 'event 3', createdAt: 3000);
 
-          await dao.upsertEventWithExpiry(event1, expireAt: 100);
-          await dao.upsertEventWithExpiry(event2, expireAt: 200);
-          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+          await dao.upsertEvent(event1, expireAt: 100);
+          await dao.upsertEvent(event2, expireAt: 200);
+          await dao.upsertEvent(event3, expireAt: 300);
 
           // Delete events expiring before 250
           final deletedCount = await dao.deleteExpiredEvents(250);
@@ -1292,7 +1279,7 @@ void main() {
         test('returns 0 when no expired events', () async {
           final futureExpiry = nowUnix() + 3600;
           final event = createEvent();
-          await dao.upsertEventWithExpiry(event, expireAt: futureExpiry);
+          await dao.upsertEvent(event, expireAt: futureExpiry);
 
           final deletedCount = await dao.deleteExpiredEvents(null);
 
@@ -1313,9 +1300,9 @@ void main() {
           final event3 = createEvent(content: 'event 3', createdAt: 3000);
           final noExpiry = createEvent(content: 'no expiry', createdAt: 4000);
 
-          await dao.upsertEventWithExpiry(event1, expireAt: 100);
-          await dao.upsertEventWithExpiry(event2, expireAt: 200);
-          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+          await dao.upsertEvent(event1, expireAt: 100);
+          await dao.upsertEvent(event2, expireAt: 200);
+          await dao.upsertEvent(event3, expireAt: 300);
           await dao.upsertEvent(noExpiry);
 
           final count = await dao.countExpiredEvents(250);
@@ -1325,7 +1312,7 @@ void main() {
 
         test('returns 0 when no events will expire', () async {
           final event = createEvent();
-          await dao.upsertEventWithExpiry(event, expireAt: 1000);
+          await dao.upsertEvent(event, expireAt: 1000);
 
           final count = await dao.countExpiredEvents(500);
 

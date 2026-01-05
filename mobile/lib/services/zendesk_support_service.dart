@@ -2,7 +2,6 @@
 // ABOUTME: Provides ticket creation via native iOS/Android SDKs or REST API for desktop
 
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/zendesk_config.dart';
@@ -326,6 +325,20 @@ class ZendeskSupportService {
         );
         return false;
       }
+    } on MissingPluginException {
+      // Native SDK not available (macOS, Windows, Web)
+      // Fall back to REST API
+      Log.info(
+        'Native createTicket not available, falling back to REST API',
+        category: LogCategory.system,
+      );
+      return createTicketViaApi(
+        subject: subject,
+        description: description,
+        requesterName: _userName,
+        requesterEmail: _userEmail,
+        tags: tags,
+      );
     } on PlatformException catch (e) {
       Log.error(
         'Platform error creating Zendesk ticket: ${e.code} - ${e.message}',
