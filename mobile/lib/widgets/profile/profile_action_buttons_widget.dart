@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/conversation_screen.dart';
 import 'package:openvine/widgets/profile/follow_from_profile_button.dart';
 
 /// Action buttons shown on profile page
@@ -79,7 +80,36 @@ class ProfileActionButtons extends StatelessWidget {
           ),
         ] else ...[
           Expanded(child: FollowFromProfileButton(pubkey: userIdHex)),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          // Message button
+          OutlinedButton(
+            key: const Key('profile-message-button'),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) =>
+                      ConversationScreen(peerPubkey: userIdHex),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.grey),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.chat_bubble_outline, size: 18),
+                SizedBox(width: 4),
+                Text('Message'),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           Consumer(
             builder: (context, ref, _) {
               final blocklistService = ref.watch(
