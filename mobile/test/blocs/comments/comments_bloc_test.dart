@@ -33,6 +33,15 @@ void main() {
       when(
         () => mockAuthService.currentPublicKeyHex,
       ).thenReturn(validId('currentuser'));
+
+      // Default stub for watchComments - returns empty stream to avoid errors
+      when(
+        () => mockCommentsRepository.watchComments(
+          rootEventId: any(named: 'rootEventId'),
+          rootEventKind: any(named: 'rootEventKind'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) => const Stream.empty());
     });
 
     // Video kind 34236 for NIP-71 addressable short videos

@@ -60,3 +60,11 @@ final class CommentDeleteRequested extends CommentsEvent {
   /// The ID of the comment to delete
   final String commentId;
 }
+
+/// Real-time update from comment stream
+final class CommentsStreamUpdated extends CommentsEvent {
+  const CommentsStreamUpdated(this.thread);
+
+  /// The updated comment thread from the stream
+  final CommentThread thread;
+}

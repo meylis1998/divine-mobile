@@ -1,6 +1,8 @@
 // ABOUTME: BLoC for managing comments on videos with threaded replies
 // ABOUTME: Handles loading, posting, and input state for comments
 
+import 'dart:async';
+
 import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,10 +41,12 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
     on<CommentSubmitted>(_onSubmitted);
     on<CommentErrorCleared>(_onErrorCleared);
     on<CommentDeleteRequested>(_onDeleteRequested);
+    on<CommentsStreamUpdated>(_onStreamUpdated);
   }
 
   final CommentsRepository _commentsRepository;
   final AuthService _authService;
+  StreamSubscription<CommentThread>? _commentsSubscription;
 
   Future<void> _onLoadRequested(
     CommentsLoadRequested event,
@@ -64,6 +68,9 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
           topLevelComments: thread.topLevelComments,
         ),
       );
+
+      // Start real-time subscription for new comments
+      _startCommentsSubscription();
     } catch (e) {
       Log.error(
         'Error loading comments: $e',
@@ -226,5 +233,46 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
 
       emit(state.copyWith(error: CommentsError.deleteCommentFailed));
     }
+  }
+
+  /// Starts real-time subscription for new comments.
+  void _startCommentsSubscription() {
+    _commentsSubscription?.cancel();
+    _commentsSubscription = _commentsRepository
+        .watchComments(
+          rootEventId: state.rootEventId,
+          rootEventKind: state.rootEventKind,
+        )
+        .listen(
+          (thread) => add(CommentsStreamUpdated(thread)),
+          onError: (Object error) {
+            Log.error(
+              'Comment stream error: $error',
+              name: 'CommentsBloc',
+              category: LogCategory.ui,
+            );
+          },
+        );
+  }
+
+  /// Handles real-time updates from the comment stream.
+  void _onStreamUpdated(
+    CommentsStreamUpdated event,
+    Emitter<CommentsState> emit,
+  ) {
+    // Skip empty initial emission from stream's startWith()
+    if (event.thread.topLevelComments.isEmpty) return;
+
+    // Only update if stream has comments we don't have yet
+    // (stream accumulates all events via scan operator)
+    if (event.thread.totalCount > state.topLevelComments.length) {
+      emit(state.copyWith(topLevelComments: event.thread.topLevelComments));
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _commentsSubscription?.cancel();
+    return super.close();
   }
 }
