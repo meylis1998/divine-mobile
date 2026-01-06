@@ -16,8 +16,8 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:synchronized/synchronized.dart';
 
 /// Enhanced notification service with social features
-/// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-class NotificationServiceEnhanced {
+/// Uses ChangeNotifier to notify UI when notifications change
+class NotificationServiceEnhanced extends ChangeNotifier {
   /// Factory constructor that returns the singleton instance
   factory NotificationServiceEnhanced() => instance;
 
@@ -431,6 +431,8 @@ class NotificationServiceEnhanced {
   /// Add a notification
   /// Uses mutex lock to prevent race condition when same notification arrives via multiple handlers
   Future<void> _addNotification(NotificationModel notification) async {
+    bool added = false;
+
     // Use synchronized lock to make check-and-insert atomic
     // This prevents duplicates when the same event triggers multiple handlers concurrently
     await _notificationLock.synchronized(() async {
@@ -441,6 +443,7 @@ class NotificationServiceEnhanced {
 
       // Add to list
       _notifications.insert(0, notification);
+      added = true;
 
       // Update unread count
       _updateUnreadCount();
@@ -458,6 +461,11 @@ class NotificationServiceEnhanced {
         _notifications.removeRange(100, _notifications.length);
       }
     });
+
+    // Notify listeners after lock is released
+    if (added) {
+      notifyListeners();
+    }
   }
 
   /// Add notification for testing (exposes private _addNotification for tests)
@@ -514,18 +522,24 @@ class NotificationServiceEnhanced {
       _notifications[index] = _notifications[index].copyWith(isRead: true);
       _updateUnreadCount();
       await _saveNotificationToCache(_notifications[index]);
+      notifyListeners();
     }
   }
 
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
+    bool changed = false;
     for (var i = 0; i < _notifications.length; i++) {
       if (!_notifications[i].isRead) {
         _notifications[i] = _notifications[i].copyWith(isRead: true);
         await _saveNotificationToCache(_notifications[i]);
+        changed = true;
       }
     }
     _updateUnreadCount();
+    if (changed) {
+      notifyListeners();
+    }
   }
 
   /// Handle notification tap/click for navigation
@@ -608,6 +622,11 @@ class NotificationServiceEnhanced {
           category: LogCategory.system,
         );
         await _clearCorruptedCache();
+      }
+
+      // Notify listeners after loading
+      if (loadedCount > 0) {
+        notifyListeners();
       }
     } catch (e) {
       Log.error(
@@ -707,6 +726,7 @@ class NotificationServiceEnhanced {
 
   /// Clear all notifications
   Future<void> clearAll() async {
+    final hadNotifications = _notifications.isNotEmpty;
     _notifications.clear();
     _unreadCount = 0;
 
@@ -718,6 +738,10 @@ class NotificationServiceEnhanced {
       name: 'NotificationServiceEnhanced',
       category: LogCategory.system,
     );
+
+    if (hadNotifications) {
+      notifyListeners();
+    }
   }
 
   /// Clear notifications older than specified duration
@@ -751,6 +775,8 @@ class NotificationServiceEnhanced {
         name: 'NotificationServiceEnhanced',
         category: LogCategory.system,
       );
+
+      notifyListeners();
     }
   }
 
