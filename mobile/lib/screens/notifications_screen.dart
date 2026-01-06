@@ -1,8 +1,9 @@
 // ABOUTME: Notifications screen displaying user's social interactions and system updates
-// ABOUTME: Shows likes, comments, follows, mentions, reposts with filtering and read state
+// ABOUTME: Shows likes, comments, follows, mentions, reposts, messages with filtering
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
@@ -27,7 +28,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -74,6 +75,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                     _selectedFilter = NotificationType.follow;
                   case 4:
                     _selectedFilter = NotificationType.repost;
+                  case 5:
+                    _selectedFilter = NotificationType.message;
                 }
               });
             },
@@ -83,6 +86,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
               Tab(text: 'Comments'),
               Tab(text: 'Follows'),
               Tab(text: 'Reposts'),
+              Tab(text: 'Messages'),
             ],
           ),
         ),
@@ -209,6 +213,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         return 'mention';
       case NotificationType.repost:
         return 'repost';
+      case NotificationType.message:
+        return 'message';
       case NotificationType.system:
         return 'system';
     }
@@ -277,6 +283,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       case 'open_profile':
         if (notification.navigationTarget != null) {
           _navigateToProfile(context, notification.navigationTarget!);
+        }
+        break;
+      case 'open_conversation':
+        if (notification.navigationTarget != null) {
+          // Navigate to DM conversation with the sender
+          context.go('/messages/${notification.navigationTarget}');
         }
         break;
       case 'none':

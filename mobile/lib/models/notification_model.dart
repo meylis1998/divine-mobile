@@ -1,9 +1,17 @@
 // ABOUTME: Data model for divine notifications with different types and metadata
-// ABOUTME: Supports likes, comments, follows, mentions, and system notifications
+// ABOUTME: Supports likes, comments, follows, mentions, messages, and system notifications
 
 import 'package:equatable/equatable.dart';
 
-enum NotificationType { like, comment, follow, mention, repost, system }
+enum NotificationType {
+  like,
+  comment,
+  follow,
+  mention,
+  repost,
+  message,
+  system,
+}
 
 class NotificationModel extends Equatable {
   // Additional data
@@ -106,6 +114,8 @@ class NotificationModel extends Equatable {
         return '@';
       case NotificationType.repost:
         return '🔄';
+      case NotificationType.message:
+        return '✉️';
       case NotificationType.system:
         return '📱';
     }
@@ -138,6 +148,8 @@ class NotificationModel extends Equatable {
       case NotificationType.follow:
       case NotificationType.mention:
         return 'open_profile';
+      case NotificationType.message:
+        return 'open_conversation';
       case NotificationType.system:
         return 'none';
     }
@@ -153,6 +165,8 @@ class NotificationModel extends Equatable {
       case NotificationType.follow:
       case NotificationType.mention:
         return actorPubkey;
+      case NotificationType.message:
+        return actorPubkey; // Navigate to conversation with sender
       case NotificationType.system:
         return null;
     }

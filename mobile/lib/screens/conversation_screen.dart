@@ -1,8 +1,11 @@
 // ABOUTME: Screen displaying a DM conversation thread with a single user.
 // ABOUTME: Supports sending messages, viewing history, and marking as read.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/dm_models.dart';
 import 'package:openvine/providers/dm_providers.dart';
 import 'package:openvine/services/nip17_inbox_service.dart';
@@ -304,17 +307,46 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   /// Handle tap on a video share to navigate to the video.
   void _handleVideoTap(DmMessage message) {
-    // TODO: Navigate to video screen when video routing is implemented
-    // For now, show a snackbar indicating the action
     Log.info(
       'Video share tapped: metadata=${message.metadata}',
       category: LogCategory.ui,
     );
+
+    // Parse metadata to get video event ID
+    if (message.metadata == null) {
+      _showVideoError('No video information available');
+      return;
+    }
+
+    String? videoEventId;
+    try {
+      final metadata = jsonDecode(message.metadata!) as Map<String, dynamic>;
+      videoEventId = metadata['videoEventId'] as String?;
+    } catch (e) {
+      Log.warning(
+        'Failed to parse video metadata: $e',
+        category: LogCategory.ui,
+      );
+      _showVideoError('Invalid video information');
+      return;
+    }
+
+    if (videoEventId == null) {
+      _showVideoError('Video not found');
+      return;
+    }
+
+    // Navigate to video detail screen (handles fetching from cache or relay)
+    context.push('/video/$videoEventId');
+  }
+
+  /// Show an error message for video issues.
+  void _showVideoError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Video playback coming soon'),
-        backgroundColor: VineTheme.vineGreen,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: VineTheme.likeRed,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
