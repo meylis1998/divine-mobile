@@ -215,11 +215,11 @@ void main() {
       test('respects limit parameter', () async {
         final now = DateTime.now();
         for (var i = 0; i < 5; i++) {
+          final rumorId = 'rumor${i.toString().padLeft(63, '0')}';
+          final giftWrapId = 'giftwrap${i.toString().padLeft(55, '0')}';
           await dao.insertMessage(
-            rumorId:
-                'rumor$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i',
-            giftWrapId:
-                'giftwrap$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i$i',
+            rumorId: rumorId,
+            giftWrapId: giftWrapId,
             ownerPubkey: ownerPubkey,
             peerPubkey: peerPubkey1,
             senderPubkey: peerPubkey1,

@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for NIP-17 DM conversation operations.
-// ABOUTME: Manages conversation metadata including unread counts and mute status.
+// ABOUTME: Manages conversation metadata, unread counts, and mute status.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';

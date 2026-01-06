@@ -5,6 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i8;
 import 'dart:io' as _i14;
+import 'dart:ui' as _i18;
 
 import 'package:dio/dio.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
@@ -18,7 +19,7 @@ import 'package:openvine/models/bug_report_data.dart' as _i6;
 import 'package:openvine/models/notification_model.dart' as _i16;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i5;
-import 'package:openvine/services/bug_report_service.dart' as _i18;
+import 'package:openvine/services/bug_report_service.dart' as _i19;
 import 'package:openvine/services/notification_service_enhanced.dart' as _i15;
 import 'package:openvine/services/user_profile_service.dart' as _i9;
 import 'package:openvine/services/video_event_service.dart' as _i17;
@@ -917,6 +918,11 @@ class MockNotificationServiceEnhanced extends _i1.Mock
           as bool);
 
   @override
+  bool get hasListeners =>
+      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
+          as bool);
+
+  @override
   _i8.Future<void> initialize({
     required _i11.NostrClient? nostrService,
     required _i9.UserProfileService? profileService,
@@ -1034,12 +1040,30 @@ class MockNotificationServiceEnhanced extends _i1.Mock
     Invocation.method(#dispose, []),
     returnValueForMissingStub: null,
   );
+
+  @override
+  void addListener(_i18.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#addListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void removeListener(_i18.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#removeListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+    Invocation.method(#notifyListeners, []),
+    returnValueForMissingStub: null,
+  );
 }
 
 /// A class which mocks [BugReportService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBugReportService extends _i1.Mock implements _i18.BugReportService {
+class MockBugReportService extends _i1.Mock implements _i19.BugReportService {
   MockBugReportService() {
     _i1.throwOnMissingStub(this);
   }
