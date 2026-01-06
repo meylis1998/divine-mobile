@@ -39,7 +39,6 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   bool _isSearchingRemote = false;
   String _currentQuery = '';
   Timer? _debounceTimer;
-  StreamSubscription<UserProfile>? _searchSubscription;
 
   @override
   void initState() {
@@ -53,7 +52,6 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _debounceTimer?.cancel();
-    _searchSubscription?.cancel();
     super.dispose();
   }
 
@@ -133,10 +131,6 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   }
 
   Future<void> _performSearch(String query) async {
-    // Cancel any existing search subscription
-    await _searchSubscription?.cancel();
-    _searchSubscription = null;
-
     setState(() {
       _currentQuery = query;
       _isSearching = true;
@@ -186,53 +180,49 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       _isSearching = false;
     });
 
-    // Also search remote relays with streaming
-    _searchRemoteStreaming(query, followingPubkeys);
+    // Also search remote relays (with 10-second timeout)
+    _searchRemote(query, followingPubkeys);
   }
 
-  void _searchRemoteStreaming(String query, Set<String> followingPubkeys) {
+  Future<void> _searchRemote(String query, Set<String> followingPubkeys) async {
     if (query.isEmpty || query.length < 2) return;
 
     setState(() => _isSearchingRemote = true);
 
-    final userProfileService = ref.read(userProfileServiceProvider);
-    final queryLower = query.toLowerCase();
+    try {
+      final userProfileService = ref.read(userProfileServiceProvider);
+      final queryLower = query.toLowerCase();
 
-    _searchSubscription = userProfileService
-        .searchUsersStream(query, limit: 30)
-        .listen(
-          (profile) {
-            if (!mounted || _currentQuery != query) return;
+      // Use the non-streaming search which has a 10-second timeout
+      final results = await userProfileService.searchUsers(query, limit: 30);
 
-            // Skip if already in results (from local search)
-            if (_searchResultsMap.containsKey(profile.pubkey)) return;
+      if (!mounted || _currentQuery != query) return;
 
-            // Calculate relevance score
-            final score = _calculateRelevanceScore(
-              profile,
-              queryLower,
-              isFollowing: followingPubkeys.contains(profile.pubkey),
-            );
+      for (final profile in results) {
+        // Skip if already in results (from local search)
+        if (_searchResultsMap.containsKey(profile.pubkey)) continue;
 
-            // Only add if there's some relevance (score > 0)
-            // Remote search from relay may return loosely matching results
-            if (score > 0) {
-              setState(() {
-                _searchResultsMap[profile.pubkey] = _SearchResult(score: score);
-              });
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() => _isSearchingRemote = false);
-            }
-          },
-          onDone: () {
-            if (mounted) {
-              setState(() => _isSearchingRemote = false);
-            }
-          },
+        // Calculate relevance score
+        final score = _calculateRelevanceScore(
+          profile,
+          queryLower,
+          isFollowing: followingPubkeys.contains(profile.pubkey),
         );
+
+        // Only add if there's some relevance (score > 0)
+        if (score > 0) {
+          _searchResultsMap[profile.pubkey] = _SearchResult(score: score);
+        }
+      }
+
+      if (mounted) {
+        setState(() => _isSearchingRemote = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSearchingRemote = false);
+      }
+    }
   }
 
   void _selectUser(String pubkey) {
