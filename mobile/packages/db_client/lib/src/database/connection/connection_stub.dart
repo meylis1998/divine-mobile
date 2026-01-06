@@ -12,3 +12,8 @@ QueryExecutor openConnection() {
 Future<String> getSharedDatabasePath() async {
   throw UnsupportedError('No database implementation found for this platform');
 }
+
+/// Stub implementation - will be replaced by conditional imports
+Future<bool> deleteDatabaseFile() async {
+  throw UnsupportedError('No database implementation found for this platform');
+}

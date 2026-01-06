@@ -46,6 +46,53 @@ import 'dart:io'
 import 'package:openvine/network/vine_cdn_http_overrides.dart'
     if (dart.library.html) 'package:openvine/utils/platform_io_web.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+/// SharedPreferences key for storing the last known app version.
+const String _lastAppVersionKey = 'last_app_version';
+
+/// Resets the database if the app version has changed.
+///
+/// The database is a cache for Nostr data that can always be re-fetched from
+/// relays. By dropping and recreating the database on version changes, we
+/// avoid complex migration code. Important data (Nostr keys, user settings)
+/// is stored separately in SharedPreferences and Secure Storage.
+Future<void> _resetDatabaseIfVersionChanged(SharedPreferences prefs) async {
+  try {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    final lastVersion = prefs.getString(_lastAppVersionKey);
+
+    if (lastVersion != null && lastVersion != currentVersion) {
+      // Version changed - delete the database file
+      Log.info(
+        '[STARTUP] App version changed from $lastVersion to $currentVersion, '
+        'resetting database cache',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+
+      final deleted = await deleteDatabaseFile();
+      if (deleted) {
+        Log.info(
+          '[STARTUP] Database cache deleted successfully',
+          name: 'Main',
+          category: LogCategory.system,
+        );
+      }
+    }
+
+    // Store current version for next startup
+    await prefs.setString(_lastAppVersionKey, currentVersion);
+  } catch (e) {
+    // Non-critical: if version check fails, continue with existing database
+    Log.warning(
+      '[STARTUP] Version check failed (non-critical): $e',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+  }
+}
 
 Future<void> _startOpenVineApp() async {
   // Add timing logs for startup diagnostics
@@ -457,6 +504,14 @@ Future<void> _startOpenVineApp() async {
   StartupPerformanceService.instance.startPhase('shared_preferences');
   final sharedPreferences = await SharedPreferences.getInstance();
   StartupPerformanceService.instance.completePhase('shared_preferences');
+
+  // Check if app version changed and reset database if needed.
+  // The database is a cache - all data can be re-fetched from Nostr relays.
+  // This avoids complex migration code since important data (keys, settings)
+  // are stored in SharedPreferences/Secure Storage.
+  StartupPerformanceService.instance.startPhase('version_check');
+  await _resetDatabaseIfVersionChanged(sharedPreferences);
+  StartupPerformanceService.instance.completePhase('version_check');
 
   StartupPerformanceService.instance.checkpoint('pre_app_launch');
 

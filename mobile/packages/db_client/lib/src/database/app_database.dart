@@ -3,7 +3,6 @@
 // ABOUTME: and uploads.
 
 import 'package:db_client/db_client.dart';
-import 'package:db_client/src/database/app_database.steps.dart';
 import 'package:drift/drift.dart';
 
 part 'app_database.g.dart';
@@ -54,23 +53,15 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
-      // Use createAll for standard Drift table creation
       await m.createAll();
-
-      // IMPORTANT: The database file may have been created by nostr_sdk's
-      // embedded relay before our schema ran. In that case, some tables
-      // exist (event) but ours don't. Explicitly ensure our tables exist.
-      // This handles the case where user_version=0 but db file exists.
       await _ensureAllTablesExist();
     },
-    onUpgrade: _schemaUpgrade,
+    onUpgrade: (m, from, to) async {
+      // Schema mismatch - throw to trigger file deletion and retry
+      throw SchemaMismatchException(from, to);
+    },
     beforeOpen: (details) async {
-      // Ensure the event table has the expire_at column.
-      // The event table is managed by nostr_sdk's embedded relay, so we need
-      // to add this column ourselves if it doesn't exist.
       await _ensureExpireAtColumn();
-
-      // Run cleanup of expired data on every app startup
       await runStartupCleanup();
     },
   );
@@ -300,46 +291,25 @@ class AppDatabase extends _$AppDatabase {
   /// - Old notifications (older than 7 days)
   ///
   /// Returns a [CleanupResult] with counts of deleted records.
-  ///
-  /// Note: This method handles cases where tables may not exist during
-  /// migrations from older schema versions.
   Future<CleanupResult> runStartupCleanup() async {
     // Delete expired events (also deletes events with NULL expire_at)
     final expiredEventsDeleted = await nostrEventsDao.deleteExpiredEvents(null);
 
     // Delete expired profile stats (5 minute expiry)
-    // Note: Table may not exist during migrations from older versions
-    var expiredProfileStatsDeleted = 0;
-    try {
-      expiredProfileStatsDeleted = await profileStatsDao.deleteExpired();
-    } on Exception {
-      // Table doesn't exist yet (migrating from older schema)
-    }
+    final expiredProfileStatsDeleted = await profileStatsDao.deleteExpired();
 
     // Delete expired hashtag stats (1 hour expiry)
-    // Note: Table may not exist during migrations from older versions
-    var expiredHashtagStatsDeleted = 0;
-    try {
-      expiredHashtagStatsDeleted = await hashtagStatsDao.deleteExpired();
-    } on Exception {
-      // Table doesn't exist yet (migrating from older schema)
-    }
+    final expiredHashtagStatsDeleted = await hashtagStatsDao.deleteExpired();
 
     // Delete old notifications (7 day retention)
-    // Note: Table may not exist during migrations from older versions
-    var oldNotificationsDeleted = 0;
-    try {
-      final notificationCutoff =
-          DateTime.now()
-              .subtract(const Duration(days: _notificationRetentionDays))
-              .millisecondsSinceEpoch ~/
-          1000;
-      oldNotificationsDeleted = await notificationsDao.deleteOlderThan(
-        notificationCutoff,
-      );
-    } on Exception {
-      // Table doesn't exist yet (migrating from older schema)
-    }
+    final notificationCutoff =
+        DateTime.now()
+            .subtract(const Duration(days: _notificationRetentionDays))
+            .millisecondsSinceEpoch ~/
+        1000;
+    final oldNotificationsDeleted = await notificationsDao.deleteOlderThan(
+      notificationCutoff,
+    );
 
     return CleanupResult(
       expiredEventsDeleted: expiredEventsDeleted,
@@ -350,45 +320,16 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-extension Migrations on GeneratedDatabase {
-  OnUpgrade get _schemaUpgrade => stepByStep(
-    from1To2: (m, schema) async {
-      // Add expire_at column to event table
-      await m.alterTable(
-        TableMigration(
-          schema.event,
-          newColumns: [schema.event.expireAt],
-        ),
-      );
-    },
-    from2To3: (m, schema) async {
-      // Drop old profile_stats table (renamed to profile_statistics).
-      // This handles any schema mismatches from older versions.
-      // Data loss is acceptable since this is a cache with 5-minute expiry.
-      await customStatement('DROP TABLE IF EXISTS profile_stats');
+/// Exception thrown when database schema version doesn't match.
+/// Signals that the database file should be deleted and recreated.
+class SchemaMismatchException implements Exception {
+  SchemaMismatchException(this.fromVersion, this.toVersion);
 
-      // Create new profile_statistics table with correct schema
-      await m.createTable(schema.profileStatistics);
+  final int fromVersion;
+  final int toVersion;
 
-      // Ensure hashtag_stats table exists.
-      // Some users may be missing this table due to database being created
-      // by nostr_sdk's embedded relay before our schema ran onCreate.
-      await customStatement('''
-        CREATE TABLE IF NOT EXISTS "hashtag_stats" (
-          "hashtag" TEXT NOT NULL PRIMARY KEY,
-          "video_count" INTEGER NULL,
-          "total_views" INTEGER NULL,
-          "total_likes" INTEGER NULL,
-          "cached_at" INTEGER NOT NULL
-        )
-      ''');
-    },
-    from3To4: (m, schema) async {
-      // Create dm_conversations table for NIP-17 DM conversation metadata
-      await m.createTable(schema.dmConversations);
-
-      // Create dm_messages table for NIP-17 decrypted messages
-      await m.createTable(schema.dmMessages);
-    },
-  );
+  @override
+  String toString() =>
+      'SchemaMismatchException: Cannot migrate from v$fromVersion to '
+      'v$toVersion. Delete database and recreate.';
 }
