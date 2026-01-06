@@ -1,7 +1,6 @@
 // ABOUTME: Riverpod providers for NIP-17 DM state management.
 // ABOUTME: Provides reactive streams for conversations, messages, and unread counts.
 
-import 'package:db_client/db_client.dart';
 import 'package:openvine/models/dm_models.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';

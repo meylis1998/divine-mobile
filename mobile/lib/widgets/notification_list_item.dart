@@ -297,6 +297,8 @@ class NotificationListItem extends StatelessWidget {
         return Colors.orange;
       case NotificationType.repost:
         return VineTheme.vineGreen;
+      case NotificationType.message:
+        return VineTheme.vineGreen;
       case NotificationType.system:
         return Colors.grey;
     }
