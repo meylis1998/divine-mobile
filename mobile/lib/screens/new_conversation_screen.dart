@@ -161,18 +161,16 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     final userProfileService = ref.read(userProfileServiceProvider);
     final followingPubkeys = followRepository.followingPubkeys.toSet();
 
-    // Search locally first (filter followed users by name)
-    for (final pubkey in followingPubkeys) {
-      final profile = userProfileService.getCachedProfile(pubkey);
-      if (profile != null) {
-        final score = _calculateRelevanceScore(
-          profile,
-          queryLower,
-          isFollowing: true,
-        );
-        if (score > 0) {
-          _searchResultsMap[pubkey] = _SearchResult(score: score);
-        }
+    // Search ALL cached profiles (not just followed users)
+    // This includes profiles from videos, interactions, etc.
+    for (final profile in userProfileService.allProfiles.values) {
+      final score = _calculateRelevanceScore(
+        profile,
+        queryLower,
+        isFollowing: followingPubkeys.contains(profile.pubkey),
+      );
+      if (score > 0) {
+        _searchResultsMap[profile.pubkey] = _SearchResult(score: score);
       }
     }
 
@@ -181,6 +179,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     });
 
     // Also search remote relays (with 10-second timeout)
+    // This populates the cache with more profiles for future searches
     _searchRemote(query, followingPubkeys);
   }
 
