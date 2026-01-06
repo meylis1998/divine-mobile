@@ -192,13 +192,16 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       final userProfileService = ref.read(userProfileServiceProvider);
       final queryLower = query.toLowerCase();
 
-      // Use the non-streaming search which has a 10-second timeout
-      final results = await userProfileService.searchUsers(query, limit: 30);
+      // Call relay search - this populates the profile cache with results
+      // Even if it times out, any profiles received get cached
+      await userProfileService.searchUsers(query, limit: 30);
 
       if (!mounted || _currentQuery != query) return;
 
-      for (final profile in results) {
-        // Skip if already in results (from local search)
+      // Re-search ALL cached profiles (relay results are now in cache)
+      // This is how the main search screen works
+      for (final profile in userProfileService.allProfiles.values) {
+        // Skip if already in results
         if (_searchResultsMap.containsKey(profile.pubkey)) continue;
 
         // Calculate relevance score
