@@ -429,6 +429,33 @@ class KeycastOAuth {
     }
   }
 
+  /// Send a password reset link to the provided email address
+  Future<ForgotPasswordResult> sendPasswordResetEmail(String email) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${config.serverUrl}/api/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      final Map<String, dynamic> json = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ForgotPasswordResult.fromJson(json);
+      }
+
+      // Handle server-side errors
+      final error = json['error'] as String? ?? 'reset_failed';
+      final description =
+          json['message'] ??
+          json['error_description'] ??
+          'Failed to send reset email';
+      return ForgotPasswordResult.error('$error: $description');
+    } catch (e) {
+      return ForgotPasswordResult.error('Network error: $e');
+    }
+  }
+
   void close() {
     _client.close();
   }

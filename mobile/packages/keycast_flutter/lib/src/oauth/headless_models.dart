@@ -100,3 +100,24 @@ enum PollStatus {
   complete, // User verified, code available
   error, // Something went wrong
 }
+
+/// Result from POST /api/auth/forgot-password
+class ForgotPasswordResult {
+  final bool success;
+  final String? message;
+  final String? error;
+
+  ForgotPasswordResult({required this.success, this.message, this.error});
+
+  factory ForgotPasswordResult.fromJson(Map<String, dynamic> json) {
+    return ForgotPasswordResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+      error: json['error'] as String?,
+    );
+  }
+
+  factory ForgotPasswordResult.error(String message) {
+    return ForgotPasswordResult(success: false, error: message);
+  }
+}

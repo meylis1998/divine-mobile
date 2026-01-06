@@ -465,30 +465,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
 
                         // Error message
                         if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade300),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _ErrorMessage(message: _errorMessage),
                           const SizedBox(height: 16),
                         ],
 
@@ -623,22 +600,33 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     });
 
     try {
-      // TODO: Implement password reset via diVine OAuth
-      //final oauth = ref.read(oauthClientProvider);
-      //await oauth.sendPasswordResetEmail(email);
+      final oauth = ref.read(oauthClientProvider);
+      final result = await oauth.sendPasswordResetEmail(email);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Not yet implemented.'),
-            backgroundColor: VineTheme.vineGreen,
-          ),
-        );
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.message ??
+                    'If an account exists with that email, '
+                        'a password reset link has been sent.',
+              ),
+              backgroundColor: VineTheme.vineGreen,
+            ),
+          );
+        } else {
+          setState(() {
+            _errorMessage = result.error ?? 'Failed to send reset email.';
+          });
+        }
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Failed to send reset email.');
+      setState(() => _errorMessage = 'An unexpected error occurred.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -651,6 +639,40 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
       labelText: label,
       prefixIcon: Icon(icon),
       suffixIcon: suffixIcon,
+    );
+  }
+}
+
+class _ErrorMessage extends StatelessWidget {
+  final String? message;
+
+  const _ErrorMessage({this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    if (message == null || message!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade300),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message!,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
