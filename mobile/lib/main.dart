@@ -455,10 +455,24 @@ Future<void> _startOpenVineApp() async {
   await Hive.initFlutter();
   StartupPerformanceService.instance.completePhase('hive_storage');
 
-  // Load seed data if database is empty (first install only)
+  // Validate database schema and load seed data if needed.
+  // If schema mismatch occurs, delete database and retry.
   StartupPerformanceService.instance.startPhase('seed_data_preload');
   AppDatabase? seedDb;
   try {
+    seedDb = AppDatabase();
+    await SeedDataPreloadService.loadSeedDataIfNeeded(seedDb);
+  } on SchemaMismatchException catch (e) {
+    // Schema mismatch - close, delete, and retry with fresh database
+    Log.warning(
+      '[STARTUP] $e - deleting database and recreating',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+    await seedDb?.close();
+    seedDb = null;
+    await deleteDatabaseFile();
+    // Retry with fresh database
     seedDb = AppDatabase();
     await SeedDataPreloadService.loadSeedDataIfNeeded(seedDb);
   } catch (e, stack) {
