@@ -28,7 +28,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -75,8 +75,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                     _selectedFilter = NotificationType.follow;
                   case 4:
                     _selectedFilter = NotificationType.repost;
-                  case 5:
-                    _selectedFilter = NotificationType.message;
                 }
               });
             },
@@ -86,7 +84,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
               Tab(text: 'Comments'),
               Tab(text: 'Follows'),
               Tab(text: 'Reposts'),
-              Tab(text: 'Messages'),
             ],
           ),
         ),
