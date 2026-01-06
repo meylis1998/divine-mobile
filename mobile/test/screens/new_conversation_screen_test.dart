@@ -1,6 +1,8 @@
 // ABOUTME: Tests for NewConversationScreen - contact picker for starting DMs.
 // ABOUTME: Verifies contact list display, search functionality, and user selection.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +41,16 @@ void main() {
     when(mockUserProfileService.getCachedProfile(any)).thenReturn(null);
     when(mockUserProfileService.hasProfile(any)).thenReturn(false);
     when(mockUserProfileService.shouldSkipProfileFetch(any)).thenReturn(false);
+
+    // Default streaming search behavior - return empty stream that completes
+    when(
+      mockUserProfileService.searchUsersStream(any, limit: anyNamed('limit')),
+    ).thenAnswer((_) {
+      final controller = StreamController<UserProfile>();
+      // Close immediately to signal completion
+      controller.close();
+      return controller.stream;
+    });
   });
 
   // Helper to create test profiles with required fields
@@ -223,9 +235,12 @@ void main() {
         'xyz123nomatch',
       );
 
-      // Wait for debounce
+      // Wait for debounce timer to fire and stream to complete
       await tester.pump(const Duration(milliseconds: 350));
-      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
 
       // Should show no results message
       expect(find.text('No users found for "xyz123nomatch"'), findsOneWidget);

@@ -33,11 +33,13 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
-  List<String> _searchResults = [];
+  /// Search results with their relevance scores for sorting.
+  final Map<String, _SearchResult> _searchResultsMap = {};
   bool _isSearching = false;
   bool _isSearchingRemote = false;
   String _currentQuery = '';
   Timer? _debounceTimer;
+  StreamSubscription<UserProfile>? _searchSubscription;
 
   @override
   void initState() {
@@ -51,7 +53,70 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _debounceTimer?.cancel();
+    _searchSubscription?.cancel();
     super.dispose();
+  }
+
+  /// Get sorted search results by relevance score (higher = better match).
+  List<String> get _searchResults {
+    final entries = _searchResultsMap.entries.toList()
+      ..sort((a, b) => b.value.score.compareTo(a.value.score));
+    return entries.map((e) => e.key).toList();
+  }
+
+  /// Calculate relevance score for a profile against a query.
+  /// Higher score = better match. Returns 0 if no text match found.
+  int _calculateRelevanceScore(
+    UserProfile profile,
+    String queryLower, {
+    bool isFollowing = false,
+  }) {
+    var score = 0;
+
+    // Check various fields for matches
+    final displayName = profile.bestDisplayName.toLowerCase();
+    final name = (profile.name ?? '').toLowerCase();
+    final nip05 = (profile.nip05 ?? '').toLowerCase();
+
+    // Exact match is highest priority (100 points)
+    if (displayName == queryLower ||
+        name == queryLower ||
+        nip05.split('@').first == queryLower) {
+      score += 100;
+    }
+    // Starts with query (50 points)
+    else if (displayName.startsWith(queryLower) ||
+        name.startsWith(queryLower) ||
+        nip05.startsWith(queryLower)) {
+      score += 50;
+    }
+    // Contains query (20 points)
+    else if (displayName.contains(queryLower) ||
+        name.contains(queryLower) ||
+        nip05.contains(queryLower)) {
+      score += 20;
+    }
+
+    // Only apply boosts if there's a text match (score > 0)
+    // Otherwise non-matching results would appear just because they're followed
+    if (score > 0) {
+      // Boost for followed users (+30 points)
+      if (isFollowing) {
+        score += 30;
+      }
+
+      // Boost for having a profile picture (+5 points)
+      if (profile.picture?.isNotEmpty == true) {
+        score += 5;
+      }
+
+      // Boost for having a verified NIP-05 (+10 points)
+      if (profile.nip05?.isNotEmpty == true) {
+        score += 10;
+      }
+    }
+
+    return score;
   }
 
   void _onSearchChanged() {
@@ -68,14 +133,18 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   }
 
   Future<void> _performSearch(String query) async {
+    // Cancel any existing search subscription
+    await _searchSubscription?.cancel();
+    _searchSubscription = null;
+
     setState(() {
       _currentQuery = query;
       _isSearching = true;
+      _searchResultsMap.clear();
     });
 
     if (query.isEmpty) {
       setState(() {
-        _searchResults = [];
         _isSearching = false;
       });
       return;
@@ -87,71 +156,83 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
       // Valid pubkey format - trigger profile fetch and add to results
       ref.read(userProfileServiceProvider).fetchProfile(hexPubkey);
       setState(() {
-        _searchResults = [hexPubkey];
+        _searchResultsMap[hexPubkey] = _SearchResult(score: 200);
         _isSearching = false;
       });
       return;
     }
 
-    // Search locally first (filter followed users by name)
+    final queryLower = query.toLowerCase();
     final followRepository = ref.read(followRepositoryProvider);
     final userProfileService = ref.read(userProfileServiceProvider);
-    final followingPubkeys = followRepository.followingPubkeys;
+    final followingPubkeys = followRepository.followingPubkeys.toSet();
 
-    final localMatches = <String>[];
-    final queryLower = query.toLowerCase();
-
+    // Search locally first (filter followed users by name)
     for (final pubkey in followingPubkeys) {
       final profile = userProfileService.getCachedProfile(pubkey);
       if (profile != null) {
-        final displayName = profile.bestDisplayName.toLowerCase();
-        final name = (profile.name ?? '').toLowerCase();
-        final nip05 = (profile.nip05 ?? '').toLowerCase();
-
-        if (displayName.contains(queryLower) ||
-            name.contains(queryLower) ||
-            nip05.contains(queryLower)) {
-          localMatches.add(pubkey);
+        final score = _calculateRelevanceScore(
+          profile,
+          queryLower,
+          isFollowing: true,
+        );
+        if (score > 0) {
+          _searchResultsMap[pubkey] = _SearchResult(score: score);
         }
       }
     }
 
     setState(() {
-      _searchResults = localMatches;
       _isSearching = false;
     });
 
-    // Also search remote relays
-    _searchRemote(query);
+    // Also search remote relays with streaming
+    _searchRemoteStreaming(query, followingPubkeys);
   }
 
-  Future<void> _searchRemote(String query) async {
+  void _searchRemoteStreaming(String query, Set<String> followingPubkeys) {
     if (query.isEmpty || query.length < 2) return;
 
     setState(() => _isSearchingRemote = true);
 
-    try {
-      final userProfileService = ref.read(userProfileServiceProvider);
-      final results = await userProfileService.searchUsers(query, limit: 20);
+    final userProfileService = ref.read(userProfileServiceProvider);
+    final queryLower = query.toLowerCase();
 
-      if (mounted && _currentQuery == query) {
-        // Merge with existing results, avoiding duplicates
-        final existingPubkeys = _searchResults.toSet();
-        final newPubkeys = results
-            .map((p) => p.pubkey)
-            .where((pk) => !existingPubkeys.contains(pk))
-            .toList();
+    _searchSubscription = userProfileService
+        .searchUsersStream(query, limit: 30)
+        .listen(
+          (profile) {
+            if (!mounted || _currentQuery != query) return;
 
-        setState(() {
-          _searchResults = [..._searchResults, ...newPubkeys];
-          _isSearchingRemote = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSearchingRemote = false);
-      }
-    }
+            // Skip if already in results (from local search)
+            if (_searchResultsMap.containsKey(profile.pubkey)) return;
+
+            // Calculate relevance score
+            final score = _calculateRelevanceScore(
+              profile,
+              queryLower,
+              isFollowing: followingPubkeys.contains(profile.pubkey),
+            );
+
+            // Only add if there's some relevance (score > 0)
+            // Remote search from relay may return loosely matching results
+            if (score > 0) {
+              setState(() {
+                _searchResultsMap[profile.pubkey] = _SearchResult(score: score);
+              });
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() => _isSearchingRemote = false);
+            }
+          },
+          onDone: () {
+            if (mounted) {
+              setState(() => _isSearchingRemote = false);
+            }
+          },
+        );
   }
 
   void _selectUser(String pubkey) {
@@ -247,7 +328,7 @@ class _NewConversationScreenState extends ConsumerState<NewConversationScreen> {
   }
 
   Widget _buildSearchResults() {
-    if (_searchResults.isEmpty && !_isSearching && !_isSearchingRemote) {
+    if (_searchResultsMap.isEmpty && !_isSearching && !_isSearchingRemote) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -425,4 +506,12 @@ class _UserListTile extends ConsumerWidget {
     // Show first 12 chars + ... + last 8 chars (e.g., npub1abc123...xyz789)
     return '${npub.substring(0, 12)}...${npub.substring(npub.length - 8)}';
   }
+}
+
+/// Holds a search result with its relevance score.
+class _SearchResult {
+  const _SearchResult({required this.score});
+
+  /// Relevance score (higher = better match).
+  final int score;
 }

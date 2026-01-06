@@ -923,6 +923,45 @@ class UserProfileService extends ChangeNotifier {
     }
   }
 
+  /// Stream search for users using NIP-50 search capability.
+  ///
+  /// Unlike [searchUsers], this method yields profiles as they arrive from
+  /// relays, enabling real-time UI updates without waiting for all results.
+  Stream<UserProfile> searchUsersStream(String query, {int? limit}) async* {
+    if (query.trim().isEmpty) {
+      throw ArgumentError('Search query cannot be empty');
+    }
+
+    Log.info(
+      '🔍 Starting streaming search for: "$query"',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
+
+    final searchStream = _nostrService.searchUsers(query, limit: limit ?? 50);
+    final seenPubkeys = <String>{};
+
+    await for (final event in searchStream) {
+      // Skip duplicates (same profile from multiple relays)
+      if (seenPubkeys.contains(event.pubkey)) {
+        continue;
+      }
+      seenPubkeys.add(event.pubkey);
+
+      // Parse and cache the profile
+      final userProfile = UserProfile.fromNostrEvent(event);
+      _profileCache[event.pubkey] = userProfile;
+
+      yield userProfile;
+    }
+
+    Log.info(
+      'Streaming search completed. Found ${seenPubkeys.length} results',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
+  }
+
   /// Test helper method to process profile events directly
   /// Only for testing purposes
   void handleProfileEventForTesting(Event event) {
