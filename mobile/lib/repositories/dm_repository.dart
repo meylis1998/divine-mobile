@@ -12,6 +12,14 @@ import 'package:openvine/utils/unified_logger.dart';
 /// Maximum length for message preview in conversations.
 const int _maxPreviewLength = 100;
 
+/// Callback type for message notification creation.
+typedef MessageNotificationCallback =
+    Future<void> Function({
+      required String senderPubkey,
+      required String messagePreview,
+      required String messageId,
+    });
+
 /// Repository for managing DM conversations and messages.
 ///
 /// This repository:
@@ -26,15 +34,18 @@ class DMRepository {
     required DmMessagesDao messagesDao,
     required NostrKeyManager keyManager,
     required NIP17InboxService inboxService,
+    MessageNotificationCallback? onMessageReceived,
   }) : _conversationsDao = conversationsDao,
        _messagesDao = messagesDao,
        _keyManager = keyManager,
-       _inboxService = inboxService;
+       _inboxService = inboxService,
+       _onMessageReceived = onMessageReceived;
 
   final DmConversationsDao _conversationsDao;
   final DmMessagesDao _messagesDao;
   final NostrKeyManager _keyManager;
   final NIP17InboxService _inboxService;
+  final MessageNotificationCallback? _onMessageReceived;
 
   /// Subscription for incoming messages from inbox service.
   StreamSubscription<IncomingMessage>? _inboxSubscription;
@@ -179,6 +190,22 @@ class DMRepository {
       'Saved incoming message from ${dmMessage.senderPubkey}',
       category: LogCategory.system,
     );
+
+    // Create notification for the new message
+    if (_onMessageReceived != null) {
+      try {
+        await _onMessageReceived(
+          senderPubkey: dmMessage.senderPubkey,
+          messagePreview: _truncatePreview(dmMessage.content),
+          messageId: dmMessage.rumorId,
+        );
+      } catch (e) {
+        Log.warning(
+          'Failed to create message notification: $e',
+          category: LogCategory.system,
+        );
+      }
+    }
   }
 
   /// Save an outgoing message after it has been sent.

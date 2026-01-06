@@ -122,7 +122,7 @@ final class DmRepositoryProvider
   }
 }
 
-String _$dmRepositoryHash() => r'6af19e6e4aecc6f58d18983aad73af9d27946ac9';
+String _$dmRepositoryHash() => r'c1c11ad92b00af302005e943e15b74f63fb20c15';
 
 /// Provider for total unread DM count across all conversations.
 ///

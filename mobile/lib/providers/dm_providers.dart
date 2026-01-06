@@ -44,12 +44,25 @@ DMRepository dmRepository(Ref ref) {
   final db = ref.watch(databaseProvider);
   final keyManager = ref.watch(nostrKeyManagerProvider);
   final inboxService = ref.watch(nip17InboxServiceProvider);
+  final notificationService = ref.watch(notificationServiceEnhancedProvider);
 
   final repository = DMRepository(
     conversationsDao: db.dmConversationsDao,
     messagesDao: db.dmMessagesDao,
     keyManager: keyManager,
     inboxService: inboxService,
+    onMessageReceived:
+        ({
+          required String senderPubkey,
+          required String messagePreview,
+          required String messageId,
+        }) async {
+          await notificationService.createMessageNotification(
+            senderPubkey: senderPubkey,
+            messagePreview: messagePreview,
+            messageId: messageId,
+          );
+        },
   );
 
   // Start syncing incoming messages

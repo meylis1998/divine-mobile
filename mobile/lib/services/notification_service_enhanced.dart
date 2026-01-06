@@ -466,6 +466,47 @@ class NotificationServiceEnhanced {
     await _addNotification(notification);
   }
 
+  /// Create a notification for an incoming DM message.
+  ///
+  /// Called by DMRepository when a new message is received.
+  /// [senderPubkey] is the pubkey of the message sender.
+  /// [messagePreview] is a preview of the message content.
+  /// [messageId] is the unique ID of the message (for deduplication).
+  Future<void> createMessageNotification({
+    required String senderPubkey,
+    required String messagePreview,
+    required String messageId,
+    String? senderName,
+    String? senderPictureUrl,
+  }) async {
+    // Get sender info if not provided
+    String displayName = senderName ?? 'Unknown user';
+    String? pictureUrl = senderPictureUrl;
+
+    if (senderName == null && _profileService != null) {
+      final profile = await _profileService!.fetchProfile(senderPubkey);
+      displayName =
+          profile?.name ??
+          profile?.displayName ??
+          profile?.nip05?.split('@').first ??
+          'Unknown user';
+      pictureUrl = profile?.picture;
+    }
+
+    final notification = NotificationModel(
+      id: messageId,
+      type: NotificationType.message,
+      actorPubkey: senderPubkey,
+      actorName: displayName,
+      actorPictureUrl: pictureUrl,
+      message: '$displayName sent you a message',
+      timestamp: DateTime.now(),
+      metadata: {'preview': messagePreview},
+    );
+
+    await _addNotification(notification);
+  }
+
   /// Mark notification as read
   Future<void> markAsRead(String notificationId) async {
     final index = _notifications.indexWhere((n) => n.id == notificationId);

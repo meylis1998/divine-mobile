@@ -91,6 +91,27 @@ class MockNotificationServiceEnhanced extends _i1.Mock
           as _i4.Future<void>);
 
   @override
+  _i4.Future<void> createMessageNotification({
+    required String? senderPubkey,
+    required String? messagePreview,
+    required String? messageId,
+    String? senderName,
+    String? senderPictureUrl,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#createMessageNotification, [], {
+              #senderPubkey: senderPubkey,
+              #messagePreview: messagePreview,
+              #messageId: messageId,
+              #senderName: senderName,
+              #senderPictureUrl: senderPictureUrl,
+            }),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
   _i4.Future<void> markAsRead(String? notificationId) =>
       (super.noSuchMethod(
             Invocation.method(#markAsRead, [notificationId]),
