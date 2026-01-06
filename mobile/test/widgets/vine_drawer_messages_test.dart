@@ -25,9 +25,7 @@ void main() {
     setUp(() {
       mockAuthService = MockAuthService();
       when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(
-        mockAuthService.currentPublicKeyHex,
-      ).thenReturn(
+      when(mockAuthService.currentPublicKeyHex).thenReturn(
         'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
       );
 
