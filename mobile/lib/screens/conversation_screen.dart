@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/dm_models.dart';
 import 'package:openvine/providers/dm_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/nip17_inbox_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -134,6 +135,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final messagesAsync = ref.watch(
       conversationMessagesProvider(widget.peerPubkey),
     );
+    final profileAsync = ref.watch(
+      fetchUserProfileProvider(widget.peerPubkey),
+    );
+
+    // Use display name from profile, or fall back to full pubkey with UI ellipsis
+    final displayName = profileAsync.value?.bestDisplayName ?? widget.peerPubkey;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -144,7 +151,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          _formatPubkey(widget.peerPubkey),
+          displayName,
           style: const TextStyle(color: Colors.white),
           overflow: TextOverflow.ellipsis,
         ),
@@ -384,16 +391,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         ),
       ),
     );
-  }
-
-  /// Format a pubkey for display (uses UI ellipsis in middle).
-  String _formatPubkey(String pubkey) {
-    // Use UI truncation with ellipsis in middle per project rules
-    // Never truncate the actual string - this is just for display
-    if (pubkey.length > 16) {
-      return '${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}';
-    }
-    return pubkey;
   }
 
   /// Format a timestamp for display.
