@@ -3,11 +3,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/dm_models.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/dm_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/conversation_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 /// Screen displaying a list of DM conversations.
@@ -33,11 +33,6 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: VineTheme.navGreen,
-        title: const Text('Messages', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-      ),
       body: conversationsAsync.when(
         data: (conversations) => _buildConversationList(conversations),
         loading: () => const Center(
@@ -56,6 +51,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        key: const Key('new_message_fab'),
+        onPressed: _navigateToNewConversation,
+        backgroundColor: VineTheme.vineGreen,
+        child: const Icon(Icons.edit, color: Colors.white),
       ),
     );
   }
@@ -100,7 +101,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start a conversation by\nsharing a video with someone!',
+            'Tap the button below to start\na new conversation',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
@@ -119,11 +120,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
   /// Navigate to the conversation screen for a specific peer.
   void _navigateToConversation(String peerPubkey) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ConversationScreen(peerPubkey: peerPubkey),
-      ),
-    );
+    context.go('/messages/$peerPubkey');
+  }
+
+  /// Navigate to the new conversation screen.
+  void _navigateToNewConversation() {
+    context.go('/messages/new');
   }
 }
 
@@ -146,8 +148,7 @@ class _ConversationListItem extends ConsumerWidget {
 
     // Build semantic label for accessibility
     // Use display name or generic fallback (never truncate Nostr IDs)
-    final displayName =
-        profileAsync.value?.bestDisplayName ?? 'this user';
+    final displayName = profileAsync.value?.bestDisplayName ?? 'this user';
     final unreadLabel = conversation.hasUnread
         ? ', ${conversation.unreadCount} unread message${conversation.unreadCount > 1 ? 's' : ''}'
         : '';
@@ -159,71 +160,71 @@ class _ConversationListItem extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: VineTheme.cardBackground,
-          border: Border(
-            bottom: BorderSide(color: Colors.grey[800]!, width: 0.5),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: VineTheme.cardBackground,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey[800]!, width: 0.5),
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            // Avatar
-            _buildAvatar(profileAsync),
-            const SizedBox(width: 12),
-            // Content (name, preview, timestamp)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and timestamp row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(child: _buildDisplayName(profileAsync)),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatTimestamp(conversation.lastMessageAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: conversation.hasUnread
-                              ? VineTheme.vineGreen
-                              : Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Message preview and unread badge row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          conversation.lastMessagePreview ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              // Avatar
+              _buildAvatar(profileAsync),
+              const SizedBox(width: 12),
+              // Content (name, preview, timestamp)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name and timestamp row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: _buildDisplayName(profileAsync)),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatTimestamp(conversation.lastMessageAt),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: conversation.hasUnread
-                                ? Colors.white
-                                : Colors.grey[400],
-                            fontWeight: conversation.hasUnread
-                                ? FontWeight.w500
-                                : FontWeight.normal,
+                                ? VineTheme.vineGreen
+                                : Colors.grey[500],
                           ),
                         ),
-                      ),
-                      if (conversation.hasUnread) ...[
-                        const SizedBox(width: 8),
-                        _buildUnreadBadge(),
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Message preview and unread badge row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            conversation.lastMessagePreview ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: conversation.hasUnread
+                                  ? Colors.white
+                                  : Colors.grey[400],
+                              fontWeight: conversation.hasUnread
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (conversation.hasUnread) ...[
+                          const SizedBox(width: 8),
+                          _buildUnreadBadge(),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );

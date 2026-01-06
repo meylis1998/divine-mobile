@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/dm_models.dart';
 import 'package:openvine/providers/dm_providers.dart';
-import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/nip17_inbox_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -135,27 +134,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final messagesAsync = ref.watch(
       conversationMessagesProvider(widget.peerPubkey),
     );
-    final profileAsync = ref.watch(
-      fetchUserProfileProvider(widget.peerPubkey),
-    );
-
-    // Use display name from profile, or fall back to full pubkey with UI ellipsis
-    final displayName = profileAsync.value?.bestDisplayName ?? widget.peerPubkey;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: VineTheme.navGreen,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          displayName,
-          style: const TextStyle(color: Colors.white),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
       body: Column(
         children: [
           Expanded(

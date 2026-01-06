@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/dm_providers.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
-import 'package:openvine/screens/inbox_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -371,11 +370,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
       onTap: () {
         // Close drawer first
         Navigator.of(context).pop();
-        // Navigate to InboxScreen using root navigator
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).push(MaterialPageRoute(builder: (context) => const InboxScreen()));
+        // Navigate to messages using go_router (inside shell for proper nav)
+        context.go('/messages');
       },
     );
   }

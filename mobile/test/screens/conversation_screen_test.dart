@@ -215,17 +215,8 @@ void main() {
       expect(scaffold.backgroundColor, Colors.black);
     });
 
-    testWidgets('shows app bar with back button', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
-      messagesController.add([]);
-      await tester.pumpAndSettle();
-
-      // Should have an AppBar
-      expect(find.byType(AppBar), findsOneWidget);
-
-      // Should have a back button (IconButton with back icon)
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-    });
+    // Note: AppBar is now provided by AppShell wrapper, not by ConversationScreen
+    // directly. Navigation and title are handled at the router level.
 
     testWidgets('displays empty state when no messages', (tester) async {
       await tester.pumpWidget(buildTestWidget());

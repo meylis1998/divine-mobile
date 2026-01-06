@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/models/dm_models.dart';
@@ -13,7 +14,6 @@ import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/dm_providers.dart';
 import 'package:openvine/repositories/dm_repository.dart';
-import 'package:openvine/screens/conversation_screen.dart';
 import 'package:openvine/screens/inbox_screen.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
@@ -56,7 +56,42 @@ void main() {
     conversationsController.close();
   });
 
-  Widget buildTestWidget() {
+  /// Track navigation for tests
+  String? lastNavigatedRoute;
+
+  Widget buildTestWidget({bool withRouter = false}) {
+    if (withRouter) {
+      // Use GoRouter for navigation tests
+      final router = GoRouter(
+        initialLocation: '/messages',
+        routes: [
+          GoRoute(path: '/messages', builder: (_, __) => const InboxScreen()),
+          GoRoute(
+            path: '/messages/:pubkey',
+            builder: (_, state) {
+              lastNavigatedRoute =
+                  '/messages/${state.pathParameters['pubkey']}';
+              return Scaffold(
+                body: Center(
+                  child: Text(
+                    'Conversation: ${state.pathParameters['pubkey']}',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+
+      return ProviderScope(
+        overrides: [
+          dmRepositoryProvider.overrideWithValue(mockDmRepository),
+          userProfileServiceProvider.overrideWithValue(mockUserProfileService),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      );
+    }
+
     return ProviderScope(
       overrides: [
         dmRepositoryProvider.overrideWithValue(mockDmRepository),
@@ -186,10 +221,11 @@ void main() {
       // The '0' text should not appear as a badge
     });
 
-    testWidgets('tapping a conversation navigates to ConversationScreen', (
+    testWidgets('tapping a conversation navigates to conversation route', (
       tester,
     ) async {
-      await tester.pumpWidget(buildTestWidget());
+      lastNavigatedRoute = null;
+      await tester.pumpWidget(buildTestWidget(withRouter: true));
 
       // Emit conversation
       final conversations = [
@@ -209,8 +245,8 @@ void main() {
       await tester.tap(conversationTile);
       await tester.pumpAndSettle();
 
-      // Should navigate to ConversationScreen
-      expect(find.byType(ConversationScreen), findsOneWidget);
+      // Should navigate to conversation route with correct pubkey
+      expect(lastNavigatedRoute, '/messages/$testPeerPubkey1');
     });
 
     testWidgets('pull-to-refresh triggers data reload', (tester) async {

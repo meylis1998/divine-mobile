@@ -28,6 +28,9 @@ enum RouteType {
   followers, // Followers list screen
   curatedList, // Curated video list screen (NIP-51 kind 30005)
   sound, // Sound detail screen for audio reuse
+  messages, // Messages inbox (NIP-17 DMs)
+  messagesNew, // New conversation screen
+  messagesConversation, // Conversation with specific user
 }
 
 /// Structured representation of a route
@@ -40,6 +43,7 @@ class RouteContext {
     this.searchTerm,
     this.listId,
     this.soundId,
+    this.peerPubkey,
   });
 
   final RouteType type;
@@ -49,6 +53,7 @@ class RouteContext {
   final String? searchTerm;
   final String? listId;
   final String? soundId;
+  final String? peerPubkey; // For DM conversations
 }
 
 /// Extra data for curated list route (passed via GoRouter extra)
@@ -230,6 +235,22 @@ RouteContext parseRoute(String path) {
       final soundId = Uri.decodeComponent(segments[1]);
       return RouteContext(type: RouteType.sound, soundId: soundId);
 
+    case 'messages':
+      // /messages - inbox
+      // /messages/new - new conversation
+      // /messages/:pubkey - conversation with user
+      if (segments.length < 2) {
+        return const RouteContext(type: RouteType.messages);
+      }
+      if (segments[1] == 'new') {
+        return const RouteContext(type: RouteType.messagesNew);
+      }
+      final peerPubkey = Uri.decodeComponent(segments[1]);
+      return RouteContext(
+        type: RouteType.messagesConversation,
+        peerPubkey: peerPubkey,
+      );
+
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
   }
@@ -358,5 +379,15 @@ String buildRoute(RouteContext context) {
 
     case RouteType.sound:
       return '/sound/${context.soundId ?? ''}';
+
+    case RouteType.messages:
+      return '/messages';
+
+    case RouteType.messagesNew:
+      return '/messages/new';
+
+    case RouteType.messagesConversation:
+      final pubkey = Uri.encodeComponent(context.peerPubkey ?? '');
+      return '/messages/$pubkey';
   }
 }

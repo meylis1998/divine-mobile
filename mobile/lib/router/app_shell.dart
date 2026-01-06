@@ -58,6 +58,21 @@ class AppShell extends ConsumerWidget {
         return 'Profile';
       case RouteType.search:
         return 'Search';
+      case RouteType.messages:
+        return 'Messages';
+      case RouteType.messagesNew:
+        return 'New Message';
+      case RouteType.messagesConversation:
+        // Get peer's display name for conversation title
+        final peerPubkey = ctx?.peerPubkey;
+        if (peerPubkey != null) {
+          final profileAsync = ref.watch(fetchUserProfileProvider(peerPubkey));
+          final displayName = profileAsync.value?.bestDisplayName;
+          if (displayName != null && !displayName.startsWith('npub1')) {
+            return displayName;
+          }
+        }
+        return 'Conversation';
       default:
         return '';
     }
@@ -275,12 +290,17 @@ class AppShell extends ConsumerWidget {
             ctx.npub != ref.read(authServiceProvider).currentNpub;
         final isProfileVideo =
             ctx.type == RouteType.profile && ctx.videoIndex != null;
+        // Messages routes - show back for new message and conversations
+        final isMessagesSubRoute =
+            ctx.type == RouteType.messagesNew ||
+            ctx.type == RouteType.messagesConversation;
 
         return isSubRoute ||
             isExploreVideo ||
             isNotificationVideo ||
             isOtherUserProfile ||
-            isProfileVideo;
+            isProfileVideo ||
+            isMessagesSubRoute;
       },
       orElse: () => false,
     );
@@ -353,6 +373,12 @@ class AppShell extends ConsumerWidget {
                     case RouteType.search:
                       // Go back to explore
                       context.go('/explore');
+                      return;
+
+                    case RouteType.messagesNew:
+                    case RouteType.messagesConversation:
+                      // Go back to messages inbox
+                      context.go('/messages');
                       return;
 
                     default:
