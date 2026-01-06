@@ -95,104 +95,115 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           child: Builder(
             builder: (context) {
               final service = ref.watch(notificationServiceEnhancedProvider);
-              // Filter notifications based on selected tab
-              final notifications = _selectedFilter == null
-                  ? service.notifications
-                  : service.getNotificationsByType(_selectedFilter!);
+              // Use ListenableBuilder to rebuild when ChangeNotifier fires
+              return ListenableBuilder(
+                listenable: service,
+                builder: (context, _) {
+                  // Filter notifications based on selected tab
+                  final notifications = _selectedFilter == null
+                      ? service.notifications
+                      : service.getNotificationsByType(_selectedFilter!);
 
-              if (notifications.isEmpty) {
-                return Container(
-                  color: Colors.black,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_none,
-                          size: 64,
-                          color: Colors.grey[700],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedFilter == null
-                              ? 'No notifications yet'
-                              : 'No ${_getFilterName(_selectedFilter!)} notifications',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "When people interact with your content,\nyou'll see it here",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return Container(
-                color: Colors.black,
-                child: RefreshIndicator(
-                  semanticsLabel: 'checking for new notifications',
-                  color: VineTheme.vineGreen,
-                  onRefresh: () async {
-                    await service.refreshNotifications();
-                  },
-                  child: ListView.builder(
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = notifications[index];
-                      final showDateHeader = _shouldShowDateHeader(
-                        index,
-                        notifications,
-                      );
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (showDateHeader)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                              child: Text(
-                                _getDateHeader(notification.timestamp),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[400],
-                                ),
+                  if (notifications.isEmpty) {
+                    return Container(
+                      color: Colors.black,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.notifications_none,
+                              size: 64,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _selectedFilter == null
+                                  ? 'No notifications yet'
+                                  : 'No ${_getFilterName(_selectedFilter!)} notifications',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[400],
                               ),
                             ),
-                          NotificationListItem(
-                            notification: notification,
-                            onTap: () async {
-                              // Mark as read
-                              await service.markAsRead(notification.id);
-
-                              // Navigate to appropriate screen based on type
-                              if (context.mounted) {
-                                _navigateToTarget(context, notification);
-                              }
-                            },
-                          ),
-                          if (index < notifications.length - 1)
-                            Divider(
-                              height: 1,
-                              thickness: 0.5,
-                              color: Colors.grey[800],
-                              indent: 72,
+                            const SizedBox(height: 8),
+                            Text(
+                              "When people interact with your content,\nyou'll see it here",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Container(
+                    color: Colors.black,
+                    child: RefreshIndicator(
+                      semanticsLabel: 'checking for new notifications',
+                      color: VineTheme.vineGreen,
+                      onRefresh: () async {
+                        await service.refreshNotifications();
+                      },
+                      child: ListView.builder(
+                        itemCount: notifications.length,
+                        itemBuilder: (context, index) {
+                          final notification = notifications[index];
+                          final showDateHeader = _shouldShowDateHeader(
+                            index,
+                            notifications,
+                          );
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (showDateHeader)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    16,
+                                    16,
+                                    8,
+                                  ),
+                                  child: Text(
+                                    _getDateHeader(notification.timestamp),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ),
+                              NotificationListItem(
+                                notification: notification,
+                                onTap: () async {
+                                  // Mark as read
+                                  await service.markAsRead(notification.id);
+
+                                  // Navigate to appropriate screen based on type
+                                  if (context.mounted) {
+                                    _navigateToTarget(context, notification);
+                                  }
+                                },
+                              ),
+                              if (index < notifications.length - 1)
+                                Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Colors.grey[800],
+                                  indent: 72,
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
