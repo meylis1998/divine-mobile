@@ -7,7 +7,7 @@ import 'dart:async' as _i3;
 
 import 'package:keycast_flutter/keycast_flutter.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:nostr_sdk/event.dart' as _i6;
+import 'package:nostr_sdk/nostr_sdk.dart' as _i6;
 import 'package:openvine/services/audio_sharing_preference_service.dart' as _i7;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/user_profile_service.dart' as _i4;

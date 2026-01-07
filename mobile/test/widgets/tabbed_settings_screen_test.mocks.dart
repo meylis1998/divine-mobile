@@ -4,7 +4,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i8;
-import 'dart:io' as _i15;
+import 'dart:io' as _i14;
 
 import 'package:dio/dio.dart' as _i4;
 import 'package:keycast_flutter/keycast_flutter.dart' as _i10;
@@ -13,16 +13,15 @@ import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:models/models.dart' as _i7;
 import 'package:nostr_client/nostr_client.dart' as _i12;
 import 'package:nostr_client/src/models/models.dart' as _i3;
-import 'package:nostr_sdk/event.dart' as _i11;
-import 'package:nostr_sdk/nostr_sdk.dart' as _i14;
+import 'package:nostr_sdk/nostr_sdk.dart' as _i11;
 import 'package:openvine/models/bug_report_data.dart' as _i6;
-import 'package:openvine/models/notification_model.dart' as _i17;
+import 'package:openvine/models/notification_model.dart' as _i16;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i5;
-import 'package:openvine/services/bug_report_service.dart' as _i19;
-import 'package:openvine/services/notification_service_enhanced.dart' as _i16;
+import 'package:openvine/services/bug_report_service.dart' as _i18;
+import 'package:openvine/services/notification_service_enhanced.dart' as _i15;
 import 'package:openvine/services/user_profile_service.dart' as _i9;
-import 'package:openvine/services/video_event_service.dart' as _i18;
+import 'package:openvine/services/video_event_service.dart' as _i17;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -419,7 +418,7 @@ class MockNostrClient extends _i1.Mock implements _i12.NostrClient {
 
   @override
   _i8.Future<List<_i11.Event>> queryEvents(
-    List<_i14.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -446,7 +445,7 @@ class MockNostrClient extends _i1.Mock implements _i12.NostrClient {
 
   @override
   _i8.Future<_i3.CountResult> countEvents(
-    List<_i14.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<int>? relayTypes = const [1, 2, 3, 4],
@@ -520,7 +519,7 @@ class MockNostrClient extends _i1.Mock implements _i12.NostrClient {
 
   @override
   _i8.Stream<_i11.Event> subscribe(
-    List<_i14.Filter>? filters, {
+    List<_i11.Filter>? filters, {
     String? subscriptionId,
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -691,7 +690,7 @@ class MockNostrClient extends _i1.Mock implements _i12.NostrClient {
 
   @override
   _i8.Future<_i11.Event?> sendContactList(
-    _i14.ContactList? contacts,
+    _i11.ContactList? contacts,
     String? content, {
     List<String>? tempRelays,
     List<String>? targetRelays,
@@ -806,7 +805,7 @@ class MockBlossomUploadService extends _i1.Mock
 
   @override
   _i8.Future<_i5.BlossomUploadResult> uploadVideo({
-    required _i15.File? videoFile,
+    required _i14.File? videoFile,
     required String? nostrPubkey,
     required String? title,
     String? description,
@@ -843,7 +842,7 @@ class MockBlossomUploadService extends _i1.Mock
 
   @override
   _i8.Future<_i5.BlossomUploadResult> uploadImage({
-    required _i15.File? imageFile,
+    required _i14.File? imageFile,
     required String? nostrPubkey,
     String? mimeType = 'image/jpeg',
     void Function(double)? onProgress,
@@ -871,7 +870,7 @@ class MockBlossomUploadService extends _i1.Mock
 
   @override
   _i8.Future<String?> uploadBugReport({
-    required _i15.File? bugReportFile,
+    required _i14.File? bugReportFile,
     void Function(double)? onProgress,
   }) =>
       (super.noSuchMethod(
@@ -885,7 +884,7 @@ class MockBlossomUploadService extends _i1.Mock
 
   @override
   _i8.Future<_i5.BlossomUploadResult> uploadAudio({
-    required _i15.File? audioFile,
+    required _i14.File? audioFile,
     String? mimeType = 'audio/aac',
     void Function(double)? onProgress,
   }) =>
@@ -913,18 +912,18 @@ class MockBlossomUploadService extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNotificationServiceEnhanced extends _i1.Mock
-    implements _i16.NotificationServiceEnhanced {
+    implements _i15.NotificationServiceEnhanced {
   MockNotificationServiceEnhanced() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  List<_i17.NotificationModel> get notifications =>
+  List<_i16.NotificationModel> get notifications =>
       (super.noSuchMethod(
             Invocation.getter(#notifications),
-            returnValue: <_i17.NotificationModel>[],
+            returnValue: <_i16.NotificationModel>[],
           )
-          as List<_i17.NotificationModel>);
+          as List<_i16.NotificationModel>);
 
   @override
   int get unreadCount =>
@@ -948,7 +947,7 @@ class MockNotificationServiceEnhanced extends _i1.Mock
   _i8.Future<void> initialize({
     required _i12.NostrClient? nostrService,
     required _i9.UserProfileService? profileService,
-    required _i18.VideoEventService? videoService,
+    required _i17.VideoEventService? videoService,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#initialize, [], {
@@ -963,7 +962,7 @@ class MockNotificationServiceEnhanced extends _i1.Mock
 
   @override
   _i8.Future<void> addNotificationForTesting(
-    _i17.NotificationModel? notification,
+    _i16.NotificationModel? notification,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#addNotificationForTesting, [notification]),
@@ -1000,14 +999,14 @@ class MockNotificationServiceEnhanced extends _i1.Mock
           as _i8.Future<void>);
 
   @override
-  List<_i17.NotificationModel> getNotificationsByType(
-    _i17.NotificationType? type,
+  List<_i16.NotificationModel> getNotificationsByType(
+    _i16.NotificationType? type,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getNotificationsByType, [type]),
-            returnValue: <_i17.NotificationModel>[],
+            returnValue: <_i16.NotificationModel>[],
           )
-          as List<_i17.NotificationModel>);
+          as List<_i16.NotificationModel>);
 
   @override
   _i8.Future<void> clearAll() =>
@@ -1046,7 +1045,7 @@ class MockNotificationServiceEnhanced extends _i1.Mock
 /// A class which mocks [BugReportService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBugReportService extends _i1.Mock implements _i19.BugReportService {
+class MockBugReportService extends _i1.Mock implements _i18.BugReportService {
   MockBugReportService() {
     _i1.throwOnMissingStub(this);
   }
