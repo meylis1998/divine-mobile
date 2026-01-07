@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/developer_mode_tap_provider.dart';
@@ -246,10 +244,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildSectionHeader('Account'),
                 // Show register tile for anonymous users
                 // Only shown when headless auth feature is enabled
-                if (authService.isAnonymous &&
-                    ref.watch(
-                      isFeatureEnabledProvider(FeatureFlag.headlessAuth),
-                    ))
+                if (authService.isAnonymous)
                   _buildSettingsTile(
                     context,
                     icon: Icons.security,

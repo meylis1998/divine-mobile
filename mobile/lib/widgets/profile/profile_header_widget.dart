@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -71,9 +69,7 @@ class ProfileHeaderWidget extends ConsumerWidget {
 
           // Secure account banner for anonymous users (only on own profile)
           // Only shown when headless auth feature is enabled
-          if (isOwnProfile &&
-              authService.isAnonymous &&
-              ref.watch(isFeatureEnabledProvider(FeatureFlag.headlessAuth)))
+          if (isOwnProfile && authService.isAnonymous)
             _CreateRecoverableIdentityBanner(),
 
           // Profile picture and stats row

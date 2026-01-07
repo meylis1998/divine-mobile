@@ -24,10 +24,6 @@ enum FeatureFlag {
   enableVideoEditorV1(
     'Video Editor V1',
     'Enable video editing functionality (disabled on web, enabled on native platforms)',
-  ),
-  headlessAuth(
-    'Headless Auth',
-    'Enable native email/password authentication (shake to enable)',
   );
 
   const FeatureFlag(this.displayName, this.description);

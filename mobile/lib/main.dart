@@ -40,7 +40,6 @@ import 'package:openvine/widgets/geo_blocking_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/shake_detector_provider.dart';
 import 'dart:io'
     if (dart.library.html) 'package:openvine/utils/platform_io_web.dart'
     as io;
@@ -536,15 +535,6 @@ Future<void> _initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Initialize shake detector for feature flag activation (mobile only)
-  // Reading the provider starts listening for shake events
-  container.read(shakeDetectorProvider);
-  Log.info(
-    '[INIT] ✅ ShakeDetector initialized',
-    name: 'Main',
-    category: LogCategory.system,
-  );
-
   Log.info(
     '[INIT] ✅ All critical services initialized',
     name: 'Main',
@@ -592,7 +582,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
         _backgroundInitDone = true;
         _initializeDeepLinkServices();
         _initializeBackgroundServices();
-        _initializeShakeListener();
       }
     });
   }
@@ -601,26 +590,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
   void dispose() {
     _shakeSubscription?.cancel();
     super.dispose();
-  }
-
-  /// Listen for shake-enabled headless auth and show snackbar feedback
-  void _initializeShakeListener() {
-    _shakeSubscription = headlessAuthEnabledStream.listen((_) {
-      if (!mounted) return;
-      // Get the nearest scaffold messenger to show snackbar
-      final router = ref.read(goRouterProvider);
-      final navigatorKey = router.routerDelegate.navigatorKey;
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Developer mode enabled'),
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    });
   }
 
   void _initializeDeepLinkServices() {
