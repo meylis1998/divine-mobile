@@ -22,7 +22,6 @@ import 'package:openvine/state/username_state.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/widgets/reserved_username_request_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
@@ -1633,7 +1632,7 @@ class UsernameStatusIndicator extends StatelessWidget {
     }
 
     if (state.isReserved) {
-      return _UsernameReservedIndicator(username: state.username);
+      return _UsernameReservedIndicator();
     }
 
     if (state.hasError) {
@@ -1714,49 +1713,19 @@ class _UsernameTakenIndicator extends StatelessWidget {
 }
 
 class _UsernameReservedIndicator extends StatelessWidget {
-  const _UsernameReservedIndicator({required this.username});
-
-  final String username;
+  const _UsernameReservedIndicator();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.lock, color: Colors.orange[400], size: 16),
-              const SizedBox(width: 8),
-              Text(
-                'Username is reserved',
-                style: TextStyle(color: Colors.orange[400], fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          Icon(Icons.lock, color: Colors.orange[400], size: 16),
+          const SizedBox(width: 8),
           Text(
-            'If you are the original owner, you can request to claim it.',
-            style: TextStyle(color: Colors.grey[500], fontSize: 11),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (context) =>
-                    ReservedUsernameRequestDialog(username: username),
-              );
-            },
-            icon: const Icon(Icons.send, size: 16),
-            label: const Text('Request Username'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange[400],
-              side: BorderSide(color: Colors.orange[400]!),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              textStyle: const TextStyle(fontSize: 12),
-            ),
+            'Username is reserved',
+            style: TextStyle(color: Colors.orange[400], fontSize: 12),
           ),
         ],
       ),

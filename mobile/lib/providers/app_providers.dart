@@ -3,24 +3,23 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:comments_repository/comments_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:likes_repository/likes_repository.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/providers/database_provider.dart';
 import 'package:nostr_client/nostr_client.dart'
     show RelayConnectionStatus, RelayState;
+import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/repositories/reserved_username_request_repository.dart';
+import 'package:openvine/repositories/follow_repository.dart';
 import 'package:openvine/repositories/username_repository.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/analytics_service.dart';
-import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/audio_playback_service.dart';
+import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/blossom_auth_service.dart';
@@ -28,14 +27,13 @@ import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/bookmark_service.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/bug_report_service.dart';
+import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
@@ -50,12 +48,10 @@ import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/relay_capability_service.dart';
-import 'package:openvine/services/zendesk_support_service.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/social_service.dart';
-import 'package:openvine/repositories/follow_repository.dart';
+import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -67,6 +63,8 @@ import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_visibility_manager.dart';
 import 'package:openvine/services/web_auth_service.dart';
+import 'package:openvine/services/zendesk_support_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -321,12 +319,6 @@ Nip05Service nip05Service(Ref ref) {
 UsernameRepository usernameRepository(Ref ref) {
   final nip05Service = ref.watch(nip05ServiceProvider);
   return UsernameRepository(nip05Service);
-}
-
-/// Reserved username request repository for claiming reserved usernames
-@riverpod
-ReservedUsernameRequestRepository reservedUsernameRequestRepository(Ref ref) {
-  return ReservedUsernameRequestRepository(http.Client());
 }
 
 /// Draft storage service for persisting vine drafts
