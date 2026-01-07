@@ -867,6 +867,9 @@ class VideoEventService extends ChangeNotifier {
         name: 'VideoEventService',
         category: LogCategory.video,
       );
+      // Reset pagination state to allow new events to be processed
+      // Without this, seenEventIds would filter out new videos as "duplicates"
+      resetPaginationState(subscriptionType);
     }
 
     // Only close existing subscription for this type if replace=true and params changed
