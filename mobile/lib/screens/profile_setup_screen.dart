@@ -23,6 +23,7 @@ import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/reserved_username_request_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({required this.isNewUser, super.key});
@@ -919,14 +920,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           } else if (registrationResult.isReserved) {
             // Show reserved error - user needs to contact support
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'Username is reserved. Contact support to claim it.',
-                  ),
-                  backgroundColor: Colors.orange[700],
-                  duration: const Duration(seconds: 4),
-                ),
+              final username = usernameState.username;
+              await showDialog(
+                context: context,
+                builder: (context) => _UsernameReservedDialog(username),
               );
             }
             // Continue with profile creation without NIP-05
@@ -1786,6 +1783,59 @@ class _UsernameErrorIndicator extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _UsernameReservedDialog extends StatelessWidget {
+  const _UsernameReservedDialog(this.username);
+
+  final String username;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: VineTheme.cardBackground,
+      title: const Text(
+        'Username reserved',
+        style: TextStyle(color: VineTheme.whiteText),
+      ),
+      content: Text(
+        'The name $username is reserved. Please email names@divine.video explaining and proving why you should own it.',
+        style: TextStyle(color: VineTheme.secondaryText),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Close', style: TextStyle(color: VineTheme.lightText)),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final launched = await launchUrl(
+              Uri.parse(
+                'mailto:names@divine.video?subject=Reserved username request: $username',
+              ),
+            );
+            if (context.mounted) {
+              if (!launched) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                      'Couldn\'t open email. Send to: names@divine.video',
+                    ),
+                  ),
+                );
+              }
+              Navigator.of(context).pop();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: VineTheme.vineGreen,
+            foregroundColor: VineTheme.whiteText,
+          ),
+          child: const Text('Email Us'),
+        ),
+      ],
     );
   }
 }
