@@ -314,23 +314,25 @@ class _SafeNetworkImage extends StatelessWidget {
       cacheManager: openVineImageCache,
       placeholder: (context, url) => _buildFallback(),
       errorWidget: (context, url, error) {
-        // 404s are expected - thumbnail may not exist yet. Handle silently.
+        // One log line with exception type
         final errorStr = error.toString();
         final is404 =
             errorStr.contains('404') ||
             (errorStr.contains('statusCode') && errorStr.contains('Invalid'));
 
         if (is404) {
-          // Expected case - just use fallback without logging
-          return _buildFallback();
+          Log.debug(
+            '🖼️ Thumbnail 404 (${error.runtimeType}): $url',
+            name: 'VIDEO',
+            category: LogCategory.video,
+          );
+        } else {
+          Log.warning(
+            '🖼️ Thumbnail error (${error.runtimeType}): $url',
+            name: 'VIDEO',
+            category: LogCategory.video,
+          );
         }
-
-        // Only log unexpected errors (not 404s)
-        Log.warning(
-          '🖼️ Thumbnail load failed for video $videoId: ${error.runtimeType}',
-          name: 'VideoThumbnailWidget',
-          category: LogCategory.video,
-        );
 
         return _buildFallback();
       },

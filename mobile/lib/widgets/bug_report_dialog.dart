@@ -115,8 +115,11 @@ class _BugReportDialogState extends State<BugReportDialog> {
         'Report a Bug',
         style: TextStyle(color: VineTheme.whiteText),
       ),
-      content: SizedBox(
-        width: 400,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 400,
+          maxHeight: 300, // Prevent content from pushing buttons off screen
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

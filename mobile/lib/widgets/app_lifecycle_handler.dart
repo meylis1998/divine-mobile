@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
@@ -62,6 +63,28 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
         if (!_tickersEnabled) {
           setState(() => _tickersEnabled = true);
         }
+
+        // Force reconnect relays on app resume
+        // WebSocket connections are often silently dropped when app is backgrounded
+        // Without this, subscriptions will timeout because they're sent to dead sockets
+        Future.microtask(() async {
+          try {
+            final nostrClient = ref.read(nostrServiceProvider);
+            await nostrClient.forceReconnectAll();
+            Log.info(
+              '📱 Relay connections restored after app resume',
+              name: 'AppLifecycleHandler',
+              category: LogCategory.system,
+            );
+          } catch (e) {
+            Log.warning(
+              '📱 Failed to reconnect relays on resume: $e',
+              name: 'AppLifecycleHandler',
+              category: LogCategory.system,
+            );
+          }
+        });
+
         // Don't force resume playback - let visibility detectors naturally trigger
         // This prevents playing videos that are covered by modals/camera screen
         Log.info(

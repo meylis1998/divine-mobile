@@ -1157,7 +1157,17 @@ class VineRecordingController {
           );
         } else {
           // Normal segment recording for other platforms
+          Log.info(
+            '📹 Calling stopRecordingSegment on camera interface...',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
           final filePath = await _cameraInterface!.stopRecordingSegment();
+          Log.info(
+            '📹 stopRecordingSegment returned: ${filePath ?? "NULL"}',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
 
           if (filePath != null) {
             // CRITICAL: Copy segment to safe location immediately
@@ -2591,7 +2601,14 @@ class VineRecordingController {
 
   void _setState(VineRecordingState newState) {
     if (_disposed) return;
+    final oldState = _state;
     _state = newState;
+    // Log state transitions for debugging
+    Log.info(
+      '🔄 State transition: $oldState → $newState',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
     // Notify UI of state change
     _onStateChanged?.call();
   }
@@ -2641,8 +2658,18 @@ class VineRecordingController {
   void _startMaxDurationTimer() {
     _stopMaxDurationTimer();
     final remainingTime = remainingDuration;
+    Log.info(
+      '⏱️ Starting max duration timer: ${remainingTime.inMilliseconds}ms remaining',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
     if (remainingTime > Duration.zero) {
       _maxDurationTimer = Timer(remainingTime, () {
+        Log.info(
+          '⏱️ Max duration timer fired! Current state: $_state, hasStartTime: ${_currentSegmentStartTime != null}',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         if (_state == VineRecordingState.recording) {
           Log.info(
             '📱 Recording completed - reached maximum duration',
@@ -2658,6 +2685,12 @@ class VineRecordingController {
           } else {
             stopRecording();
           }
+        } else {
+          Log.warning(
+            '⏱️ Max duration timer fired but state is $_state (not recording), skipping stop',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         }
       });
     }
