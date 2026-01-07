@@ -220,6 +220,65 @@ final class VideoVisibilityManagerProvider
 String _$videoVisibilityManagerHash() =>
     r'e1a7642e6cb5e4c1733981be738064df7c3c0a91';
 
+/// Global video controller pool for enforcing concurrent controller limits.
+/// Prevents platform resource exhaustion (iOS/Android ~4-6 player limit).
+/// Uses LRU eviction to dispose oldest non-playing controller when at capacity.
+
+@ProviderFor(videoControllerPool)
+const videoControllerPoolProvider = VideoControllerPoolProvider._();
+
+/// Global video controller pool for enforcing concurrent controller limits.
+/// Prevents platform resource exhaustion (iOS/Android ~4-6 player limit).
+/// Uses LRU eviction to dispose oldest non-playing controller when at capacity.
+
+final class VideoControllerPoolProvider
+    extends
+        $FunctionalProvider<
+          VideoControllerPool,
+          VideoControllerPool,
+          VideoControllerPool
+        >
+    with $Provider<VideoControllerPool> {
+  /// Global video controller pool for enforcing concurrent controller limits.
+  /// Prevents platform resource exhaustion (iOS/Android ~4-6 player limit).
+  /// Uses LRU eviction to dispose oldest non-playing controller when at capacity.
+  const VideoControllerPoolProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'videoControllerPoolProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoControllerPoolHash();
+
+  @$internal
+  @override
+  $ProviderElement<VideoControllerPool> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  VideoControllerPool create(Ref ref) {
+    return videoControllerPool(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VideoControllerPool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VideoControllerPool>(value),
+    );
+  }
+}
+
+String _$videoControllerPoolHash() =>
+    r'fe18d486dbd22b06fa94aea078da8f53aaadfc1d';
+
 /// Background activity manager singleton for tracking app foreground/background state
 
 @ProviderFor(backgroundActivityManager)

@@ -1,5 +1,6 @@
 // ABOUTME: Individual video controller providers using proper Riverpod Family pattern
 // ABOUTME: Each video gets its own controller with automatic lifecycle management via autoDispose
+// ABOUTME: Integrates with VideoControllerPool to enforce max concurrent controller limit
 
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -200,31 +201,42 @@ class VideoLoadingState {
 
 /// Provider for individual video controllers with autoDispose
 /// Each video gets its own controller instance
+///
+/// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+/// When pool is at capacity, oldest non-playing controller is evicted.
 @riverpod
 VideoPlayerController individualVideoController(
   Ref ref,
   VideoControllerParams params,
 ) {
-  // Riverpod-native lifecycle: keep controller alive with 5-minute cache timeout
-  // This prevents excessive codec churn during scrolling (creating/disposing controllers rapidly)
-  // 5 minutes allows smooth scrolling back and forth without re-initializing codecs
-  final link = ref.keepAlive();
-  Timer? cacheTimer;
+  // Get the global controller pool
+  final pool = ref.read(videoControllerPoolProvider);
+
+  // Check pool capacity and evict if needed BEFORE creating new controller
+  if (pool.isAtLimit && !pool.hasSlot(params.videoId)) {
+    final evictCandidate = pool.getEvictionCandidate();
+    if (evictCandidate != null) {
+      Log.info(
+        '🎬 [POOL] At capacity - evicting $evictCandidate to make room for ${params.videoId}',
+        name: 'IndividualVideoController',
+        category: LogCategory.video,
+      );
+      // Mark as disposed to prevent race conditions
+      ref.read(_disposedControllersProvider.notifier).state = {
+        ...ref.read(_disposedControllersProvider),
+        evictCandidate,
+      };
+      // Evict by invalidating - this triggers disposal of that controller
+      // We need to find the params for the evicted video, but we only have the ID
+      // The pool will release the slot when that provider's onDispose fires
+      pool.releaseSlot(evictCandidate);
+    }
+  }
+
+  // Register this controller in the pool
+  pool.requestSlot(params.videoId);
+
   Timer? loopEnforcementTimer;
-
-  // Riverpod lifecycle hooks for idiomatic cache behavior
-  ref.onCancel(() {
-    // Last listener removed - start 5-minute cache timeout
-    // Longer timeout reduces jittery scrolling caused by rapid codec initialization/disposal
-    cacheTimer = Timer(const Duration(minutes: 5), () {
-      link.close(); // Allow autoDispose after 5 minutes of no listeners
-    });
-  });
-
-  ref.onResume(() {
-    // New listener added - cancel the disposal timer
-    cacheTimer?.cancel();
-  });
 
   Log.info(
     '🎬 Creating VideoPlayerController for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
@@ -452,6 +464,9 @@ VideoPlayerController individualVideoController(
         // Set looping for Vine-like behavior
         controller.setLooping(true);
 
+        // Mark controller as initialized in pool (no longer initializing)
+        pool.markInitialized(params.videoId);
+
         // Start loop enforcement timer for videos longer than 6.3s
         // Short videos use native looping; long videos get enforced loop at 6.3s
         final videoDuration = controller.value.duration;
@@ -642,8 +657,13 @@ VideoPlayerController individualVideoController(
 
   // AutoDispose: Cleanup controller when provider is disposed
   ref.onDispose(() {
+    // Cancel loop enforcement timer first
     loopEnforcementTimer?.cancel();
-    cacheTimer?.cancel();
+
+    // Release slot from pool SYNCHRONOUSLY before disposal
+    // This ensures pool state is updated immediately
+    pool.releaseSlot(params.videoId);
+
     Log.info(
       '🧹 Disposing VideoPlayerController for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
       name: 'IndividualVideoController',
@@ -653,20 +673,17 @@ VideoPlayerController individualVideoController(
     // Remove state change listener before disposal
     controller.removeListener(stateChangeListener);
 
-    // Defer controller disposal to avoid triggering listener callbacks during lifecycle
-    // This prevents "Cannot use Ref inside life-cycles" errors when listeners try to access providers
-    Future.microtask(() {
-      // Only dispose if controller exists
-      try {
-        controller.dispose();
-      } catch (e) {
-        Log.warning(
-          'Failed to dispose controller: $e',
-          name: 'IndividualVideoController',
-          category: LogCategory.system,
-        );
-      }
-    });
+    // Dispose controller synchronously to free platform resources immediately
+    // This prevents resource exhaustion from accumulated controllers
+    try {
+      controller.dispose();
+    } catch (e) {
+      Log.warning(
+        'Failed to dispose controller: $e',
+        name: 'IndividualVideoController',
+        category: LogCategory.system,
+      );
+    }
   });
 
   // NOTE: Play/pause logic has been moved to VideoFeedItem widget

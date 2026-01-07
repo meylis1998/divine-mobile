@@ -63,6 +63,7 @@ import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/services/video_sharing_service.dart';
+import 'package:openvine/services/video_controller_pool.dart';
 import 'package:openvine/services/video_visibility_manager.dart';
 import 'package:openvine/services/web_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
@@ -101,6 +102,16 @@ VideoFilterBuilder videoFilterBuilder(Ref ref) {
 @riverpod
 VideoVisibilityManager videoVisibilityManager(Ref ref) {
   return VideoVisibilityManager();
+}
+
+/// Global video controller pool for enforcing concurrent controller limits.
+/// Prevents platform resource exhaustion (iOS/Android ~4-6 player limit).
+/// Uses LRU eviction to dispose oldest non-playing controller when at capacity.
+@Riverpod(keepAlive: true)
+VideoControllerPool videoControllerPool(Ref ref) {
+  final pool = VideoControllerPool();
+  ref.onDispose(pool.dispose);
+  return pool;
 }
 
 /// Background activity manager singleton for tracking app foreground/background state

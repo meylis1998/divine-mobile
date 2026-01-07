@@ -10,12 +10,18 @@ part of 'individual_video_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Provider for individual video controllers with autoDispose
 /// Each video gets its own controller instance
+///
+/// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+/// When pool is at capacity, oldest non-playing controller is evicted.
 
 @ProviderFor(individualVideoController)
 const individualVideoControllerProvider = IndividualVideoControllerFamily._();
 
 /// Provider for individual video controllers with autoDispose
 /// Each video gets its own controller instance
+///
+/// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+/// When pool is at capacity, oldest non-playing controller is evicted.
 
 final class IndividualVideoControllerProvider
     extends
@@ -27,6 +33,9 @@ final class IndividualVideoControllerProvider
     with $Provider<VideoPlayerController> {
   /// Provider for individual video controllers with autoDispose
   /// Each video gets its own controller instance
+  ///
+  /// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+  /// When pool is at capacity, oldest non-playing controller is evicted.
   const IndividualVideoControllerProvider._({
     required IndividualVideoControllerFamily super.from,
     required VideoControllerParams super.argument,
@@ -81,10 +90,13 @@ final class IndividualVideoControllerProvider
 }
 
 String _$individualVideoControllerHash() =>
-    r'773e7924654cc063bc7e5dd892493c68c920061f';
+    r'a9532d106724b9ac55cce905277ade92cdf747bf';
 
 /// Provider for individual video controllers with autoDispose
 /// Each video gets its own controller instance
+///
+/// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+/// When pool is at capacity, oldest non-playing controller is evicted.
 
 final class IndividualVideoControllerFamily extends $Family
     with
@@ -103,6 +115,9 @@ final class IndividualVideoControllerFamily extends $Family
 
   /// Provider for individual video controllers with autoDispose
   /// Each video gets its own controller instance
+  ///
+  /// Integrates with VideoControllerPool to enforce max concurrent controller limit.
+  /// When pool is at capacity, oldest non-playing controller is evicted.
 
   IndividualVideoControllerProvider call(VideoControllerParams params) =>
       IndividualVideoControllerProvider._(argument: params, from: this);

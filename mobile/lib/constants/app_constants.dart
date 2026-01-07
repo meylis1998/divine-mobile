@@ -85,6 +85,29 @@ class AppConstants {
   static const int preloadAfter = 3;
 
   // ============================================================================
+  // VIDEO CONTROLLER POOL CONFIGURATION
+  // ============================================================================
+
+  /// Maximum concurrent video controllers in memory.
+  /// Platform limits: iOS/Android support ~4-6 concurrent players.
+  /// Using 4 for safety margin to prevent resource exhaustion.
+  static const int maxConcurrentVideoControllers = 4;
+
+  /// Number of adjacent videos to pre-initialize controllers for (before current).
+  /// Total slots: 1 current + preInitBefore + preInitAfter <= maxConcurrentVideoControllers
+  static const int controllerPreInitBefore = 1;
+
+  /// Number of adjacent videos to pre-initialize controllers for (after current).
+  static const int controllerPreInitAfter = 1;
+
+  /// Number of controllers to keep before current when disposing out-of-range.
+  /// Tighter range since pool enforces hard limit.
+  static const int controllerKeepBefore = 2;
+
+  /// Number of controllers to keep after current when disposing out-of-range.
+  static const int controllerKeepAfter = 2;
+
+  // ============================================================================
   // NETWORK CONFIGURATION
   // ============================================================================
 

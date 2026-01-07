@@ -1,12 +1,15 @@
 // ABOUTME: Reusable video prefetch mixin for PageView-based video feeds
 // ABOUTME: Handles both file caching and controller pre-initialization for instant playback
+// ABOUTME: Pool-aware to respect max concurrent controller limits
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
 import 'package:openvine/services/video_cache_manager.dart';
+import 'package:openvine/services/video_controller_pool.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Mixin that provides video prefetching logic for PageView-based feeds
@@ -149,30 +152,70 @@ mixin VideoPrefetchMixin {
   /// This complements [checkForPrefetch] which caches video files to disk.
   /// Controller initialization happens in memory and includes codec setup.
   ///
+  /// Pool-aware: Checks available slots before pre-initializing to avoid
+  /// exceeding the platform's concurrent controller limit.
+  ///
   /// - [ref]: WidgetRef for reading the controller provider
   /// - [currentIndex]: Current video index in the feed
   /// - [videos]: Full list of videos in the feed
-  /// - [preInitBefore]: Number of videos to pre-init before current (default: 1)
-  /// - [preInitAfter]: Number of videos to pre-init after current (default: 2)
+  /// - [preInitBefore]: Number of videos to pre-init before current
+  /// - [preInitAfter]: Number of videos to pre-init after current
   void preInitializeControllers({
     required WidgetRef ref,
     required int currentIndex,
     required List<VideoEvent> videos,
-    int preInitBefore = 1,
-    int preInitAfter = 2,
+    int preInitBefore = AppConstants.controllerPreInitBefore,
+    int preInitAfter = AppConstants.controllerPreInitAfter,
   }) {
     if (videos.isEmpty) return;
 
-    final startIndex = (currentIndex - preInitBefore).clamp(0, videos.length);
-    final endIndex = (currentIndex + preInitAfter + 1).clamp(0, videos.length);
+    // Check pool capacity before pre-initializing
+    final pool = ref.read(videoControllerPoolProvider);
+    final availableSlots = pool.availableSlots;
 
-    for (int i = startIndex; i < endIndex; i++) {
-      // Skip current video (it's already being initialized by its widget)
-      if (i == currentIndex) continue;
-      if (i < 0 || i >= videos.length) continue;
+    if (availableSlots <= 0) {
+      Log.debug(
+        '🎬 [PREFETCH] Pool at capacity (${pool.activeCount}/${VideoControllerPool.maxConcurrentControllers}), skipping pre-initialization',
+        name: 'VideoPrefetchMixin',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    // Build prioritized list: current+1, current-1, current+2, current-2, etc.
+    final prioritizedIndices = <int>[];
+    for (
+      int offset = 1;
+      offset <= preInitAfter || offset <= preInitBefore;
+      offset++
+    ) {
+      if (offset <= preInitAfter) {
+        final afterIdx = currentIndex + offset;
+        if (afterIdx < videos.length) prioritizedIndices.add(afterIdx);
+      }
+      if (offset <= preInitBefore) {
+        final beforeIdx = currentIndex - offset;
+        if (beforeIdx >= 0) prioritizedIndices.add(beforeIdx);
+      }
+    }
+
+    var initialized = 0;
+    for (final i in prioritizedIndices) {
+      // Stop if we've used all available slots
+      if (initialized >= availableSlots) {
+        Log.debug(
+          '🎬 [PREFETCH] Used all $availableSlots available slots, stopping pre-initialization',
+          name: 'VideoPrefetchMixin',
+          category: LogCategory.video,
+        );
+        break;
+      }
 
       final video = videos[i];
       if (video.videoUrl == null || video.videoUrl!.isEmpty) continue;
+
+      // Skip if already tracked (already initialized)
+      if (_preInitializedControllers.containsKey(video.id)) continue;
 
       // Trigger controller creation by reading the provider
       // This is fire-and-forget - we just want to start initialization
@@ -183,11 +226,20 @@ mixin VideoPrefetchMixin {
       );
 
       // Reading the provider triggers controller creation + initialize()
-      // The controller will stay alive due to keepAlive() + 5-min cache
+      // The pool will handle capacity enforcement
       ref.read(individualVideoControllerProvider(params));
 
       // Track this controller for potential disposal later
       _preInitializedControllers[video.id] = video.videoUrl!;
+      initialized++;
+    }
+
+    if (initialized > 0) {
+      Log.debug(
+        '🎬 [PREFETCH] Pre-initialized $initialized controllers around index $currentIndex',
+        name: 'VideoPrefetchMixin',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -197,20 +249,21 @@ mixin VideoPrefetchMixin {
   /// Controllers within the keep range are preserved for smooth scrolling.
   /// Controllers outside this range are invalidated to free memory.
   ///
-  /// The keep range is intentionally larger than the pre-init range to avoid
-  /// disposing controllers that might be needed soon.
+  /// Note: With the VideoControllerPool in place, this method is less critical
+  /// as the pool enforces hard limits. However, it still helps with proactive
+  /// cleanup and tracking state management.
   ///
   /// - [ref]: WidgetRef for invalidating controller providers
   /// - [currentIndex]: Current video index in the feed
   /// - [videos]: Full list of videos in the feed
-  /// - [keepBefore]: Videos to keep before current (default: 5)
-  /// - [keepAfter]: Videos to keep after current (default: 6)
+  /// - [keepBefore]: Videos to keep before current
+  /// - [keepAfter]: Videos to keep after current
   void disposeControllersOutsideRange({
     required WidgetRef ref,
     required int currentIndex,
     required List<VideoEvent> videos,
-    int keepBefore = 5,
-    int keepAfter = 6,
+    int keepBefore = AppConstants.controllerKeepBefore,
+    int keepAfter = AppConstants.controllerKeepAfter,
   }) {
     if (videos.isEmpty || _preInitializedControllers.isEmpty) {
       return;
