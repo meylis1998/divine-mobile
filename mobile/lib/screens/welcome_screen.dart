@@ -36,8 +36,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     //   isFeatureEnabledProvider(FeatureFlag.headlessAuth),
     // );
 
-    const isHeadlessAuthEnabled = true;
-
     // Handle stream loading/error states
     final authState = authStateAsync.when(
       data: (state) => state,

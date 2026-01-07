@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
-import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer, SecureKeyStorage;
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -129,6 +129,8 @@ class AuthService {
   UserProfile? _currentProfile;
   String? _lastError;
   KeycastRpc? _rpcSigner;
+
+  NostrSigner? get rpcSigner => _rpcSigner;
   OAuthConfig _oauthConfig;
 
   // Streaming controllers for reactive auth state
