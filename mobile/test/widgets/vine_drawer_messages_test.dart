@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -167,7 +168,30 @@ void main() {
 
     testWidgets('Tapping Messages navigates to InboxScreen', (tester) async {
       final scaffoldKey = GlobalKey<ScaffoldState>();
-      var navigatedToInbox = false;
+      var navigatedToMessages = false;
+
+      // Create a GoRouter that tracks navigation to /messages
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              key: scaffoldKey,
+              drawer: const VineDrawer(),
+              body: const Center(child: Text('Test')),
+            ),
+          ),
+          GoRoute(
+            path: '/messages',
+            builder: (context, state) {
+              navigatedToMessages = true;
+              // Return a simple page to verify navigation
+              return const Scaffold(body: Text('Messages Screen'));
+            },
+          ),
+        ],
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -177,25 +201,7 @@ void main() {
               (ref) => unreadCountController.stream,
             ),
           ],
-          child: MaterialApp(
-            home: Scaffold(
-              key: scaffoldKey,
-              drawer: const VineDrawer(),
-              body: const Center(child: Text('Test')),
-            ),
-            onGenerateRoute: (settings) {
-              // Catch navigation to InboxScreen
-              return MaterialPageRoute<void>(
-                builder: (context) {
-                  if (settings.name == '/inbox' ||
-                      settings.arguments is InboxScreen) {
-                    navigatedToInbox = true;
-                  }
-                  return const Scaffold(body: Text('Navigation Target'));
-                },
-              );
-            },
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
 
@@ -211,12 +217,16 @@ void main() {
       await tester.tap(find.text('Messages'));
       await tester.pumpAndSettle();
 
-      // Verify navigation occurred (drawer closed + InboxScreen pushed)
-      // We check by looking for InboxScreen in the widget tree
+      // Verify navigation occurred to /messages route
       expect(
-        find.byType(InboxScreen),
+        navigatedToMessages,
+        isTrue,
+        reason: 'Should navigate to /messages when Messages is tapped',
+      );
+      expect(
+        find.text('Messages Screen'),
         findsOneWidget,
-        reason: 'Should navigate to InboxScreen when Messages is tapped',
+        reason: 'Messages Screen should be visible after navigation',
       );
     });
   });

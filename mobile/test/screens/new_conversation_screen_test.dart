@@ -41,6 +41,7 @@ void main() {
     when(mockUserProfileService.getCachedProfile(any)).thenReturn(null);
     when(mockUserProfileService.hasProfile(any)).thenReturn(false);
     when(mockUserProfileService.shouldSkipProfileFetch(any)).thenReturn(false);
+    when(mockUserProfileService.allProfiles).thenReturn({});
 
     // Default streaming search behavior - return empty stream that completes
     when(
@@ -81,6 +82,9 @@ void main() {
       ).thenReturn(entry.value);
       when(mockUserProfileService.hasProfile(entry.key)).thenReturn(true);
     }
+
+    // Update allProfiles to return the profiles map for search functionality
+    when(mockUserProfileService.allProfiles).thenReturn(profiles);
 
     return ProviderScope(
       overrides: [
