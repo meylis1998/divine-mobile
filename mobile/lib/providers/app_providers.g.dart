@@ -1587,7 +1587,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'a5fdab46c67b6110ee0d34f2d27332a7c9aa7737';
+String _$authServiceHash() => r'94a2bd6d38b6063777d3442f2383752fe6a885d8';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds
