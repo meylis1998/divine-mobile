@@ -250,10 +250,7 @@ void main() {
     });
 
     testWidgets('pull-to-refresh triggers data reload', (tester) async {
-      // Set up a flag to track if refresh was called
-      var refreshCalled = false;
       when(mockDmRepository.watchConversations()).thenAnswer((_) {
-        refreshCalled = true;
         return conversationsController.stream;
       });
 
@@ -269,9 +266,6 @@ void main() {
         ),
       ]);
       await tester.pumpAndSettle();
-
-      // Reset flag after initial load
-      refreshCalled = false;
 
       // Perform pull-to-refresh gesture
       await tester.fling(

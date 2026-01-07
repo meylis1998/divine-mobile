@@ -11,7 +11,6 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/dm_providers.dart';
-import 'package:openvine/screens/inbox_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/vine_drawer.dart';
 
@@ -150,13 +149,6 @@ void main() {
       // Find the Messages item key to scope badge search
       final messagesItemFinder = find.byKey(const Key('drawer-messages-item'));
       expect(messagesItemFinder, findsOneWidget);
-
-      // There should be no badge container within the Messages item
-      // The badge container has a specific decoration
-      final badgeFinder = find.descendant(
-        of: messagesItemFinder,
-        matching: find.byType(Container),
-      );
 
       // Check that no badge with count "0" is shown
       expect(

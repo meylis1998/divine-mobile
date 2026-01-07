@@ -813,6 +813,7 @@ class NotificationServiceEnhanced extends ChangeNotifier {
     );
   }
 
+  @override
   void dispose() {
     if (_disposed) return;
 
@@ -829,6 +830,8 @@ class NotificationServiceEnhanced extends ChangeNotifier {
 
     // Close Hive box
     _notificationBox?.close();
+
+    super.dispose();
   }
 
   /// Check if this service is still mounted/active
