@@ -715,58 +715,6 @@ class AuthService {
         createdAt: NostrTimestamp.now(driftTolerance: driftTolerance),
       );
 
-      // DEBUG: Log event details before signing
-      Log.info(
-        '🔍 Event BEFORE signing:',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - ID: ${event.id}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Pubkey: ${event.pubkey}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Kind: ${event.kind}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Created at: ${event.createdAt}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Tags: ${event.tags}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Content: ${event.content}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Signature (before): ${event.sig}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Is valid (before): ${event.isValid}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      Log.info(
-        '  - Is signed (before): ${event.isSigned}',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-
       // 2. Branch Signing Logic (Local vs RPC)
       Event? signedEvent;
 

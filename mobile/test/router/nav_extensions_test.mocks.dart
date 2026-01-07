@@ -832,6 +832,16 @@ class MockVideoEventService extends _i1.Mock implements _i11.VideoEventService {
           as _i13.VoidCallback);
 
   @override
+  _i13.VoidCallback addNewVideoListener(
+    void Function(_i12.VideoEvent, String)? callback,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addNewVideoListener, [callback]),
+            returnValue: () {},
+          )
+          as _i13.VoidCallback);
+
+  @override
   void removeVideoUpdateListener(void Function(_i12.VideoEvent)? callback) =>
       super.noSuchMethod(
         Invocation.method(#removeVideoUpdateListener, [callback]),
