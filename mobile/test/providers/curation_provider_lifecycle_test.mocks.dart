@@ -1836,6 +1836,14 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i6.Future<List<_i16.TrendingHashtag>>);
 
   @override
+  List<_i16.TrendingHashtag> getTrendingHashtags({int? limit = 25}) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTrendingHashtags, [], {#limit: limit}),
+            returnValue: <_i16.TrendingHashtag>[],
+          )
+          as List<_i16.TrendingHashtag>);
+
+  @override
   void clearCache() => super.noSuchMethod(
     Invocation.method(#clearCache, []),
     returnValueForMissingStub: null,

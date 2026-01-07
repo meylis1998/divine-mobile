@@ -179,7 +179,7 @@ class AnalyticsApiService {
       _httpClient = httpClient ?? http.Client();
 
   /// Whether the API is available (has a configured base URL)
-  bool get isAvailable => _baseUrl != null && _baseUrl!.isNotEmpty;
+  bool get isAvailable => _baseUrl != null && _baseUrl.isNotEmpty;
 
   /// Fetch trending videos sorted by engagement score
   ///
