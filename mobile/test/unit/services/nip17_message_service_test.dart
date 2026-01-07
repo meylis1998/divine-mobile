@@ -63,6 +63,53 @@ void main() {
       verify(mockNostrService.publishEvent(any)).called(1);
     });
 
+    test('should return different IDs for rumor and gift wrap events', () async {
+      // Setup: Capture the published event to get its ID
+      Event? capturedGiftWrap;
+      when(mockNostrService.publishEvent(any)).thenAnswer((invocation) async {
+        capturedGiftWrap = invocation.positionalArguments[0] as Event;
+        return capturedGiftWrap;
+      });
+
+      // Execute: Send encrypted message
+      final result = await service.sendPrivateMessage(
+        recipientPubkey: recipientPubkey,
+        content: 'Test message for ID verification',
+      );
+
+      // Verify: Both IDs are present and different
+      expect(result.success, isTrue);
+      expect(result.rumorEventId, isNotNull);
+      expect(result.giftWrapEventId, isNotNull);
+      expect(
+        result.rumorEventId,
+        isNot(equals(result.giftWrapEventId)),
+        reason: 'Rumor ID (kind 14) must differ from gift wrap ID (kind 1059)',
+      );
+
+      // Verify: giftWrapEventId matches the published event's ID
+      expect(capturedGiftWrap, isNotNull);
+      expect(
+        result.giftWrapEventId,
+        equals(capturedGiftWrap!.id),
+        reason: 'giftWrapEventId should match the published event ID',
+      );
+
+      // Verify: IDs are valid 64-char hex strings
+      expect(result.rumorEventId!.length, equals(64));
+      expect(result.giftWrapEventId!.length, equals(64));
+      expect(
+        RegExp(r'^[0-9a-f]{64}$').hasMatch(result.rumorEventId!),
+        isTrue,
+        reason: 'rumorEventId should be valid hex',
+      );
+      expect(
+        RegExp(r'^[0-9a-f]{64}$').hasMatch(result.giftWrapEventId!),
+        isTrue,
+        reason: 'giftWrapEventId should be valid hex',
+      );
+    });
+
     test('should create gift wrap with kind 1059', () async {
       Event? capturedEvent;
 
