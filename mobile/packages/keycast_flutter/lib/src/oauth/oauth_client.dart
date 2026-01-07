@@ -456,6 +456,32 @@ class KeycastOAuth {
     }
   }
 
+  /// Reset password using token from email link
+  Future<ResetPasswordResult> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('${config.serverUrl}/api/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': token, 'new_password': newPassword}),
+      );
+
+      final Map<String, dynamic> json = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResetPasswordResult.fromJson(json);
+      }
+
+      // Handle server-side errors
+      final message = json['message'] ?? 'Failed to reset password';
+      return ResetPasswordResult.error( message );
+    } catch (e) {
+      return ResetPasswordResult.error('Network error: $e');
+    }
+  }
+
   void close() {
     _client.close();
   }

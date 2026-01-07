@@ -37,13 +37,13 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/curation_service.dart';
+import 'package:openvine/services/password_reset_listener.dart';
 import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
-import 'package:openvine/services/oauth_listener.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
@@ -279,39 +279,10 @@ KeycastOAuth oauthClient(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-OAuthListener oAuthListener(Ref ref) {
-  final listener = OAuthListener(ref);
+PasswordResetListener passwordResetListener(Ref ref) {
+  final listener = PasswordResetListener(ref);
   ref.onDispose(() => listener.dispose());
   return listener;
-}
-
-/// Holds the PKCE verifier while the user is in the browser.
-@Riverpod(keepAlive: true)
-class PendingVerifier extends _$PendingVerifier {
-  // Use a persistent storage instance because it is possible that the
-  // operating system kills the app while the user is in the browser logging
-  // in. Use secure storage to avoid leaking the verifier.
-
-  static const _key = 'oauth_pkce_verifier';
-
-  @override
-  Future<String?> build() async {
-    final storage = ref.read(flutterSecureStorageProvider);
-    final result = await storage.read(key: _key);
-    return result;
-  }
-
-  Future<void> set(String verifier) async {
-    final storage = ref.read(flutterSecureStorageProvider);
-    await storage.write(key: _key, value: verifier);
-    ref.invalidateSelf();
-  }
-
-  Future<void> clear() async {
-    final storage = ref.read(flutterSecureStorageProvider);
-    await storage.delete(key: _key);
-    ref.invalidateSelf();
-  }
 }
 
 /// Web authentication service (for web platform only)

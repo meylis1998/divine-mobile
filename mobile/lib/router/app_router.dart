@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_shell.dart';
+import 'package:openvine/screens/auth/reset_password.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/home_screen_router.dart';
@@ -95,8 +96,6 @@ int tabIndexFromLocation(String loc) {
     case 'setup-profile':
     case 'import-key':
     case 'welcome':
-    case 'login-options':
-    case 'auth-native':
     case 'camera':
     case 'clip-manager':
     case 'edit-video':
@@ -235,8 +234,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       if (authState == AuthState.authenticated &&
           (location == '/welcome' ||
               location == '/import-key' ||
-              location == '/login-options' ||
-              location == '/auth-native')) {
+              location == '/welcome/login-options' ||
+              location == '/welcome/login-options/auth-native')) {
         debugPrint('[Router] Authenticated. moving to /home/0');
         return '/home/0';
       }
@@ -245,8 +244,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthRoute =
           location.startsWith('/welcome') ||
           location.startsWith('/import-key') ||
-          location.startsWith('/login-options') ||
-          location.startsWith('/auth-native');
+          location.startsWith('/reset-password');
 
       // Check TOS acceptance for non-auth routes
       if (!isAuthRoute) {
@@ -548,32 +546,56 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/welcome',
         name: 'welcome',
         builder: (_, __) => const WelcomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'login-options',
+            name: 'login-options',
+            builder: (_, __) => const LoginOptionsScreen(),
+            routes: [
+              GoRoute(
+                path: 'auth-native',
+                name: 'auth-native',
+                builder: (ctx, st) {
+                  // Check for initialMode passed via extra or query param
+                  AuthMode? mode = st.extra as AuthMode?;
+                  if (mode == null) {
+                    final modeParam = st.uri.queryParameters['mode'];
+                    if (modeParam == 'register') {
+                      mode = AuthMode.register;
+                    }
+                  }
+                  return DivineAuthScreen(initialMode: mode ?? AuthMode.login);
+                },
+                routes: [
+                  // route for deep link when resetting password from emailed link
+                  GoRoute(
+                    path: 'reset-password',
+                    name: 'reset-password',
+                    builder: (ctx, st) {
+                      final token = st.uri.queryParameters['token'];
+                      return ResetPasswordScreen(token: token ?? '');
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: '/import-key',
         name: 'import-key',
         builder: (_, __) => const KeyImportScreen(),
       ),
+      // redirect deep link route to full reset password path
       GoRoute(
-        path: '/login-options',
-        name: 'login-options',
-        builder: (_, __) => const LoginOptionsScreen(),
-      ),
-      GoRoute(
-        path: '/auth-native',
-        name: 'auth-native',
-        builder: (ctx, st) {
-          // Check for initialMode passed via extra or query param
-          AuthMode? mode = st.extra as AuthMode?;
-          if (mode == null) {
-            final modeParam = st.uri.queryParameters['mode'];
-            if (modeParam == 'register') {
-              mode = AuthMode.register;
-            }
-          }
-          return DivineAuthScreen(initialMode: mode ?? AuthMode.login);
+        path: '/reset-password',
+        redirect: (context, state) {
+          final token = state.uri.queryParameters['token'];
+          return '/welcome/login-options/auth-native/reset-password?token=$token';
         },
       ),
+
       GoRoute(
         path: '/camera',
         name: 'camera',

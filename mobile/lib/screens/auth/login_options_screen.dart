@@ -57,7 +57,9 @@ class LoginOptionsScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () => context.push('/auth-native'),
+                          onPressed: () => context.push(
+                            '/welcome/login-options/auth-native',
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: VineTheme.vineGreen,

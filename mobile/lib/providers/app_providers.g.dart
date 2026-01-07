@@ -882,97 +882,53 @@ final class OauthClientProvider
 
 String _$oauthClientHash() => r'd7a61dbb44cb15f2ad9520e1251048469da85b20';
 
-@ProviderFor(oAuthListener)
-const oAuthListenerProvider = OAuthListenerProvider._();
+@ProviderFor(passwordResetListener)
+const passwordResetListenerProvider = PasswordResetListenerProvider._();
 
-final class OAuthListenerProvider
-    extends $FunctionalProvider<OAuthListener, OAuthListener, OAuthListener>
-    with $Provider<OAuthListener> {
-  const OAuthListenerProvider._()
+final class PasswordResetListenerProvider
+    extends
+        $FunctionalProvider<
+          PasswordResetListener,
+          PasswordResetListener,
+          PasswordResetListener
+        >
+    with $Provider<PasswordResetListener> {
+  const PasswordResetListenerProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'oAuthListenerProvider',
+        name: r'passwordResetListenerProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$oAuthListenerHash();
+  String debugGetCreateSourceHash() => _$passwordResetListenerHash();
 
   @$internal
   @override
-  $ProviderElement<OAuthListener> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $ProviderElement<PasswordResetListener> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
 
   @override
-  OAuthListener create(Ref ref) {
-    return oAuthListener(ref);
+  PasswordResetListener create(Ref ref) {
+    return passwordResetListener(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(OAuthListener value) {
+  Override overrideWithValue(PasswordResetListener value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<OAuthListener>(value),
+      providerOverride: $SyncValueProvider<PasswordResetListener>(value),
     );
   }
 }
 
-String _$oAuthListenerHash() => r'dcf33ced1dffba07f0b633646392fbc3c9b38b84';
-
-/// Holds the PKCE verifier while the user is in the browser.
-
-@ProviderFor(PendingVerifier)
-const pendingVerifierProvider = PendingVerifierProvider._();
-
-/// Holds the PKCE verifier while the user is in the browser.
-final class PendingVerifierProvider
-    extends $AsyncNotifierProvider<PendingVerifier, String?> {
-  /// Holds the PKCE verifier while the user is in the browser.
-  const PendingVerifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'pendingVerifierProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$pendingVerifierHash();
-
-  @$internal
-  @override
-  PendingVerifier create() => PendingVerifier();
-}
-
-String _$pendingVerifierHash() => r'a23857977eddec4dad51ab0234415e0f1a79cd8e';
-
-/// Holds the PKCE verifier while the user is in the browser.
-
-abstract class _$PendingVerifier extends $AsyncNotifier<String?> {
-  FutureOr<String?> build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final created = build();
-    final ref = this.ref as $Ref<AsyncValue<String?>, String?>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<AsyncValue<String?>, String?>,
-              AsyncValue<String?>,
-              Object?,
-              Object?
-            >;
-    element.handleValue(ref, created);
-  }
-}
+String _$passwordResetListenerHash() =>
+    r'e9469a2977559d922c965f6441a71b6cc3626ec2';
 
 /// Web authentication service (for web platform only)
 

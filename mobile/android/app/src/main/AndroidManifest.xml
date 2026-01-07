@@ -126,16 +126,19 @@
                     android:pathPrefix="/search"/>
             </intent-filter>
 
-            <!-- Deep link for oauth login -->
+
+            <!-- Deep link for password reset link emailed to user -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data
                     android:scheme="https"
-                    android:host="divine.video"
-                    android:pathPrefix="/app/callback"/>
+                    android:host="login.divine.video"
+                    android:pathPrefix="/reset-password"/>
             </intent-filter>
+
+
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

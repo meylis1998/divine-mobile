@@ -121,3 +121,21 @@ class ForgotPasswordResult {
     return ForgotPasswordResult(success: false, error: message);
   }
 }
+
+class ResetPasswordResult {
+  final bool success;
+  final String? message;
+
+  ResetPasswordResult({required this.success, this.message});
+
+  factory ResetPasswordResult.fromJson(Map<String, dynamic> json) {
+    return ResetPasswordResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+    );
+  }
+
+  factory ResetPasswordResult.error(String message) {
+    return ResetPasswordResult(success: false, message: message);
+  }
+}

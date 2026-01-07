@@ -633,8 +633,8 @@ class _DivineAppState extends ConsumerState<DivineApp> {
     // Initialize the deep link service for video content
     ref.read(deepLinkServiceProvider).initialize();
 
-    // Initialize the deep link service for oauth authentication
-    ref.read(oAuthListenerProvider).initialize();
+    // Initialize the deep link service for password reset
+    ref.read(passwordResetListenerProvider).initialize();
 
     Log.info(
       '✅ Deep Link services initialized',

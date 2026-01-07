@@ -10,6 +10,8 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/utils/validators.dart';
+import 'package:openvine/widgets/error_message.dart';
 
 /// Mode for the auth screen
 enum AuthMode { login, register }
@@ -307,30 +309,6 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     }
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    if (value.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
-    return null;
-  }
-
   String? _validateConfirmPassword(String? value) {
     if (_currentMode == AuthMode.login) return null;
     if (value != _passwordController.text) {
@@ -403,7 +381,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                             label: 'Email',
                             icon: Icons.email_outlined,
                           ),
-                          validator: _validateEmail,
+                          validator: Validators.validateEmail,
                         ),
                         const SizedBox(height: 16),
 
@@ -426,7 +404,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                               ),
                             ),
                           ),
-                          validator: _validatePassword,
+                          validator: Validators.validatePassword,
                         ),
                         const SizedBox(height: 16),
 
@@ -465,7 +443,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
 
                         // Error message
                         if (_errorMessage != null) ...[
-                          _ErrorMessage(message: _errorMessage),
+                          ErrorMessage(message: _errorMessage),
                           const SizedBox(height: 16),
                         ],
 
@@ -560,7 +538,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
                     label: 'Email Address',
                     icon: Icons.email_outlined,
                   ),
-                  validator: _validateEmail,
+                  validator: Validators.validateEmail,
                 ),
               ],
             ),
@@ -639,40 +617,6 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
       labelText: label,
       prefixIcon: Icon(icon),
       suffixIcon: suffixIcon,
-    );
-  }
-}
-
-class _ErrorMessage extends StatelessWidget {
-  final String? message;
-
-  const _ErrorMessage({this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    if (message == null || message!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade300),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.white, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message!,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

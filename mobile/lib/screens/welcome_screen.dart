@@ -5,12 +5,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/error_message.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -31,10 +30,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final authStateAsync = ref.watch(authStateStreamProvider);
     final authService = ref.watch(authServiceProvider);
 
-    // Check if headless auth feature is enabled (can be enabled by shaking)
-    final isHeadlessAuthEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.headlessAuth),
-    );
+    // // Check if headless auth feature is enabled (can be enabled by shaking)
+
+    // final isHeadlessAuthEnabled = ref.watch(
+    //   isFeatureEnabledProvider(FeatureFlag.headlessAuth),
+    // );
+
+    const isHeadlessAuthEnabled = true;
 
     // Handle stream loading/error states
     final authState = authStateAsync.when(
@@ -137,7 +139,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                 if (isHeadlessAuthEnabled)
                                   TextButton(
                                     onPressed: _canProceed
-                                        ? () => context.push('/login-options')
+                                        ? () => context.push(
+                                            '/welcome/login-options',
+                                          )
                                         : null,
                                     child: Text(
                                       'Have an account? Log In',
@@ -223,7 +227,7 @@ class _WelcomeActionSection extends StatelessWidget {
     }
 
     if (lastError != null) {
-      return _ErrorMessage(error: lastError!);
+      return ErrorMessage(message: lastError!);
     }
 
     return _ActionButton(
@@ -240,50 +244,6 @@ class _LoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(child: BrandedLoadingIndicator(size: 120));
-  }
-}
-
-class _ErrorMessage extends StatelessWidget {
-  const _ErrorMessage({required this.error});
-
-  final String error;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          const Text(
-            'Setup Error',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: const TextStyle(color: Colors.red, fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Please restart the app. If the problem persists, contact support.',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
   }
 }
 
