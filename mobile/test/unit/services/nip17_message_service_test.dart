@@ -54,7 +54,8 @@ void main() {
 
       // Verify: Success
       expect(result.success, isTrue);
-      expect(result.messageEventId, isNotNull);
+      expect(result.rumorEventId, isNotNull);
+      expect(result.giftWrapEventId, isNotNull);
       expect(result.recipientPubkey, equals(recipientPubkey));
       expect(result.error, isNull);
 

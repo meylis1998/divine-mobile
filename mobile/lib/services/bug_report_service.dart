@@ -401,14 +401,14 @@ class BugReportService {
         ],
       );
 
-      if (result.success && result.messageEventId != null) {
+      if (result.success && result.giftWrapEventId != null) {
         Log.info(
-          'Bug report sent successfully: ${result.messageEventId}',
+          'Bug report sent successfully: ${result.giftWrapEventId}',
           category: LogCategory.system,
         );
         return BugReportResult.success(
           reportId: data.reportId,
-          messageEventId: result.messageEventId!,
+          messageEventId: result.giftWrapEventId!,
         );
       } else {
         Log.error(

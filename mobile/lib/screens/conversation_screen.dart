@@ -80,13 +80,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         content: content,
       );
 
-      if (result.success && result.messageEventId != null) {
+      if (result.success && result.rumorEventId != null) {
         // Save outgoing message to repository
         await ref
             .read(dmRepositoryProvider)
             .saveOutgoingMessage(
-              rumorId: result.messageEventId!,
-              giftWrapId: result.messageEventId!,
+              rumorId: result.rumorEventId!,
+              giftWrapId: result.giftWrapEventId!,
               recipientPubkey: widget.peerPubkey,
               content: content,
               createdAt: DateTime.now(),

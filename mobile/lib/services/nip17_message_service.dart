@@ -108,7 +108,8 @@ class NIP17MessageService {
           category: LogCategory.system,
         );
         return NIP17SendResult.success(
-          messageEventId: giftWrapEvent.id,
+          rumorEventId: rumorEvent.id,
+          giftWrapEventId: giftWrapEvent.id,
           recipientPubkey: recipientPubkey,
         );
       } else {

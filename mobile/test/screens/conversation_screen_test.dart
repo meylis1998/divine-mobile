@@ -150,7 +150,8 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => NIP17SendResult.success(
-          messageEventId: 'test_event_id',
+          rumorEventId: 'test_rumor_id',
+          giftWrapEventId: 'test_giftwrap_id',
           recipientPubkey: testPeerPubkey,
         ),
       );
@@ -237,7 +238,8 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => NIP17SendResult.success(
-          messageEventId: 'test_event_id',
+          rumorEventId: 'test_rumor_id',
+          giftWrapEventId: 'test_giftwrap_id',
           recipientPubkey: testPeerPubkey,
         ),
       );
