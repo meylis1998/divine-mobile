@@ -21,16 +21,3 @@ QueryExecutor openConnection() {
 Future<String> getSharedDatabasePath() async {
   return 'local_relay_db'; // IndexedDB database name
 }
-
-/// Delete the database on web platform.
-///
-/// Web uses IndexedDB which persists across sessions. This function is a
-/// no-op on web since IndexedDB doesn't support simple file deletion.
-/// The drift web implementation handles schema changes differently.
-///
-/// Returns false on web (no file to delete).
-Future<bool> deleteDatabaseFile() async {
-  // Web uses IndexedDB - more complex deletion not currently supported
-  // For now, web doesn't support version-based DB reset
-  return false;
-}

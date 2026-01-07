@@ -13,13 +13,8 @@ part of 'database_provider.dart';
 const databaseProvider = DatabaseProvider._();
 
 final class DatabaseProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<AppDatabase>,
-          AppDatabase,
-          FutureOr<AppDatabase>
-        >
-    with $FutureModifier<AppDatabase>, $FutureProvider<AppDatabase> {
+    extends $FunctionalProvider<AppDatabase, AppDatabase, AppDatabase>
+    with $Provider<AppDatabase> {
   const DatabaseProvider._()
     : super(
         from: null,
@@ -36,17 +31,24 @@ final class DatabaseProvider
 
   @$internal
   @override
-  $FutureProviderElement<AppDatabase> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  $ProviderElement<AppDatabase> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  FutureOr<AppDatabase> create(Ref ref) {
+  AppDatabase create(Ref ref) {
     return database(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppDatabase value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppDatabase>(value),
+    );
   }
 }
 
-String _$databaseHash() => r'423947fc955d6b8d75a6615b1815f2dc34258976';
+String _$databaseHash() => r'd66464688f3f3beae31aa517238455b4413086f1';
 
 /// AppDbClient wrapping the database for NostrClient integration.
 /// Enables optimistic caching of Nostr events in the local database.
@@ -58,13 +60,8 @@ const appDbClientProvider = AppDbClientProvider._();
 /// Enables optimistic caching of Nostr events in the local database.
 
 final class AppDbClientProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<AppDbClient>,
-          AppDbClient,
-          FutureOr<AppDbClient>
-        >
-    with $FutureModifier<AppDbClient>, $FutureProvider<AppDbClient> {
+    extends $FunctionalProvider<AppDbClient, AppDbClient, AppDbClient>
+    with $Provider<AppDbClient> {
   /// AppDbClient wrapping the database for NostrClient integration.
   /// Enables optimistic caching of Nostr events in the local database.
   const AppDbClientProvider._()
@@ -83,14 +80,21 @@ final class AppDbClientProvider
 
   @$internal
   @override
-  $FutureProviderElement<AppDbClient> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
+  $ProviderElement<AppDbClient> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  FutureOr<AppDbClient> create(Ref ref) {
+  AppDbClient create(Ref ref) {
     return appDbClient(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppDbClient value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppDbClient>(value),
+    );
   }
 }
 
-String _$appDbClientHash() => r'e70cbbff72ff84631c6681c3fb3c29423192bc64';
+String _$appDbClientHash() => r'c4d2017985665ff5d6c72afa546321042a5f16ca';

@@ -26,20 +26,3 @@ Future<String> getSharedDatabasePath() async {
   final docDir = await getApplicationDocumentsDirectory();
   return p.join(docDir.path, 'openvine', 'database', 'local_relay.db');
 }
-
-/// Delete the database file if it exists.
-///
-/// Call this before creating a new database connection when the app version
-/// changes. The database is a cache and can be safely recreated.
-///
-/// Returns true if a file was deleted, false if no file existed.
-Future<bool> deleteDatabaseFile() async {
-  final dbPath = await getSharedDatabasePath();
-  final dbFile = File(dbPath);
-
-  if (await dbFile.exists()) {
-    await dbFile.delete();
-    return true;
-  }
-  return false;
-}
