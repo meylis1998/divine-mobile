@@ -405,11 +405,13 @@ AuthService authService(Ref ref) {
   final userDataCleanupService = ref.watch(userDataCleanupServiceProvider);
   final oauthClient = ref.watch(oauthClientProvider);
   final flutterSecureStorage = ref.watch(flutterSecureStorageProvider);
+  final oauthConfig = ref.watch(oauthConfigProvider);
   return AuthService(
     userDataCleanupService: userDataCleanupService,
     keyStorage: keyStorage,
     oauthClient: oauthClient,
     flutterSecureStorage: flutterSecureStorage,
+    oauthConfig: oauthConfig,
   );
 }
 

@@ -135,32 +135,26 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                 const SizedBox(height: 24),
 
                                 // Login option for existing users
-                                // Only shown when headless auth feature is enabled
-                                if (isHeadlessAuthEnabled)
-                                  TextButton(
-                                    onPressed: _canProceed
-                                        ? () => context.push(
-                                            '/welcome/login-options',
-                                          )
-                                        : null,
-                                    child: Text(
-                                      'Have an account? Log In',
-                                      style: TextStyle(
-                                        color: _canProceed
-                                            ? Colors.white
-                                            : Colors.white.withValues(
-                                                alpha: 0.5,
-                                              ),
-                                        fontSize: 16,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: _canProceed
-                                            ? Colors.white
-                                            : Colors.white.withValues(
-                                                alpha: 0.5,
-                                              ),
-                                      ),
+                                TextButton(
+                                  onPressed: _canProceed
+                                      ? () => context.push(
+                                          '/welcome/login-options',
+                                        )
+                                      : null,
+                                  child: Text(
+                                    'Have an account? Log In',
+                                    style: TextStyle(
+                                      color: _canProceed
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.5),
+                                      fontSize: 16,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: _canProceed
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.5),
                                     ),
                                   ),
+                                ),
                               ],
                             ),
                           ],

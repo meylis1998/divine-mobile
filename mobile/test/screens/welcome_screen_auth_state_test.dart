@@ -147,8 +147,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Expect: Error message shown
-        expect(find.text('Setup Error'), findsOneWidget);
-        expect(find.textContaining('Failed to'), findsOneWidget);
+        expect(
+          find.textContaining('Failed to create identity'),
+          findsOneWidget,
+        );
 
         // Expect: Create/Import buttons NEVER shown
         expect(find.text('Create New Identity'), findsNothing);

@@ -111,10 +111,14 @@ class AuthService {
     SecureKeyStorage? keyStorage,
     KeycastOAuth? oauthClient,
     FlutterSecureStorage? flutterSecureStorage,
+    OAuthConfig? oauthConfig,
   }) : _keyStorage = keyStorage ?? SecureKeyStorage(),
        _userDataCleanupService = userDataCleanupService,
        _oauthClient = oauthClient,
-       _flutterSecureStorage = flutterSecureStorage;
+       _flutterSecureStorage = flutterSecureStorage,
+       _oauthConfig =
+           oauthConfig ??
+           OAuthConfig(serverUrl: '', clientId: '', redirectUri: '');
   final SecureKeyStorage _keyStorage;
   final UserDataCleanupService _userDataCleanupService;
   final KeycastOAuth? _oauthClient;
@@ -125,6 +129,7 @@ class AuthService {
   UserProfile? _currentProfile;
   String? _lastError;
   KeycastRpc? _rpcSigner;
+  OAuthConfig _oauthConfig;
 
   // Streaming controllers for reactive auth state
   final StreamController<AuthState> _authStateController =
@@ -522,13 +527,7 @@ class AuthService {
     _lastError = null;
 
     try {
-      const config = OAuthConfig(
-        serverUrl: 'https://login.divine.video',
-        clientId: 'divine-mobile',
-        redirectUri: 'https://divine.video/app/callback',
-      );
-
-      _rpcSigner = KeycastRpc.fromSession(config, session);
+      _rpcSigner = KeycastRpc.fromSession(_oauthConfig, session);
 
       final publicKeyHex = await _rpcSigner?.getPublicKey();
       if (publicKeyHex == null) {
