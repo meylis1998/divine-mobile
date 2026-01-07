@@ -20,15 +20,14 @@ import 'package:openvine/utils/video_controller_cleanup.dart';
 /// Route-aware: switches feed provider based on route type
 final activeVideoIdProvider = Provider<String?>((ref) {
   // Check app foreground state - be defensive and require explicit foreground signal
-  final isFg = ref
-      .watch(appForegroundProvider)
-      .maybeWhen(
-        data: (v) => v,
-        orElse: () => false, // Default to background if provider not ready
-      );
+  final fgValue = ref.watch(appForegroundProvider);
+  final isFg = fgValue.maybeWhen(
+    data: (v) => v,
+    orElse: () => false, // Default to background if provider not ready
+  );
   if (!isFg) {
-    Log.debug(
-      '[ACTIVE] ❌ App not in foreground',
+    Log.info(
+      '[ACTIVE] ❌ App not in foreground (fgValue: $fgValue)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
     );
@@ -38,7 +37,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
   // Check if any overlay (drawer, settings, modal) is visible
   final hasOverlay = ref.watch(hasVisibleOverlayProvider);
   if (hasOverlay) {
-    Log.debug(
+    Log.info(
       '[ACTIVE] ❌ Overlay is visible (drawer/settings/modal)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
@@ -47,17 +46,18 @@ final activeVideoIdProvider = Provider<String?>((ref) {
   }
 
   // Get current page context from router
-  final ctx = ref.watch(pageContextProvider).asData?.value;
+  final ctxValue = ref.watch(pageContextProvider);
+  final ctx = ctxValue.asData?.value;
   if (ctx == null) {
-    Log.debug(
-      '[ACTIVE] ❌ No page context available',
+    Log.info(
+      '[ACTIVE] ❌ No page context available (ctxValue: $ctxValue)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
     );
     return null;
   }
 
-  Log.debug(
+  Log.info(
     '[ACTIVE] 📍 Route context: type=${ctx.type}, videoIndex=${ctx.videoIndex}',
     name: 'ActiveVideoProvider',
     category: LogCategory.system,
@@ -115,7 +115,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.curatedList:
     case RouteType.sound:
       // Non-video routes - return null
-      Log.debug(
+      Log.info(
         '[ACTIVE] ❌ Non-video route: ${ctx.type}',
         name: 'ActiveVideoProvider',
         category: LogCategory.system,
@@ -128,15 +128,15 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     orElse: () => const <VideoEvent>[],
   );
 
-  Log.debug(
-    '[ACTIVE] 📊 Feed state: videosAsync.hasValue=${videosAsync.hasValue}, videos.length=${videos.length}',
+  Log.info(
+    '[ACTIVE] 📊 Feed state: hasValue=${videosAsync.hasValue}, videos.length=${videos.length}',
     name: 'ActiveVideoProvider',
     category: LogCategory.system,
   );
 
   if (videos.isEmpty) {
-    Log.debug(
-      '[ACTIVE] ❌ No videos in feed',
+    Log.info(
+      '[ACTIVE] ❌ No videos in feed (videosAsync: $videosAsync)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
     );
@@ -145,7 +145,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
 
   // Grid mode (no videoIndex) - no active video
   if (ctx.videoIndex == null) {
-    Log.debug(
+    Log.info(
       '[ACTIVE] ❌ Grid mode (no videoIndex)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,

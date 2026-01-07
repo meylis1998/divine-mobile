@@ -1,11 +1,11 @@
 // ABOUTME: Environment configuration model for dev/staging/production switching
-// ABOUTME: Each environment maps to exactly one relay URL
+// ABOUTME: Each environment maps to exactly one relay URL and optional API base URL
 
 /// Available app environments
 enum AppEnvironment { production, staging, dev }
 
 /// Dev environment relay options
-enum DevRelay { umbra, shugur }
+enum DevRelay { umbra, shugur, funnelcakeProd }
 
 /// Configuration for the current app environment
 class EnvironmentConfig {
@@ -20,12 +20,13 @@ class EnvironmentConfig {
   );
 
   /// Get relay URL for current environment (always exactly one)
+  /// Staging uses Divine Funnelcake relay (cake service)
   String get relayUrl {
     switch (environment) {
       case AppEnvironment.production:
         return 'wss://relay.divine.video';
       case AppEnvironment.staging:
-        return 'wss://staging-relay.divine.video';
+        return 'wss://funnelcake.staging.dvines.org';
       case AppEnvironment.dev:
         switch (devRelay) {
           case DevRelay.umbra:
@@ -33,7 +34,26 @@ class EnvironmentConfig {
             return 'wss://relay.poc.dvines.org';
           case DevRelay.shugur:
             return 'wss://shugur.poc.dvines.org';
+          case DevRelay.funnelcakeProd:
+            return 'wss://relay.dvines.org';
         }
+    }
+  }
+
+  /// Get REST API base URL for video analytics (funnel service)
+  /// Production uses relay.dvines.org, staging uses funnelcake.staging
+  String? get apiBaseUrl {
+    switch (environment) {
+      case AppEnvironment.production:
+        return 'https://relay.dvines.org';
+      case AppEnvironment.staging:
+        return 'https://funnelcake.staging.dvines.org';
+      case AppEnvironment.dev:
+        // Only funnelcakeProd dev relay has REST API
+        if (devRelay == DevRelay.funnelcakeProd) {
+          return 'https://relay.dvines.org';
+        }
+        return null;
     }
   }
 
@@ -49,7 +69,7 @@ class EnvironmentConfig {
       case AppEnvironment.production:
         return 'Production';
       case AppEnvironment.staging:
-        return 'Staging';
+        return 'Staging (Funnelcake)';
       case AppEnvironment.dev:
         switch (devRelay) {
           case DevRelay.umbra:
@@ -57,6 +77,8 @@ class EnvironmentConfig {
             return 'Dev - Umbra';
           case DevRelay.shugur:
             return 'Dev - Shugur';
+          case DevRelay.funnelcakeProd:
+            return 'Dev - Funnelcake Prod';
         }
     }
   }
