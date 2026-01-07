@@ -73,7 +73,7 @@ void main() {
       tester,
     ) async {
       final nostrService = container.read(nostrServiceProvider);
-      final keyManager = container.read(keyManagerProvider);
+      final keyManager = container.read(nostrKeyManagerProvider);
 
       // Create NIP17MessageService
       final messageService = NIP17MessageService(
@@ -120,7 +120,7 @@ void main() {
       tester,
     ) async {
       final nostrService = container.read(nostrServiceProvider);
-      final keyManager = container.read(keyManagerProvider);
+      final keyManager = container.read(nostrKeyManagerProvider);
 
       // Create message service as sender
       final messageService = NIP17MessageService(
@@ -154,28 +154,30 @@ void main() {
       );
 
       // Subscribe to gift wraps addressed to recipient
+      // Filter.since expects Unix timestamp (int), not DateTime
+      final sinceTimestamp =
+          DateTime.now().subtract(const Duration(minutes: 5)).millisecondsSinceEpoch ~/
+          1000;
       final giftWrapFilter = Filter(
         kinds: const [EventKind.giftWrap],
         p: [recipientPublicKey],
-        since: DateTime.now().subtract(const Duration(minutes: 5)),
+        since: sinceTimestamp,
       );
 
       Event? receivedGiftWrap;
       final completer = Completer<Event>();
 
-      // Listen for gift wraps via the nostr service
-      final subscription = nostrService.subscribe(
-        [giftWrapFilter],
-        onEvent: (event) {
-          print('📨 Received gift wrap: ${event.id}');
-          if (event.id == sendResult.giftWrapEventId) {
-            receivedGiftWrap = event;
-            if (!completer.isCompleted) {
-              completer.complete(event);
-            }
+      // Listen for gift wraps via the nostr service stream
+      final stream = nostrService.subscribe([giftWrapFilter]);
+      final subscription = stream.listen((event) {
+        print('📨 Received gift wrap: ${event.id}');
+        if (event.id == sendResult.giftWrapEventId) {
+          receivedGiftWrap = event;
+          if (!completer.isCompleted) {
+            completer.complete(event);
           }
-        },
-      );
+        }
+      });
 
       // Wait for the gift wrap (with timeout)
       try {
@@ -191,11 +193,11 @@ void main() {
         // Some relays don't echo events back to sender
         // This is acceptable - the important test is the ID separation
         print('⚠️ Relay did not echo gift wrap - testing ID separation only');
-        subscription.cancel();
+        await subscription.cancel();
         return;
       }
 
-      subscription.cancel();
+      await subscription.cancel();
 
       // Verify we got the right event
       expect(receivedGiftWrap, isNotNull);
@@ -207,7 +209,6 @@ void main() {
       final rumorEvent = await GiftWrapUtil.getRumorEvent(
         recipientNostr,
         receivedGiftWrap!,
-        recipientPrivateKey,
       );
 
       expect(rumorEvent, isNotNull, reason: 'Should decrypt rumor');
@@ -228,7 +229,7 @@ void main() {
 
     testWidgets('rumorEventId is stable for deduplication', (tester) async {
       final nostrService = container.read(nostrServiceProvider);
-      final keyManager = container.read(keyManagerProvider);
+      final keyManager = container.read(nostrKeyManagerProvider);
 
       final messageService = NIP17MessageService(
         keyManager: keyManager,
