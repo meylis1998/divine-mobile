@@ -476,7 +476,7 @@ class KeycastOAuth {
 
       // Handle server-side errors
       final message = json['message'] ?? 'Failed to reset password';
-      return ResetPasswordResult.error( message );
+      return ResetPasswordResult.error(message);
     } catch (e) {
       return ResetPasswordResult.error('Network error: $e');
     }
