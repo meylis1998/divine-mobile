@@ -36,7 +36,10 @@ import 'package:openvine/screens/fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/clip_manager_screen.dart';
 import 'package:openvine/screens/clip_library_screen.dart';
+import 'package:openvine/screens/conversation_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/inbox_screen.dart';
+import 'package:openvine/screens/new_conversation_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/welcome_screen.dart';
@@ -111,7 +114,8 @@ int tabIndexFromLocation(String loc) {
     case 'video-feed':
     case 'profile-view':
     case 'sound':
-      return -1; // Non-tab routes - no bottom nav
+    case 'messages':
+      return -1; // Non-tab routes - shell visible but no tab highlighted
     case 'list':
       return 1; // List keeps explore tab active (like hashtag)
     default:
@@ -532,6 +536,32 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 videoIds: extra?.videoIds,
                 authorPubkey: extra?.authorPubkey,
               );
+            },
+          ),
+
+          // MESSAGES/DM routes (NIP-17 encrypted direct messages)
+          GoRoute(
+            path: '/messages',
+            name: 'messages',
+            builder: (_, __) => const InboxScreen(),
+          ),
+          GoRoute(
+            path: '/messages/new',
+            name: 'messages-new',
+            builder: (_, __) => const NewConversationScreen(),
+          ),
+          GoRoute(
+            path: '/messages/:pubkey',
+            name: 'messages-conversation',
+            builder: (ctx, st) {
+              final pubkey = st.pathParameters['pubkey'];
+              if (pubkey == null || pubkey.isEmpty) {
+                return Scaffold(
+                  appBar: AppBar(title: const Text('Error')),
+                  body: const Center(child: Text('Invalid conversation')),
+                );
+              }
+              return ConversationScreen(peerPubkey: pubkey);
             },
           ),
         ],

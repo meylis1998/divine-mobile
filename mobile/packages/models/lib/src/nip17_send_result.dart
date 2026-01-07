@@ -5,7 +5,8 @@
 class NIP17SendResult {
   const NIP17SendResult({
     required this.success,
-    this.messageEventId,
+    this.rumorEventId,
+    this.giftWrapEventId,
     this.recipientPubkey,
     this.error,
     this.timestamp,
@@ -13,11 +14,13 @@ class NIP17SendResult {
 
   /// Create success result
   factory NIP17SendResult.success({
-    required String messageEventId,
+    required String rumorEventId,
+    required String giftWrapEventId,
     required String recipientPubkey,
   }) => NIP17SendResult(
     success: true,
-    messageEventId: messageEventId,
+    rumorEventId: rumorEventId,
+    giftWrapEventId: giftWrapEventId,
     recipientPubkey: recipientPubkey,
     timestamp: DateTime.now(),
   );
@@ -27,7 +30,8 @@ class NIP17SendResult {
       NIP17SendResult(success: false, error: error);
 
   final bool success;
-  final String? messageEventId; // Gift wrap event ID (kind 1059)
+  final String? rumorEventId; // Kind 14 rumor event ID (for deduplication)
+  final String? giftWrapEventId; // Kind 1059 gift wrap event ID (published)
   final String? recipientPubkey;
   final String? error;
   final DateTime? timestamp;
@@ -36,7 +40,9 @@ class NIP17SendResult {
   String toString() {
     if (success) {
       return 'NIP17SendResult(success: true, '
-          'messageEventId: $messageEventId, recipient: $recipientPubkey)';
+          'rumorEventId: $rumorEventId, '
+          'giftWrapEventId: $giftWrapEventId, '
+          'recipient: $recipientPubkey)';
     } else {
       return 'NIP17SendResult(success: false, error: $error)';
     }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/dm_providers.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
@@ -148,6 +149,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                         );
                       },
                     ),
+                    _buildMessagesItem(context),
                     const Divider(color: Colors.grey, height: 1),
                   ],
 
@@ -315,6 +317,64 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
         : null,
     onTap: onTap,
   );
+
+  /// Build the Messages menu item with unread badge.
+  Widget _buildMessagesItem(BuildContext context) {
+    final unreadCountAsync = ref.watch(unreadDmCountProvider);
+
+    return ListTile(
+      key: const Key('drawer-messages-item'),
+      leading: const Icon(
+        Icons.chat_bubble_outline,
+        color: VineTheme.vineGreen,
+        size: 24,
+      ),
+      title: Row(
+        children: [
+          const Text(
+            'Messages',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Show badge when there are unread messages
+          unreadCountAsync.when(
+            data: (count) => count > 0
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: VineTheme.vineGreen,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
+      onTap: () {
+        // Close drawer first
+        Navigator.of(context).pop();
+        // Navigate to messages using go_router (inside shell for proper nav)
+        context.go('/messages');
+      },
+    );
+  }
 
   /// Show support options dialog
   /// NOTE: All services and values must be captured BEFORE the drawer

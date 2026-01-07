@@ -4,6 +4,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
+import 'dart:ui' as _i8;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:nostr_client/nostr_client.dart' as _i5;
@@ -63,6 +64,11 @@ class MockNotificationServiceEnhanced extends _i1.Mock
           as bool);
 
   @override
+  bool get hasListeners =>
+      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
+          as bool);
+
+  @override
   _i4.Future<void> initialize({
     required _i5.NostrClient? nostrService,
     required _i6.UserProfileService? profileService,
@@ -85,6 +91,27 @@ class MockNotificationServiceEnhanced extends _i1.Mock
   ) =>
       (super.noSuchMethod(
             Invocation.method(#addNotificationForTesting, [notification]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> createMessageNotification({
+    required String? senderPubkey,
+    required String? messagePreview,
+    required String? messageId,
+    String? senderName,
+    String? senderPictureUrl,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#createMessageNotification, [], {
+              #senderPubkey: senderPubkey,
+              #messagePreview: messagePreview,
+              #messageId: messageId,
+              #senderName: senderName,
+              #senderPictureUrl: senderPictureUrl,
+            }),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
@@ -157,6 +184,24 @@ class MockNotificationServiceEnhanced extends _i1.Mock
   @override
   void dispose() => super.noSuchMethod(
     Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void addListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#addListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void removeListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#removeListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+    Invocation.method(#notifyListeners, []),
     returnValueForMissingStub: null,
   );
 }

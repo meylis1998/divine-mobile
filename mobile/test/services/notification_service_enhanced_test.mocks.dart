@@ -625,6 +625,14 @@ class MockUserProfileService extends _i1.Mock
           as _i5.Future<List<_i8.UserProfile>>);
 
   @override
+  _i5.Stream<_i8.UserProfile> searchUsersStream(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsersStream, [query], {#limit: limit}),
+            returnValue: _i5.Stream<_i8.UserProfile>.empty(),
+          )
+          as _i5.Stream<_i8.UserProfile>);
+
+  @override
   void handleProfileEventForTesting(_i6.Event? event) => super.noSuchMethod(
     Invocation.method(#handleProfileEventForTesting, [event]),
     returnValueForMissingStub: null,
