@@ -70,7 +70,7 @@ class ProfileHeaderWidget extends ConsumerWidget {
           // Secure account banner for anonymous users (only on own profile)
           // Only shown when headless auth feature is enabled
           if (isOwnProfile && authService.isAnonymous)
-            _CreateRecoverableIdentityBanner(),
+            _IdentityNotRecoverableBanner(),
 
           // Profile picture and stats row
           Row(
@@ -181,8 +181,8 @@ class _SetupProfileBanner extends StatelessWidget {
   }
 }
 
-class _CreateRecoverableIdentityBanner extends StatelessWidget {
-  const _CreateRecoverableIdentityBanner();
+class _IdentityNotRecoverableBanner extends StatelessWidget {
+  const _IdentityNotRecoverableBanner();
 
   @override
   Widget build(BuildContext context) {
