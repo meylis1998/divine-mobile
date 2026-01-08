@@ -988,7 +988,7 @@ CommentsRepository commentsRepository(Ref ref) {
 /// - NostrClient from nostrServiceProvider (for relay communication)
 /// - PersonalReactionsDao from databaseProvider (for local storage)
 @Riverpod(keepAlive: true)
-LikesRepository? likesRepository(Ref ref) {
+LikesRepository likesRepository(Ref ref) {
   final authService = ref.watch(authServiceProvider);
 
   // Watch auth state stream to react to auth changes (login/logout)
@@ -996,9 +996,8 @@ LikesRepository? likesRepository(Ref ref) {
   ref.watch(authStateStreamProvider);
 
   // Repository requires authentication
-  if (!authService.isAuthenticated || authService.currentPublicKeyHex == null) {
-    return null;
-  }
+  final authenticated =
+      !authService.isAuthenticated || authService.currentPublicKeyHex == null;
 
   final nostrClient = ref.watch(nostrServiceProvider);
   final db = ref.watch(databaseProvider);
@@ -1010,6 +1009,7 @@ LikesRepository? likesRepository(Ref ref) {
   final repository = LikesRepository(
     nostrClient: nostrClient,
     localStorage: localStorage,
+    isAuthenticated: authenticated,
   );
 
   ref.onDispose(repository.dispose);
