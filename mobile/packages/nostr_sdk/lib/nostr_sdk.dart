@@ -34,6 +34,7 @@ export 'nip59/gift_wrap_util.dart';
 export 'nip65/nip65.dart';
 export 'nip65/relay_list_metadata.dart';
 export 'nip69/poll_info.dart';
+export 'nip71/nip71_video_kinds.dart';
 export 'nip75/zap_goals_info.dart';
 export 'nip94/file_metadata.dart';
 // Core classes - essential for any Nostr application

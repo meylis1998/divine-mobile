@@ -6,7 +6,6 @@
 import 'dart:developer' as developer;
 
 import 'package:meta/meta.dart';
-import 'package:models/src/nip71_video_kinds.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// Represents a video event (NIP-71 compliant kinds 22, 34236)

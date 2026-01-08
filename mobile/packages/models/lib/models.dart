@@ -13,7 +13,6 @@ export 'src/log_entry.dart';
 export 'src/logging_types.dart';
 export 'src/native_proof_data.dart';
 export 'src/nip17_send_result.dart';
-export 'src/nip71_video_kinds.dart';
 export 'src/nip94_metadata.dart';
 export 'src/notification_model.dart';
 export 'src/pending_upload.dart';

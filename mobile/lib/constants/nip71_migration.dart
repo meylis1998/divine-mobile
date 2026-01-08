@@ -1,22 +1,27 @@
-// ABOUTME: Constants for NIP-71 compliant video kinds - OpenVine uses kind 34236 (addressable short videos)
-// ABOUTME: Defines supported video event kinds per NIP-71 standard for short-form video content
+// ABOUTME: App-level extensions for NIP-71 video kinds
+// ABOUTME: Adds live video support and permissive kind checking for curated lists
+// ABOUTME: Re-exports base NIP-71 kinds from nostr_sdk package
 
-/// NIP-71 compliant video event kinds
+import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
+
+/// NIP-71 compliant video event kinds with app-specific extensions
 class NIP71VideoKinds {
-  // NIP-71 Standard kinds for video events
-  static const int shortVideo = 22; // Short videos (Vine-like content)
-  static const int normalVideo = 21; // Normal videos (longer content)
-  static const int addressableShortVideo = 34236; // Addressable short videos
-  static const int addressableNormalVideo = 34235; // Addressable normal videos
+  // Re-export base kinds from nostr_sdk
+  static const int shortVideo = sdk.NIP71VideoKinds.shortVideo;
+  static const int normalVideo = sdk.NIP71VideoKinds.normalVideo;
+  static const int addressableShortVideo =
+      sdk.NIP71VideoKinds.addressableShortVideo;
+  static const int addressableNormalVideo =
+      sdk.NIP71VideoKinds.addressableNormalVideo;
+  static const int repost = sdk.NIP71VideoKinds.repost;
+
+  // App-specific extension: live video support
   static const int liveVideo = 34237; // Live video streams
 
-  // Repost kinds
-  static const int repost = 16; // NIP-18 generic reposts
-
   /// Get all NIP-71 video kinds that OpenVine subscribes to for discovery
-  /// OpenVine only uses kind 34236 (addressable short videos)
+  /// Delegates to nostr_sdk implementation
   static List<int> getAllVideoKinds() {
-    return [addressableShortVideo]; // Only kind 34236
+    return sdk.NIP71VideoKinds.getAllVideoKinds();
   }
 
   /// Get ALL video kinds that should be accepted when reading from external sources
@@ -32,13 +37,15 @@ class NIP71VideoKinds {
   }
 
   /// Get primary kinds for new video events
+  /// Delegates to nostr_sdk implementation
   static List<int> getPrimaryVideoKinds() {
-    return [addressableShortVideo]; // Only kind 34236
+    return sdk.NIP71VideoKinds.getPrimaryVideoKinds();
   }
 
   /// Check if a kind is a video event (strict - for discovery feeds)
+  /// Delegates to nostr_sdk implementation
   static bool isVideoKind(int kind) {
-    return getAllVideoKinds().contains(kind);
+    return sdk.NIP71VideoKinds.isVideoKind(kind);
   }
 
   /// Check if a kind is any acceptable video event (permissive - for curated lists)
@@ -47,12 +54,14 @@ class NIP71VideoKinds {
   }
 
   /// Get the preferred addressable kind for new events
+  /// Delegates to nostr_sdk implementation
   static int getPreferredAddressableKind() {
-    return addressableShortVideo; // Kind 34236 for addressable short videos
+    return sdk.NIP71VideoKinds.getPreferredAddressableKind();
   }
 
   /// Get the preferred kind for new events (same as addressable)
+  /// Delegates to nostr_sdk implementation
   static int getPreferredKind() {
-    return addressableShortVideo; // Kind 34236 - OpenVine only uses addressable
+    return sdk.NIP71VideoKinds.getPreferredKind();
   }
 }
