@@ -22,6 +22,7 @@ import 'package:openvine/state/username_state.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({required this.isNewUser, super.key});
@@ -1769,9 +1770,33 @@ class UsernameReservedDialog extends StatelessWidget {
         'Username reserved',
         style: TextStyle(color: VineTheme.whiteText),
       ),
-      content: Text(
-        'The name $username is reserved. Please email names@divine.video explaining and proving why you should own it.',
-        style: TextStyle(color: VineTheme.secondaryText),
+      content: RichText(
+        text: TextSpan(
+          style: TextStyle(color: VineTheme.secondaryText),
+          children: [
+            TextSpan(text: 'The name $username is reserved. Please email '),
+            WidgetSpan(
+              child: GestureDetector(
+                onTap: () => launchUrl(
+                  Uri.parse(
+                    'mailto:names@divine.video?subject=Reserved username request: $username',
+                  ),
+                ),
+                child: Text(
+                  'names@divine.video',
+                  style: TextStyle(
+                    color: VineTheme.vineGreen,
+                    decoration: TextDecoration.underline,
+                    decorationColor: VineTheme.vineGreen,
+                  ),
+                ),
+              ),
+            ),
+            const TextSpan(
+              text: ' explaining and proving why you should own it.',
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

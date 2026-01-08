@@ -3,12 +3,25 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/username_notifier.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/state/username_state.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+class MockUrlLauncher extends Mock
+    with MockPlatformInterfaceMixin
+    implements UrlLauncherPlatform {}
+
+class FakeLaunchOptions extends Fake implements LaunchOptions {}
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(FakeLaunchOptions());
+  });
+
   group('UsernameStatusIndicator', () {
     Widget buildIndicator(UsernameState state) {
       return MaterialApp(
@@ -172,13 +185,20 @@ void main() {
       const username = 'reservedname';
       await tester.pumpWidget(buildDialog(username));
 
-      expect(find.textContaining(username), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains(username),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows email address in message content', (tester) async {
       await tester.pumpWidget(buildDialog('reservedname'));
 
-      expect(find.textContaining('names@divine.video'), findsOneWidget);
+      expect(find.text('names@divine.video'), findsOneWidget);
     });
 
     testWidgets('has Close button as TextButton', (tester) async {
@@ -214,6 +234,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Username reserved'), findsNothing);
+    });
+
+    testWidgets('tapping email link calls launchUrl with mailto URI', (
+      tester,
+    ) async {
+      final mockUrlLauncher = MockUrlLauncher();
+      UrlLauncherPlatform.instance = mockUrlLauncher;
+
+      when(
+        () => mockUrlLauncher.launchUrl(any(), any()),
+      ).thenAnswer((_) async => true);
+
+      const username = 'reservedname';
+      await tester.pumpWidget(buildDialog(username));
+
+      await tester.tap(find.text('names@divine.video'));
+      await tester.pumpAndSettle();
+
+      final expectedUri = Uri.parse(
+        'mailto:names@divine.video?subject=Reserved username request: $username',
+      );
+      verify(
+        () => mockUrlLauncher.launchUrl(expectedUri.toString(), any()),
+      ).called(1);
     });
   });
 }
