@@ -212,6 +212,13 @@ class VideoEventService extends ChangeNotifier {
   /// [updated] is the new video with updated metadata.
   final List<void Function(VideoEvent updated)> _onVideoUpdatedCallbacks = [];
 
+  /// Callback type for new video notifications.
+  /// Called when a NEW video is added (not an update to existing).
+  /// [newVideo] is the newly added video.
+  /// [authorPubkey] is the video author's pubkey (or reposter's pubkey for reposts).
+  final List<void Function(VideoEvent newVideo, String authorPubkey)>
+  _onNewVideoCallbacks = [];
+
   /// Register a callback to be notified when a video is updated.
   /// Returns a function that can be called to unregister the callback.
   VoidCallback addVideoUpdateListener(
@@ -219,6 +226,16 @@ class VideoEventService extends ChangeNotifier {
   ) {
     _onVideoUpdatedCallbacks.add(callback);
     return () => _onVideoUpdatedCallbacks.remove(callback);
+  }
+
+  /// Register a callback to be notified when a NEW video is added.
+  /// Returns a function that can be called to unregister the callback.
+  /// This is called for new videos added via any subscription type.
+  VoidCallback addNewVideoListener(
+    void Function(VideoEvent newVideo, String authorPubkey) callback,
+  ) {
+    _onNewVideoCallbacks.add(callback);
+    return () => _onNewVideoCallbacks.remove(callback);
   }
 
   /// Remove a previously registered video update callback.
@@ -234,6 +251,21 @@ class VideoEventService extends ChangeNotifier {
       } catch (e) {
         Log.error(
           'Error in video update callback: $e',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+      }
+    }
+  }
+
+  /// Notify all registered callbacks that a NEW video was added.
+  void _notifyNewVideo(VideoEvent newVideo, String authorPubkey) {
+    for (final callback in _onNewVideoCallbacks) {
+      try {
+        callback(newVideo, authorPubkey);
+      } catch (e) {
+        Log.error(
+          'Error in new video callback: $e',
           name: 'VideoEventService',
           category: LogCategory.video,
         );
@@ -1040,8 +1072,22 @@ class VideoEventService extends ChangeNotifier {
       // Store hashtag filter for event processing
       _activeHashtagFilters[subscriptionType] = hashtags;
 
-      // Gateway handling is now done internally by NostrClient
-      // NostrClient.queryEvents() follows Cache → Gateway → WebSocket flow
+      // Gateway handling: Parallel fetch for immediate content
+      if (_shouldUseGatewayForFeed(subscriptionType) && filters.isNotEmpty) {
+        // Only query gateway with primary video filter (index 0)
+        // Gateway doesn't support REQ with multiple filters yet
+        final gatewayFilter = filters[0];
+
+        Log.info(
+          '🚀 Querying gateway for $subscriptionType',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+
+        // Fire and forget - don't await
+        // The gateway results will be merged into the feed via _handleNewVideoEvent
+        unawaited(_queryGatewayAndMerge(subscriptionType, gatewayFilter));
+      }
 
       // Verify NostrService is ready
       if (!_nostrService.isInitialized) {
@@ -1203,6 +1249,8 @@ class VideoEventService extends ChangeNotifier {
         // Set up timeout to detect feed loading failures (30 seconds)
         Timer? feedLoadingTimeout;
         feedLoadingTimeout = Timer(const Duration(seconds: 30), () {
+          if (_isDisposed) return;
+
           if (!eoseReceived && eventCount == 0 && !timeoutReported) {
             timeoutReported = true;
             Log.error(
@@ -1210,6 +1258,22 @@ class VideoEventService extends ChangeNotifier {
               name: 'VideoEventService',
               category: LogCategory.video,
             );
+
+            // Clean up subscription state so retry is possible
+            Log.info(
+              '🧹 Cleaning up timed-out subscription state for $subscriptionType',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
+            _activeSubscriptions.remove(subscriptionType);
+            _subscriptionParams.remove(subscriptionType);
+
+            // Cancel the subscription to prevent leaks
+            final sub = _subscriptions.remove(subscriptionId);
+            sub?.cancel();
+
+            // Reset loading state
+            _paginationStates[subscriptionType]?.isLoading = false;
 
             // Report timeout to Crashlytics
             _reportFeedLoadingTimeout(
@@ -3012,6 +3076,58 @@ class VideoEventService extends ChangeNotifier {
     }
   }
 
+  /// Check if we should use the gateway for this feed type
+  bool _shouldUseGatewayForFeed(SubscriptionType type) {
+    return switch (type) {
+      SubscriptionType.popularNow => true,
+      SubscriptionType.discovery => true,
+      SubscriptionType.trending => true,
+      SubscriptionType.hashtag => true,
+      _ => false,
+    };
+  }
+
+  /// Query the gateway for events and merge them into the feed
+  Future<void> _queryGatewayAndMerge(
+    SubscriptionType type,
+    Filter filter,
+  ) async {
+    try {
+      Log.info(
+        '🚀 Querying gateway for $type',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+
+      final events = await _nostrService.queryEvents(
+        [filter],
+        useGateway: true,
+        useCache: false,
+      );
+
+      Log.info(
+        '✅ Gateway returned ${events.length} events for $type',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+
+      for (final event in events) {
+        _handleNewVideoEvent(event, type);
+      }
+
+      if (events.isNotEmpty) {
+        notifyListeners();
+      }
+    } catch (e) {
+      // Log but don't rethrow - gateway failure shouldn't break the feed
+      Log.warning(
+        ' Gateway query failed for $type: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   /// Reset pagination state for a subscription type to allow fresh loading
   void resetPaginationState(SubscriptionType subscriptionType) {
     final paginationState = _paginationStates[subscriptionType];
@@ -4173,24 +4289,35 @@ class VideoEventService extends ChangeNotifier {
       final authorHex = videoEvent.isRepost && videoEvent.reposterPubkey != null
           ? videoEvent.reposterPubkey!
           : videoEvent.pubkey;
-      final bucket = _authorBuckets.putIfAbsent(authorHex, () => []);
-
-      // For addressable events (NIP-71), deduplicate by (pubkey, vineId) pair
-      // since each update creates a new event ID but same vineId
-      final existingIndex = bucket.indexWhere(
-        (e) => e.vineId == videoEvent.vineId && e.pubkey == videoEvent.pubkey,
+      final wasAdded = _addToAuthorBucket(
+        videoEvent,
+        authorHex,
+        isHistorical: isHistorical,
       );
+      // Notify listeners when a new (non-historical) video is added
+      if (wasAdded && !isHistorical) {
+        _notifyNewVideo(videoEvent, authorHex);
+      }
+    }
 
-      if (existingIndex != -1) {
-        // Replace existing video with newer version (higher createdAt wins)
-        if (videoEvent.createdAt > bucket[existingIndex].createdAt) {
-          bucket[existingIndex] = videoEvent;
-        }
-      } else {
-        if (isHistorical) {
-          bucket.add(videoEvent);
-        } else {
-          bucket.insert(0, videoEvent);
+    final currentUserPubkey = _nostrService.publicKey;
+    if (currentUserPubkey.isNotEmpty &&
+        subscriptionType != SubscriptionType.profile) {
+      // Determine the author for bucket assignment (reposter for reposts)
+      final authorHex = videoEvent.isRepost && videoEvent.reposterPubkey != null
+          ? videoEvent.reposterPubkey!
+          : videoEvent.pubkey;
+
+      // Only add if this is the current user's video
+      if (authorHex == currentUserPubkey) {
+        final wasAdded = _addToAuthorBucket(
+          videoEvent,
+          authorHex,
+          isHistorical: isHistorical,
+        );
+        if (wasAdded && !isHistorical) {
+          // Notify listeners that a new video was added for this user
+          _notifyNewVideo(videoEvent, authorHex);
         }
       }
     }
@@ -4242,6 +4369,37 @@ class VideoEventService extends ChangeNotifier {
 
       _lastDuplicateVideoLogTime = now;
       _duplicateVideoEventCount = 0;
+    }
+  }
+
+  /// Add a video to the author's bucket for profile feeds.
+  /// Returns true if the video was added (new), false if it was a duplicate or update.
+  bool _addToAuthorBucket(
+    VideoEvent videoEvent,
+    String authorHex, {
+    required bool isHistorical,
+  }) {
+    final bucket = _authorBuckets.putIfAbsent(authorHex, () => []);
+
+    // For addressable events (NIP-71), deduplicate by (pubkey, vineId) pair
+    // since each update creates a new event ID but same vineId
+    final existingIndex = bucket.indexWhere(
+      (e) => e.vineId == videoEvent.vineId && e.pubkey == videoEvent.pubkey,
+    );
+
+    if (existingIndex != -1) {
+      // Replace existing video with newer version (higher createdAt wins)
+      if (videoEvent.createdAt > bucket[existingIndex].createdAt) {
+        bucket[existingIndex] = videoEvent;
+      }
+      return false; // Not a new video, just an update
+    } else {
+      if (isHistorical) {
+        bucket.add(videoEvent);
+      } else {
+        bucket.insert(0, videoEvent);
+      }
+      return true; // New video was added
     }
   }
 
@@ -4624,8 +4782,13 @@ class VideoEventService extends ChangeNotifier {
     }
   }
 
+  // Track whether the service has been disposed
+  bool _isDisposed = false;
+
   @override
   void dispose() {
+    _isDisposed = true;
+
     // Flush any remaining batched logs
     LogBatcher.flush();
 

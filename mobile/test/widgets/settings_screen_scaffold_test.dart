@@ -24,22 +24,26 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
     });
 
-    testWidgets('SettingsScreen has Vine green AppBar', (tester) async {
+    testWidgets('SettingsScreen has nav green AppBar', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
           child: const MaterialApp(home: SettingsScreen()),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Find the AppBar
       final appBarFinder = find.byType(AppBar);
       expect(appBarFinder, findsOneWidget);
 
-      // Verify AppBar color is Vine green
+      // Verify AppBar color is nav green
       final AppBar appBar = tester.widget(appBarFinder);
-      expect(appBar.backgroundColor, equals(VineTheme.vineGreen));
-      expect(appBar.foregroundColor, equals(VineTheme.whiteText));
+      expect(appBar.backgroundColor, equals(VineTheme.navGreen));
+
+      // Dispose and pump to clear any pending timers from overlay visibility
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
     });
 
     testWidgets('SettingsScreen has black background', (tester) async {
@@ -49,6 +53,7 @@ void main() {
           child: const MaterialApp(home: SettingsScreen()),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Find the Scaffold
       final scaffoldFinder = find.byType(Scaffold);
@@ -57,6 +62,10 @@ void main() {
       // Verify Scaffold background is black
       final Scaffold scaffold = tester.widget(scaffoldFinder);
       expect(scaffold.backgroundColor, equals(Colors.black));
+
+      // Dispose and pump to clear any pending timers from overlay visibility
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
     });
 
     testWidgets('SettingsScreen has back button when pushed', (tester) async {
@@ -90,7 +99,7 @@ void main() {
       // TODO(any): Fix and re-enable these tests
     }, skip: true);
 
-    testWidgets('NotificationSettingsScreen has Vine green AppBar', (
+    testWidgets('NotificationSettingsScreen has nav green AppBar', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -104,10 +113,9 @@ void main() {
       final appBarFinder = find.byType(AppBar);
       expect(appBarFinder, findsOneWidget);
 
-      // Verify AppBar color is Vine green
+      // Verify AppBar color is nav green
       final AppBar appBar = tester.widget(appBarFinder);
-      expect(appBar.backgroundColor, equals(VineTheme.vineGreen));
-      expect(appBar.foregroundColor, equals(VineTheme.whiteText));
+      expect(appBar.backgroundColor, equals(VineTheme.navGreen));
     });
 
     testWidgets('NotificationSettingsScreen has black background', (

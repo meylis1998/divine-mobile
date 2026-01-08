@@ -8,8 +8,8 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/screens/fullscreen_video_feed_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Grid widget displaying user's videos on their profile
@@ -78,35 +78,47 @@ class _ProfileVideosEmptyState extends StatelessWidget {
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.videocam_outlined, color: Colors.grey, size: 64),
-        const SizedBox(height: 16),
-        const Text(
-          'No Videos Yet',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) => CustomScrollView(
+    slivers: [
+      SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_outlined, color: Colors.grey, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'No Videos Yet',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isOwnProfile
+                    ? 'Share your first video to see it here'
+                    : "This user hasn't shared any videos yet",
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 32),
+              IconButton(
+                onPressed: onRefresh,
+                icon: const Icon(
+                  Icons.refresh,
+                  color: VineTheme.vineGreen,
+                  size: 28,
+                ),
+                tooltip: 'Refresh',
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          isOwnProfile
-              ? 'Share your first video to see it here'
-              : "This user hasn't shared any videos yet",
-          style: const TextStyle(color: Colors.grey, fontSize: 14),
-        ),
-        const SizedBox(height: 32),
-        IconButton(
-          onPressed: onRefresh,
-          icon: const Icon(Icons.refresh, color: VineTheme.vineGreen, size: 28),
-          tooltip: 'Refresh',
-        ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 
@@ -144,15 +156,18 @@ class _VideoGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: () {
-      final npub = NostrKeyUtils.encodePubKey(userIdHex);
       Log.info(
         '🎯 ProfileVideosGrid TAP: gridIndex=$index, '
-        'npub=$npub, videoId=${videoEvent.id}',
+        'videoId=${videoEvent.id}',
         category: LogCategory.video,
       );
-      context.goProfile(npub, index);
+      // Use ProfileFeedSource for reactive updates when loadMore fetches new videos
+      context.pushVideoFeed(
+        source: ProfileFeedSource(userIdHex),
+        initialIndex: index,
+      );
       Log.info(
-        '✅ ProfileVideosGrid: Called goProfile($npub, $index)',
+        '✅ ProfileVideosGrid: Called pushVideoFeed with ProfileFeedSource($userIdHex) at index $index',
         category: LogCategory.video,
       );
     },

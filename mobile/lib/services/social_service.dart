@@ -427,16 +427,15 @@ class SocialService {
       // Cache the event immediately after creation
       _personalEventCache?.cacheUserEvent(event);
 
-      // Broadcast the like event
-      final result = await _nostrService.broadcast(event);
+      // Publish the like event
+      final sentEvent = await _nostrService.publishEvent(event);
 
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast like event: $errorMessages');
+      if (sentEvent == null) {
+        throw Exception('Failed to publish like event to relays');
       }
 
       Log.debug(
-        'Like event broadcasted: ${event.id}',
+        'Like event published: ${event.id}',
         name: 'SocialService',
         category: LogCategory.system,
       );
@@ -470,16 +469,15 @@ class SocialService {
       // Cache the deletion event immediately after creation
       _personalEventCache?.cacheUserEvent(event);
 
-      // Broadcast the deletion event
-      final result = await _nostrService.broadcast(event);
+      // Publish the deletion event
+      final sentEvent = await _nostrService.publishEvent(event);
 
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast deletion event: $errorMessages');
+      if (sentEvent == null) {
+        throw Exception('Failed to publish deletion event to relays');
       }
 
       Log.debug(
-        'Deletion event broadcasted: ${event.id}',
+        'Deletion event published: ${event.id}',
         name: 'SocialService',
         category: LogCategory.system,
       );
@@ -871,174 +869,6 @@ class SocialService {
 
       // Persist following list to local storage for aggressive caching
       _saveFollowingListToCache();
-    }
-  }
-
-  /// Follow a user by adding them to the contact list
-  Future<void> followUser(String pubkeyToFollow) async {
-    if (!_authService.isAuthenticated) {
-      Log.error(
-        'Cannot follow - user not authenticated',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
-    if (_followingPubkeys.contains(pubkeyToFollow)) {
-      Log.debug(
-        'ℹ️ Already following user: $pubkeyToFollow',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
-    Log.debug(
-      '📱 Following user: $pubkeyToFollow',
-      name: 'SocialService',
-      category: LogCategory.system,
-    );
-
-    // Optimistically update local state for immediate UI feedback
-    final previousFollowList = List<String>.from(_followingPubkeys);
-    _followingPubkeys = List<String>.from(_followingPubkeys)
-      ..add(pubkeyToFollow);
-
-    try {
-      // Create new Kind 3 event with updated follow list
-      final tags = _followingPubkeys.map((pubkey) => ['p', pubkey]).toList();
-
-      // Preserve existing content from previous contact list event if available
-      final content = _currentUserContactListEvent?.content ?? '';
-
-      final event = await _authService.createAndSignEvent(
-        kind: 3,
-        content: content,
-        tags: tags,
-      );
-
-      if (event == null) {
-        // Revert on failure
-        _followingPubkeys = previousFollowList;
-        throw Exception('Failed to create contact list event');
-      }
-
-      // Cache the contact list event immediately after creation
-      _personalEventCache?.cacheUserEvent(event);
-
-      // Broadcast the updated contact list
-      final result = await _nostrService.broadcast(event);
-
-      if (!result.isSuccessful) {
-        // Revert on failure
-        _followingPubkeys = previousFollowList;
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast contact list: $errorMessages');
-      }
-
-      // Update the event reference
-      _currentUserContactListEvent = event;
-
-      // Save to SharedPreferences cache immediately
-      _saveFollowingListToCache();
-
-      Log.info(
-        'Successfully followed user: $pubkeyToFollow',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-    } catch (e) {
-      Log.error(
-        'Error following user: $e',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      rethrow;
-    }
-  }
-
-  /// Unfollow a user by removing them from the contact list
-  Future<void> unfollowUser(String pubkeyToUnfollow) async {
-    if (!_authService.isAuthenticated) {
-      Log.error(
-        'Cannot unfollow - user not authenticated',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
-    if (!_followingPubkeys.contains(pubkeyToUnfollow)) {
-      Log.debug(
-        'ℹ️ Not following user: $pubkeyToUnfollow',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
-    Log.debug(
-      '📱 Unfollowing user: $pubkeyToUnfollow',
-      name: 'SocialService',
-      category: LogCategory.system,
-    );
-
-    // Optimistically update local state for immediate UI feedback
-    final previousFollowList = List<String>.from(_followingPubkeys);
-    _followingPubkeys = List<String>.from(_followingPubkeys)
-      ..remove(pubkeyToUnfollow);
-
-    try {
-      // Create new Kind 3 event with updated follow list
-      final tags = _followingPubkeys.map((pubkey) => ['p', pubkey]).toList();
-
-      // Preserve existing content from previous contact list event if available
-      final content = _currentUserContactListEvent?.content ?? '';
-
-      final event = await _authService.createAndSignEvent(
-        kind: 3,
-        content: content,
-        tags: tags,
-      );
-
-      if (event == null) {
-        // Revert on failure
-        _followingPubkeys = previousFollowList;
-        throw Exception('Failed to create contact list event');
-      }
-
-      // Cache the contact list event immediately after creation
-      _personalEventCache?.cacheUserEvent(event);
-
-      // Broadcast the updated contact list
-      final result = await _nostrService.broadcast(event);
-
-      if (!result.isSuccessful) {
-        // Revert on failure
-        _followingPubkeys = previousFollowList;
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast contact list: $errorMessages');
-      }
-
-      // Update the event reference
-      _currentUserContactListEvent = event;
-
-      // Save to SharedPreferences cache immediately
-      _saveFollowingListToCache();
-
-      Log.info(
-        'Successfully unfollowed user: $pubkeyToUnfollow',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-    } catch (e) {
-      Log.error(
-        'Error unfollowing user: $e',
-        name: 'SocialService',
-        category: LogCategory.system,
-      );
-      rethrow;
     }
   }
 
@@ -1446,8 +1276,8 @@ class SocialService {
         // Cache the follow set event immediately after creation
         _personalEventCache?.cacheUserEvent(event);
 
-        final result = await _nostrService.broadcast(event);
-        if (result.successCount > 0) {
+        final sentEvent = await _nostrService.publishEvent(event);
+        if (sentEvent != null) {
           // Update local set with Nostr event ID
           final setIndex = _followSets.indexWhere((s) => s.id == set.id);
           if (setIndex != -1) {
@@ -1708,12 +1538,11 @@ class SocialService {
         throw Exception('Failed to create comment event');
       }
 
-      // Broadcast the comment
-      final result = await _nostrService.broadcast(event);
+      // Publish the comment
+      final sentEvent = await _nostrService.publishEvent(event);
 
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast comment: $errorMessages');
+      if (sentEvent == null) {
+        throw Exception('Failed to publish comment to relays');
       }
 
       Log.info(
@@ -1932,11 +1761,10 @@ class SocialService {
         // Cache immediately
         _personalEventCache?.cacheUserEvent(event);
 
-        // Broadcast
-        final result = await _nostrService.broadcast(event);
-        if (!result.isSuccessful) {
-          final errorMessages = result.errors.values.join(', ');
-          throw Exception('Failed to broadcast repost: $errorMessages');
+        // Publish
+        final sentEvent = await _nostrService.publishEvent(event);
+        if (sentEvent == null) {
+          throw Exception('Failed to publish repost to relays');
         }
 
         // Update local state
@@ -2009,15 +1837,14 @@ class SocialService {
       // Cache immediately
       _personalEventCache?.cacheUserEvent(event);
 
-      // Broadcast
-      final result = await _nostrService.broadcast(event);
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast unrepost: $errorMessages');
+      // Publish
+      final sentEvent = await _nostrService.publishEvent(event);
+      if (sentEvent == null) {
+        throw Exception('Failed to publish unrepost to relays');
       }
 
       Log.debug(
-        'Unrepost deletion event broadcasted: ${event.id}',
+        'Unrepost deletion event published: ${event.id}',
         name: 'SocialService',
         category: LogCategory.system,
       );
@@ -2089,12 +1916,11 @@ class SocialService {
       // Cache the repost event immediately after creation
       _personalEventCache?.cacheUserEvent(event);
 
-      // Broadcast the repost event
-      final result = await _nostrService.broadcast(event);
+      // Publish the repost event
+      final sentEvent = await _nostrService.publishEvent(event);
 
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast repost: $errorMessages');
+      if (sentEvent == null) {
+        throw Exception('Failed to publish repost to relays');
       }
 
       // Track the repost locally using the addressable ID format
@@ -2159,12 +1985,11 @@ class SocialService {
         throw Exception('Failed to create deletion request event');
       }
 
-      // Broadcast the deletion request
-      final result = await _nostrService.broadcast(event);
+      // Publish the deletion request
+      final sentEvent = await _nostrService.publishEvent(event);
 
-      if (!result.isSuccessful) {
-        final errorMessages = result.errors.values.join(', ');
-        throw Exception('Failed to broadcast deletion request: $errorMessages');
+      if (sentEvent == null) {
+        throw Exception('Failed to publish deletion request to relays');
       }
 
       Log.info(

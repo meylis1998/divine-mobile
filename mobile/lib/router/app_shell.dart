@@ -1,16 +1,19 @@
 // ABOUTME: AppShell widget providing bottom navigation and dynamic header
-// ABOUTME: Header title changes based on route with Pacifico font, includes camera button
+// ABOUTME: Header title uses Bricolage Grotesque font, includes camera button
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/vine_drawer.dart';
 import 'package:openvine/widgets/environment_indicator.dart';
 import 'package:openvine/providers/active_video_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -172,12 +175,12 @@ class AppShell extends ConsumerWidget {
 
     final titleWidget = Text(
       title,
-      // Use Pacifico font only for 'Divine' on home feed, system font elsewhere
+      // Use Pacifico font for 'Divine' branding, Bricolage Grotesque for other titles
       style: title == 'Divine'
           ? GoogleFonts.pacifico(
               textStyle: const TextStyle(fontSize: 24, letterSpacing: 0.2),
             )
-          : const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          : VineTheme.titleFont(),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -206,6 +209,37 @@ class AppShell extends ConsumerWidget {
     );
   }
 
+  /// Builds a tab button for the bottom navigation bar
+  Widget _buildTabButton(
+    BuildContext context,
+    WidgetRef ref,
+    String iconPath,
+    int tabIndex,
+    int currentIndex,
+    String semanticIdentifier,
+  ) {
+    final isSelected = currentIndex == tabIndex;
+    final iconColor = isSelected ? Colors.white : VineTheme.tabIconInactive;
+
+    return Semantics(
+      identifier: semanticIdentifier,
+      child: GestureDetector(
+        onTap: () => _handleTabTap(context, ref, tabIndex),
+        child: Container(
+          width: 48,
+          height: 48,
+          padding: const EdgeInsets.all(8),
+          child: SvgPicture.asset(
+            iconPath,
+            width: 32,
+            height: 32,
+            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = _titleFor(ref);
@@ -216,27 +250,37 @@ class AppShell extends ConsumerWidget {
     // Initialize relay statistics bridge to record connection events
     ref.watch(relayStatisticsBridgeProvider);
 
-    // Watch page context to determine if back button should show
+    // Initialize Zendesk identity sync to keep user identity in sync with auth
+    ref.watch(zendeskIdentitySyncProvider);
+
+    // Watch page context to determine if back button should show and if on search route
     final pageCtxAsync = ref.watch(pageContextProvider);
+    final isSearchRoute = pageCtxAsync.maybeWhen(
+      data: (ctx) => ctx.type == RouteType.search,
+      orElse: () => false,
+    );
     final showBackButton = pageCtxAsync.maybeWhen(
       data: (ctx) {
-        if (ctx.type == RouteType.hashtag || ctx.type == RouteType.search) {
-          return true;
-        }
+        final isSubRoute =
+            ctx.type == RouteType.hashtag || ctx.type == RouteType.search;
+        final isExploreVideo =
+            ctx.type == RouteType.explore && ctx.videoIndex != null;
+        // Notifications base state is index 0, not null
+        final isNotificationVideo =
+            ctx.type == RouteType.notifications &&
+            ctx.videoIndex != null &&
+            ctx.videoIndex != 0;
+        final isOtherUserProfile =
+            ctx.type == RouteType.profile &&
+            ctx.npub != ref.read(authServiceProvider).currentNpub;
+        final isProfileVideo =
+            ctx.type == RouteType.profile && ctx.videoIndex != null;
 
-        if (ctx.type == RouteType.explore ||
-            ctx.type == RouteType.notifications) {
-          return true;
-        }
-
-        if (ctx.type == RouteType.profile) {
-          final authService = ref.read(authServiceProvider);
-          final currentNpub = authService.currentNpub;
-
-          return ctx.npub != currentNpub;
-        }
-
-        return false;
+        return isSubRoute ||
+            isExploreVideo ||
+            isNotificationVideo ||
+            isOtherUserProfile ||
+            isProfileVideo;
       },
       orElse: () => false,
     );
@@ -245,12 +289,40 @@ class AppShell extends ConsumerWidget {
     final environment = ref.watch(currentEnvironmentProvider);
 
     return Scaffold(
+      onDrawerChanged: (isOpen) {
+        // Track drawer visibility for video pause/resume
+        ref.read(overlayVisibilityProvider.notifier).setDrawerOpen(isOpen);
+      },
       appBar: AppBar(
         elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 72,
+        leadingWidth: 80,
+        centerTitle: false,
+        titleSpacing: 0,
         backgroundColor: getEnvironmentAppBarColor(environment),
         leading: showBackButton
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Container(
+                  width: 48,
+                  height: 48,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: VineTheme.iconButtonBackground,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/icon/CaretLeft.svg',
+                    width: 32,
+                    height: 32,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
                 onPressed: () {
                   Log.info(
                     '👆 User tapped back button',
@@ -258,11 +330,23 @@ class AppShell extends ConsumerWidget {
                     category: LogCategory.ui,
                   );
 
+                  // First, try to pop if there's something on the navigation stack
+                  // This handles pushed routes (e.g., list → profile → back to list)
+                  if (context.canPop()) {
+                    Log.info(
+                      '👈 Popping navigation stack',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.pop();
+                    return;
+                  }
+
                   // Get current route context
                   final ctx = ref.read(pageContextProvider).asData?.value;
                   if (ctx == null) return;
 
-                  // First, check if we're in a sub-route (hashtag, search, etc.)
+                  // Check if we're in a sub-route (hashtag, search, etc.)
                   // If so, navigate back to parent route
                   switch (ctx.type) {
                     case RouteType.hashtag:
@@ -277,33 +361,37 @@ class AppShell extends ConsumerWidget {
 
                   // For routes with videoIndex (feed mode), go to grid mode first
                   // This handles page-internal navigation before tab switching
-                  // For explore: go to grid mode (null index)
-                  // For notifications: go to index 0 (notifications always has an index)
-                  // For other routes: go to grid mode (null index)
-                  if (ctx.videoIndex != null && ctx.videoIndex != 0) {
-                    RouteContext gridCtx;
-                    if (ctx.type == RouteType.notifications) {
-                      // Notifications always has an index, go to index 0
-                      gridCtx = RouteContext(
-                        type: ctx.type,
-                        hashtag: ctx.hashtag,
-                        searchTerm: ctx.searchTerm,
-                        npub: ctx.npub,
-                        videoIndex: 0,
-                      );
-                    } else {
-                      // For explore and other routes, go to grid mode (null index)
-                      gridCtx = RouteContext(
+                  // For explore/profile: any videoIndex (including 0) should go to grid (null)
+                  // For notifications: videoIndex > 0 should go to index 0
+                  if (ctx.videoIndex != null) {
+                    // For Explore and Profile, grid mode is null
+                    if (ctx.type == RouteType.explore ||
+                        ctx.type == RouteType.profile) {
+                      final gridCtx = RouteContext(
                         type: ctx.type,
                         hashtag: ctx.hashtag,
                         searchTerm: ctx.searchTerm,
                         npub: ctx.npub,
                         videoIndex: null,
                       );
+                      final newRoute = buildRoute(gridCtx);
+                      context.go(newRoute);
+                      return;
                     }
-                    final newRoute = buildRoute(gridCtx);
-                    context.go(newRoute);
-                    return;
+                    // For Notifications, index 0 is the base state
+                    if (ctx.type == RouteType.notifications &&
+                        ctx.videoIndex != 0) {
+                      final gridCtx = RouteContext(
+                        type: ctx.type,
+                        hashtag: ctx.hashtag,
+                        searchTerm: ctx.searchTerm,
+                        npub: ctx.npub,
+                        videoIndex: 0,
+                      );
+                      final newRoute = buildRoute(gridCtx);
+                      context.go(newRoute);
+                      return;
+                    }
                   }
 
                   // Check tab history for navigation
@@ -356,20 +444,34 @@ class AppShell extends ConsumerWidget {
                 builder: (context) => IconButton(
                   key: const Key('menu-icon-button'),
                   tooltip: 'Menu',
-                  icon: const Icon(Icons.menu),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/menu.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
                   onPressed: () {
                     Log.info(
                       '👆 User tapped menu button',
                       name: 'Navigation',
                       category: LogCategory.ui,
                     );
-
-                    // Pause all videos when drawer opens
-                    final visibilityManager = ref.read(
-                      videoVisibilityManagerProvider,
-                    );
-                    visibilityManager.pauseAllVideos();
-
+                    // Drawer open state is tracked via onDrawerChanged callback
+                    // which triggers overlay visibility provider to pause videos
                     Scaffold.of(context).openDrawer();
                   },
                 ),
@@ -381,50 +483,122 @@ class AppShell extends ConsumerWidget {
             const EnvironmentBadge(),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Log.info(
-                '👆 User tapped search button',
-                name: 'Navigation',
-                category: LogCategory.ui,
-              );
-              context.goSearch();
-            },
-          ),
-          IconButton(
-            tooltip: 'Open camera',
-            icon: const Icon(Icons.photo_camera_outlined),
-            onPressed: () {
-              Log.info(
-                '👆 User tapped camera button',
-                name: 'Navigation',
-                category: LogCategory.ui,
-              );
-              context.pushCamera();
-            },
-          ),
-        ],
+        actions: isSearchRoute
+            ? null
+            : [
+                IconButton(
+                  tooltip: 'Search',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/search.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
+                    Log.info(
+                      '👆 User tapped search button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.goSearch();
+                  },
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Open camera',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: VineTheme.iconButtonBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/camera.svg',
+                      width: 32,
+                      height: 32,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  onPressed: () {
+                    Log.info(
+                      '👆 User tapped camera button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.pushCamera();
+                  },
+                ),
+                const SizedBox(width: 16),
+              ],
       ),
       drawer: const VineDrawer(),
       body: child,
       // Bottom nav visible for all shell routes (search, tabs, etc.)
       // For search (currentIndex=-1), no tab is highlighted
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: currentIndex.clamp(0, 3),
-        onTap: (index) => _handleTabTap(context, ref, index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notifications',
+      bottomNavigationBar: Container(
+        color: VineTheme.navGreen,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/house.svg',
+                0,
+                currentIndex,
+                'home_tab',
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/compass.svg',
+                1,
+                currentIndex,
+                'explore_tab',
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/bell.svg',
+                2,
+                currentIndex,
+                'notifications_tab',
+              ),
+              _buildTabButton(
+                context,
+                ref,
+                'assets/icon/userCircle.svg',
+                3,
+                currentIndex,
+                'profile_tab',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+        ),
       ),
     );
   }

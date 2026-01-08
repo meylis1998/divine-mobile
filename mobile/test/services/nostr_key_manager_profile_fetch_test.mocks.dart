@@ -35,12 +35,6 @@ class _FakeCountResult_0 extends _i1.SmartFake implements _i2.CountResult {
     : super(parent, parentInvocation);
 }
 
-class _FakeNostrBroadcastResult_1 extends _i1.SmartFake
-    implements _i2.NostrBroadcastResult {
-  _FakeNostrBroadcastResult_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
 /// A class which mocks [NostrClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -475,30 +469,6 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
           as _i5.Stream<_i6.Event>);
 
   @override
-  _i5.Future<_i2.NostrBroadcastResult> broadcast(
-    _i6.Event? event, {
-    List<String>? targetRelays,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #broadcast,
-              [event],
-              {#targetRelays: targetRelays},
-            ),
-            returnValue: _i5.Future<_i2.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(
-                  #broadcast,
-                  [event],
-                  {#targetRelays: targetRelays},
-                ),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.NostrBroadcastResult>);
-
-  @override
   _i5.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),
@@ -634,21 +604,6 @@ class MockUserProfileService extends _i1.Mock
           as String);
 
   @override
-  String? getAvatarUrl(String? pubkey) =>
-      (super.noSuchMethod(Invocation.method(#getAvatarUrl, [pubkey]))
-          as String?);
-
-  @override
-  String? getUserBio(String? pubkey) =>
-      (super.noSuchMethod(Invocation.method(#getUserBio, [pubkey])) as String?);
-
-  @override
-  void clearCache() => super.noSuchMethod(
-    Invocation.method(#clearCache, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
   void removeProfile(String? pubkey) => super.noSuchMethod(
     Invocation.method(#removeProfile, [pubkey]),
     returnValueForMissingStub: null,
@@ -663,14 +618,6 @@ class MockUserProfileService extends _i1.Mock
             ),
           )
           as _i5.Future<List<_i8.UserProfile>>);
-
-  @override
-  Map<String, dynamic> getCacheStats() =>
-      (super.noSuchMethod(
-            Invocation.method(#getCacheStats, []),
-            returnValue: <String, dynamic>{},
-          )
-          as Map<String, dynamic>);
 
   @override
   void handleProfileEventForTesting(_i6.Event? event) => super.noSuchMethod(

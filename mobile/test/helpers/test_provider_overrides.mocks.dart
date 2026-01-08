@@ -46,12 +46,6 @@ class _FakeCountResult_1 extends _i1.SmartFake implements _i3.CountResult {
     : super(parent, parentInvocation);
 }
 
-class _FakeNostrBroadcastResult_2 extends _i1.SmartFake
-    implements _i3.NostrBroadcastResult {
-  _FakeNostrBroadcastResult_2(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -289,24 +283,6 @@ class MockSocialService extends _i1.Mock implements _i6.SocialService {
   _i5.Future<void> fetchCurrentUserFollowList() =>
       (super.noSuchMethod(
             Invocation.method(#fetchCurrentUserFollowList, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> followUser(String? pubkeyToFollow) =>
-      (super.noSuchMethod(
-            Invocation.method(#followUser, [pubkeyToFollow]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> unfollowUser(String? pubkeyToUnfollow) =>
-      (super.noSuchMethod(
-            Invocation.method(#unfollowUser, [pubkeyToUnfollow]),
             returnValue: _i5.Future<void>.value(),
             returnValueForMissingStub: _i5.Future<void>.value(),
           )
@@ -1106,30 +1082,6 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
           as _i5.Stream<_i7.Event>);
 
   @override
-  _i5.Future<_i3.NostrBroadcastResult> broadcast(
-    _i7.Event? event, {
-    List<String>? targetRelays,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #broadcast,
-              [event],
-              {#targetRelays: targetRelays},
-            ),
-            returnValue: _i5.Future<_i3.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_2(
-                this,
-                Invocation.method(
-                  #broadcast,
-                  [event],
-                  {#targetRelays: targetRelays},
-                ),
-              ),
-            ),
-          )
-          as _i5.Future<_i3.NostrBroadcastResult>);
-
-  @override
   _i5.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),
@@ -1265,21 +1217,6 @@ class MockUserProfileService extends _i1.Mock
           as String);
 
   @override
-  String? getAvatarUrl(String? pubkey) =>
-      (super.noSuchMethod(Invocation.method(#getAvatarUrl, [pubkey]))
-          as String?);
-
-  @override
-  String? getUserBio(String? pubkey) =>
-      (super.noSuchMethod(Invocation.method(#getUserBio, [pubkey])) as String?);
-
-  @override
-  void clearCache() => super.noSuchMethod(
-    Invocation.method(#clearCache, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
   void removeProfile(String? pubkey) => super.noSuchMethod(
     Invocation.method(#removeProfile, [pubkey]),
     returnValueForMissingStub: null,
@@ -1294,14 +1231,6 @@ class MockUserProfileService extends _i1.Mock
             ),
           )
           as _i5.Future<List<_i13.UserProfile>>);
-
-  @override
-  Map<String, dynamic> getCacheStats() =>
-      (super.noSuchMethod(
-            Invocation.method(#getCacheStats, []),
-            returnValue: <String, dynamic>{},
-          )
-          as Map<String, dynamic>);
 
   @override
   void handleProfileEventForTesting(_i7.Event? event) => super.noSuchMethod(

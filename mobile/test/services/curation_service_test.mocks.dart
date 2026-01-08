@@ -40,14 +40,8 @@ class _FakeCountResult_0 extends _i1.SmartFake implements _i2.CountResult {
     : super(parent, parentInvocation);
 }
 
-class _FakeNostrBroadcastResult_1 extends _i1.SmartFake
-    implements _i2.NostrBroadcastResult {
-  _FakeNostrBroadcastResult_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeAuthResult_2 extends _i1.SmartFake implements _i3.AuthResult {
-  _FakeAuthResult_2(Object parent, Invocation parentInvocation)
+class _FakeAuthResult_1 extends _i1.SmartFake implements _i3.AuthResult {
+  _FakeAuthResult_1(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -485,30 +479,6 @@ class MockNostrClient extends _i1.Mock implements _i4.NostrClient {
           as _i6.Stream<_i7.Event>);
 
   @override
-  _i6.Future<_i2.NostrBroadcastResult> broadcast(
-    _i7.Event? event, {
-    List<String>? targetRelays,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #broadcast,
-              [event],
-              {#targetRelays: targetRelays},
-            ),
-            returnValue: _i6.Future<_i2.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(
-                  #broadcast,
-                  [event],
-                  {#targetRelays: targetRelays},
-                ),
-              ),
-            ),
-          )
-          as _i6.Future<_i2.NostrBroadcastResult>);
-
-  @override
   _i6.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),
@@ -633,6 +603,16 @@ class MockVideoEventService extends _i1.Mock implements _i8.VideoEventService {
   ) =>
       (super.noSuchMethod(
             Invocation.method(#addVideoUpdateListener, [callback]),
+            returnValue: () {},
+          )
+          as _i10.VoidCallback);
+
+  @override
+  _i10.VoidCallback addNewVideoListener(
+    void Function(_i9.VideoEvent, String)? callback,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addNewVideoListener, [callback]),
             returnValue: () {},
           )
           as _i10.VoidCallback);
@@ -1385,24 +1365,6 @@ class MockSocialService extends _i1.Mock implements _i14.SocialService {
           as _i6.Future<void>);
 
   @override
-  _i6.Future<void> followUser(String? pubkeyToFollow) =>
-      (super.noSuchMethod(
-            Invocation.method(#followUser, [pubkeyToFollow]),
-            returnValue: _i6.Future<void>.value(),
-            returnValueForMissingStub: _i6.Future<void>.value(),
-          )
-          as _i6.Future<void>);
-
-  @override
-  _i6.Future<void> unfollowUser(String? pubkeyToUnfollow) =>
-      (super.noSuchMethod(
-            Invocation.method(#unfollowUser, [pubkeyToUnfollow]),
-            returnValue: _i6.Future<void>.value(),
-            returnValueForMissingStub: _i6.Future<void>.value(),
-          )
-          as _i6.Future<void>);
-
-  @override
   _i6.Future<Map<String, int>> getFollowerStats(String? pubkey) =>
       (super.noSuchMethod(
             Invocation.method(#getFollowerStats, [pubkey]),
@@ -1630,7 +1592,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
               #biometricPrompt: biometricPrompt,
             }),
             returnValue: _i6.Future<_i3.AuthResult>.value(
-              _FakeAuthResult_2(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(#createNewIdentity, [], {
                   #biometricPrompt: biometricPrompt,
@@ -1652,7 +1614,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
               {#biometricPrompt: biometricPrompt},
             ),
             returnValue: _i6.Future<_i3.AuthResult>.value(
-              _FakeAuthResult_2(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(
                   #importFromNsec,
@@ -1676,7 +1638,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
               {#biometricPrompt: biometricPrompt},
             ),
             returnValue: _i6.Future<_i3.AuthResult>.value(
-              _FakeAuthResult_2(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(
                   #importFromHex,

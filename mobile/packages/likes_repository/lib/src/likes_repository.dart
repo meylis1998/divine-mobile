@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:likes_repository/src/exceptions.dart';
 import 'package:likes_repository/src/likes_local_storage.dart';
 import 'package:likes_repository/src/models/like_record.dart';
+import 'package:likes_repository/src/models/likes_sync_result.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
@@ -40,20 +41,36 @@ const _reactionKind = 7;
 /// - Uses `LikesLocalStorage` to persist like records locally
 /// - Maintains an in-memory cache for fast lookups
 /// - Provides reactive streams for UI updates
+/// - Handles authentication state changes automatically
 class LikesRepository {
   /// Creates a new likes repository.
   ///
   /// Parameters:
   /// - [nostrClient]: Client for Nostr relay communication
   /// - [localStorage]: Optional local storage for persistence
+  /// - [authStateStream]: Optional stream of authentication state
+  /// (true=authenticated)
+  /// - [isAuthenticated]: Initial authentication state
   LikesRepository({
     required NostrClient nostrClient,
     LikesLocalStorage? localStorage,
+    Stream<bool>? authStateStream,
+    bool isAuthenticated = false,
   }) : _nostrClient = nostrClient,
-       _localStorage = localStorage;
+       _localStorage = localStorage,
+       _isAuthenticated = isAuthenticated {
+    // Listen to auth state changes if stream provided
+    if (authStateStream != null) {
+      _authSubscription = authStateStream.listen(_handleAuthChange);
+    }
+  }
 
   final NostrClient _nostrClient;
   final LikesLocalStorage? _localStorage;
+  StreamSubscription<bool>? _authSubscription;
+
+  /// Whether the user is currently authenticated.
+  bool _isAuthenticated;
 
   /// In-memory cache of like records keyed by target event ID.
   final Map<String, LikeRecord> _likeRecords = {};
@@ -87,6 +104,20 @@ class LikesRepository {
   Future<Set<String>> getLikedEventIds() async {
     await _ensureInitialized();
     return _likeRecords.keys.toSet();
+  }
+
+  /// Get liked event IDs ordered by recency (most recently liked first).
+  ///
+  /// Returns a list of event IDs sorted by the `createdAt` timestamp
+  /// of the like reaction, with the most recent likes first.
+  Future<List<String>> getOrderedLikedEventIds() async {
+    await _ensureInitialized();
+
+    // Sort records by createdAt descending (most recent first)
+    final sortedRecords = _likeRecords.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return sortedRecords.map((r) => r.targetEventId).toList();
   }
 
   /// Check if a specific event is liked.
@@ -152,8 +183,13 @@ class LikesRepository {
   Future<void> unlikeEvent(String eventId) async {
     await _ensureInitialized();
 
-    // Get the reaction event ID from cache
-    final record = _likeRecords[eventId];
+    // Try in-memory cache first, then fall back to database
+    // This handles the case where the cache hasn't been populated yet
+    var record = _likeRecords[eventId];
+    if (record == null && _localStorage != null) {
+      record = await _localStorage.getLikeRecord(eventId);
+    }
+
     if (record == null) {
       throw NotLikedException(eventId);
     }
@@ -186,7 +222,13 @@ class LikesRepository {
   }) async {
     await _ensureInitialized();
 
-    if (_likeRecords.containsKey(eventId)) {
+    // Query the database directly as source of truth to avoid cache/db
+    // inconsistency after app restart
+    final isCurrentlyLiked =
+        await _localStorage?.isLiked(eventId) ??
+        _likeRecords.containsKey(eventId);
+
+    if (isCurrentlyLiked) {
       await unlikeEvent(eventId);
       return false;
     } else {
@@ -225,8 +267,10 @@ class LikesRepository {
   /// This should be called on startup to ensure local state matches relay
   /// state.
   ///
+  /// Returns a [LikesSyncResult] containing all synced data needed by the UI.
+  ///
   /// Throws `SyncFailedException` if syncing fails.
-  Future<void> syncUserReactions() async {
+  Future<LikesSyncResult> syncUserReactions() async {
     // First, load from local storage (fast)
     if (_localStorage != null) {
       final records = await _localStorage.getAllLikeRecords();
@@ -275,14 +319,34 @@ class LikesRepository {
 
       _emitLikedIds();
       _isInitialized = true;
+
+      return _buildSyncResult();
     } catch (e) {
       // If relay sync fails but we have local data, don't throw
       if (_likeRecords.isNotEmpty) {
         _isInitialized = true;
-        return;
+        return _buildSyncResult();
       }
       throw SyncFailedException('Failed to sync user reactions: $e');
     }
+  }
+
+  /// Builds a [LikesSyncResult] from the current in-memory cache.
+  LikesSyncResult _buildSyncResult() {
+    // Sort records by createdAt descending (most recent first)
+    final sortedRecords = _likeRecords.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    final orderedEventIds = sortedRecords.map((r) => r.targetEventId).toList();
+    final eventIdToReactionId = <String, String>{};
+    for (final record in sortedRecords) {
+      eventIdToReactionId[record.targetEventId] = record.reactionEventId;
+    }
+
+    return LikesSyncResult(
+      orderedEventIds: orderedEventIds,
+      eventIdToReactionId: eventIdToReactionId,
+    );
   }
 
   /// Clear all local like data.
@@ -300,8 +364,33 @@ class LikesRepository {
   ///
   /// Should be called when the repository is no longer needed.
   void dispose() {
+    unawaited(_authSubscription?.cancel());
     unawaited(_likedIdsController.close());
   }
+
+  /// Handle authentication state changes.
+  ///
+  /// When user logs out, clears the cache.
+  /// When user logs in, triggers a sync.
+  void _handleAuthChange(bool isAuthenticated) {
+    if (isAuthenticated == _isAuthenticated) return;
+
+    _isAuthenticated = isAuthenticated;
+
+    if (!isAuthenticated) {
+      // User logged out - clear cache
+      unawaited(clearCache());
+    } else {
+      // User logged in - sync will be triggered by BLoC
+      // Just mark as not initialized so next operation triggers init
+      _isInitialized = false;
+    }
+  }
+
+  /// Whether the repository is ready for operations.
+  ///
+  /// Returns false if not authenticated.
+  bool get isAuthenticated => _isAuthenticated;
 
   /// Ensures the repository is initialized with data from storage.
   Future<void> _ensureInitialized() async {

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_lifecycle_provider.dart';
 import 'package:openvine/providers/hashtag_feed_providers.dart';
+import 'package:openvine/providers/liked_videos_state_bridge.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/profile_feed_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
@@ -14,7 +16,7 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 
 /// Active video ID derived from router state and app lifecycle
-/// Returns null when app is backgrounded or no valid video at current index
+/// Returns null when app is backgrounded, overlay is visible, or no valid video at current index
 /// Route-aware: switches feed provider based on route type
 final activeVideoIdProvider = Provider<String?>((ref) {
   // Check app foreground state - be defensive and require explicit foreground signal
@@ -27,6 +29,17 @@ final activeVideoIdProvider = Provider<String?>((ref) {
   if (!isFg) {
     Log.debug(
       '[ACTIVE] ❌ App not in foreground',
+      name: 'ActiveVideoProvider',
+      category: LogCategory.system,
+    );
+    return null;
+  }
+
+  // Check if any overlay (drawer, settings, modal) is visible
+  final hasOverlay = ref.watch(hasVisibleOverlayProvider);
+  if (hasOverlay) {
+    Log.debug(
+      '[ACTIVE] ❌ Overlay is visible (drawer/settings/modal)',
       name: 'ActiveVideoProvider',
       category: LogCategory.system,
     );
@@ -68,6 +81,18 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.search:
       videosAsync = ref.watch(videosForSearchRouteProvider);
       break;
+    case RouteType.likedVideos:
+      videosAsync = ref.watch(likedVideosFeedProvider);
+      break;
+    case RouteType.videoFeed:
+      // videoFeed route manages its own playback via passed videos
+      // Return null to let FullscreenVideoFeedScreen handle it internally
+      Log.debug(
+        '[ACTIVE] ❌ videoFeed route (self-managed)',
+        name: 'ActiveVideoProvider',
+        category: LogCategory.system,
+      );
+      return null;
     case RouteType.notifications:
     case RouteType.camera:
     case RouteType.clipManager:
@@ -84,6 +109,11 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.importKey:
     case RouteType.welcome:
     case RouteType.developerOptions:
+    case RouteType.followers:
+    case RouteType.following:
+    case RouteType.profileView:
+    case RouteType.curatedList:
+    case RouteType.sound:
       // Non-video routes - return null
       Log.debug(
         '[ACTIVE] ❌ Non-video route: ${ctx.type}',
@@ -143,22 +173,40 @@ final isVideoActiveProvider = Provider.family<bool, String>((ref, videoId) {
   return activeVideoId == videoId;
 });
 
-/// Auto-cleanup provider that disposes all video controllers when active video changes
-/// This ensures only one video can be playing at a time
-/// Must be watched at app level to activate
+/// Auto-cleanup provider that disposes all video controllers when navigating
+/// between different screens (e.g., home → explore, home → camera).
+///
+/// This ensures videos stop playing when leaving a video feed screen.
+/// Does NOT dispose on swipe within the same feed to avoid flicker.
+///
+/// Must be watched at app level to activate.
 final videoControllerAutoCleanupProvider = Provider<void>((ref) {
-  // Listen to active video changes and dispose all controllers when it changes
-  ref.listen<String?>(activeVideoIdProvider, (previous, next) {
-    // When active video changes, dispose all controllers to ensure clean state
-    if (previous != next && previous != null) {
+  // Track previous route type to detect screen changes vs swipes
+  RouteType? previousRouteType;
+
+  // Listen to page context changes to detect route type changes
+  ref.listen<AsyncValue<RouteContext>>(pageContextProvider, (previous, next) {
+    final prevCtx = previous?.asData?.value;
+    final nextCtx = next.asData?.value;
+
+    // Update previous route type for next comparison
+    final prevType = prevCtx?.type ?? previousRouteType;
+    final nextType = nextCtx?.type;
+
+    if (nextType != null) {
+      previousRouteType = nextType;
+    }
+
+    // Only dispose controllers when route TYPE changes (screen navigation)
+    // Don't dispose on videoIndex change (swipe within same feed)
+    if (prevType != null && nextType != null && prevType != nextType) {
       Log.info(
-        '🧹 Active video changed ($previous → $next), disposing all video controllers',
+        '🧹 Route type changed ($prevType → $nextType), disposing all video controllers',
         name: 'VideoControllerCleanup',
         category: LogCategory.video,
       );
 
-      // Dispose all controllers to force clean state
-      // The new active video will create its controller fresh
+      // Dispose all controllers when leaving a video feed screen
       disposeAllVideoControllers(ref.container);
     }
   }, fireImmediately: false);

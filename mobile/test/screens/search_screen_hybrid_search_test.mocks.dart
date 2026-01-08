@@ -172,6 +172,17 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
           as _i5.VoidCallback);
 
   @override
+  _i5.VoidCallback addNewVideoListener(
+    void Function(_i3.VideoEvent, String)? callback,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addNewVideoListener, [callback]),
+            returnValue: () {},
+            returnValueForMissingStub: () {},
+          )
+          as _i5.VoidCallback);
+
+  @override
   void removeVideoUpdateListener(void Function(_i3.VideoEvent)? callback) =>
       super.noSuchMethod(
         Invocation.method(#removeVideoUpdateListener, [callback]),
@@ -973,28 +984,6 @@ class MockUserProfileService extends _i1.Mock
           as String);
 
   @override
-  String? getAvatarUrl(String? pubkey) =>
-      (super.noSuchMethod(
-            Invocation.method(#getAvatarUrl, [pubkey]),
-            returnValueForMissingStub: null,
-          )
-          as String?);
-
-  @override
-  String? getUserBio(String? pubkey) =>
-      (super.noSuchMethod(
-            Invocation.method(#getUserBio, [pubkey]),
-            returnValueForMissingStub: null,
-          )
-          as String?);
-
-  @override
-  void clearCache() => super.noSuchMethod(
-    Invocation.method(#clearCache, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
   void removeProfile(String? pubkey) => super.noSuchMethod(
     Invocation.method(#removeProfile, [pubkey]),
     returnValueForMissingStub: null,
@@ -1012,15 +1001,6 @@ class MockUserProfileService extends _i1.Mock
             ),
           )
           as _i9.Future<List<_i12.UserProfile>>);
-
-  @override
-  Map<String, dynamic> getCacheStats() =>
-      (super.noSuchMethod(
-            Invocation.method(#getCacheStats, []),
-            returnValue: <String, dynamic>{},
-            returnValueForMissingStub: <String, dynamic>{},
-          )
-          as Map<String, dynamic>);
 
   @override
   void handleProfileEventForTesting(_i8.Event? event) => super.noSuchMethod(
