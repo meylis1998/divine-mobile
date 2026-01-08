@@ -9,6 +9,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/developer_mode_tap_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -61,7 +62,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = ref.watch(authServiceProvider);
-    final isAuthenticated = authService.isAuthenticated;
+    // Watch auth state stream for reactive updates when auth state changes
+    final authStateAsync = ref.watch(authStateStreamProvider);
+    final isAuthenticated = authStateAsync.when(
+      data: (state) => state == AuthState.authenticated,
+      loading: () => false,
+      error: (_, __) => false,
+    );
 
     return Scaffold(
       appBar: AppBar(

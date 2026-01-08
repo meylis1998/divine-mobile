@@ -39,21 +39,21 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   final ScrollController _scrollController = ScrollController();
 
   void _fetchProfileIfNeeded(String userIdHex, bool isOwnProfile) {
-    if (isOwnProfile) return; // Own profile loads automatically
-
     final userProfileService = ref.read(userProfileServiceProvider);
 
     // Fetch profile (shows cached immediately, refreshes in background)
+    // Note: Own profile also needs explicit fetch - AuthService only creates
+    // a placeholder profile with masked key, real data comes from relays
     if (!userProfileService.hasProfile(userIdHex)) {
       Log.debug(
-        '📥 Fetching uncached profile: $userIdHex',
+        '📥 Fetching uncached profile: $userIdHex (own=$isOwnProfile)',
         name: 'ProfileScreenRouter',
         category: LogCategory.ui,
       );
       userProfileService.fetchProfile(userIdHex);
     } else {
       Log.debug(
-        '📋 Using cached profile: $userIdHex',
+        '📋 Using cached profile: $userIdHex (own=$isOwnProfile)',
         name: 'ProfileScreenRouter',
         category: LogCategory.ui,
       );
