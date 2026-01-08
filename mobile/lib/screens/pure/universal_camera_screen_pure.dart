@@ -10,18 +10,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/models/audio_event.dart';
-import 'package:openvine/router/nav_extensions.dart';
 import 'package:models/models.dart' as vine show AspectRatio;
+import 'package:openvine/models/audio_event.dart';
+import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:openvine/router/app_router.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/sounds_screen.dart';
 import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
-import 'package:openvine/services/vine_recording_controller.dart'
-    show ExtractedSegment;
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/camera/native_macos_camera.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/services/vine_recording_controller.dart'
+    show ExtractedSegment;
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
@@ -31,9 +35,6 @@ import 'package:openvine/widgets/dynamic_zoom_selector.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart'
     show CameraPreviewPlaceholder;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:openvine/providers/clip_manager_provider.dart';
-import 'package:openvine/models/clip_manager_state.dart';
-import 'package:openvine/services/video_thumbnail_service.dart';
 
 /// Pure universal camera screen using revolutionary single-controller Riverpod architecture
 class UniversalCameraScreenPure extends ConsumerStatefulWidget {
@@ -46,11 +47,45 @@ class UniversalCameraScreenPure extends ConsumerStatefulWidget {
 
 class _UniversalCameraScreenPureState
     extends ConsumerState<UniversalCameraScreenPure>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, RouteAware {
   String? _errorMessage;
   bool _isProcessing = false;
   bool _permissionDenied = false;
   bool _isInitializing = false;
+  bool _isRouteActive = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    // Another screen was pushed on top of the camera screen
+    _isRouteActive = false;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+
+      ref.read(vineRecordingProvider.notifier).releaseCamera();
+    });
+  }
+
+  @override
+  void didPopNext() {
+    // We became visible again
+    _isRouteActive = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
 
   // Camera control states
   FlashMode _flashMode = FlashMode.off;
@@ -124,6 +159,7 @@ class _UniversalCameraScreenPureState
     // Clean up audio subscriptions
     _positionSubscription?.cancel();
     _durationSubscription?.cancel();
+    routeObserver.unsubscribe(this);
 
     // Stop any playing audio when leaving camera screen
     _stopAudioPlayback();
@@ -539,7 +575,8 @@ class _UniversalCameraScreenPureState
           }
 
           // Auto-reinitialize camera if it was released (e.g., after back navigation)
-          if (!recordingState.isInitialized &&
+          if (_isRouteActive &&
+              !recordingState.isInitialized &&
               !_isInitializing &&
               !_permissionDenied) {
             // Trigger re-initialization in next microtask to avoid build phase issues
@@ -591,7 +628,7 @@ class _UniversalCameraScreenPureState
             fit: StackFit.expand,
             children: [
               // Camera preview - EXACTLY matching experimental app structure
-              if (recordingState.isInitialized)
+              if (_isRouteActive && recordingState.isInitialized)
                 ref.read(vineRecordingProvider.notifier).previewWidget
               else
                 CameraPreviewPlaceholder(

@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -20,6 +19,7 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/sound_picker/sound_picker_modal.dart';
 import 'package:openvine/widgets/text_overlay/draggable_text_overlay.dart';
 import 'package:openvine/widgets/text_overlay/text_overlay_editor.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
@@ -435,9 +435,22 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
   }
 
-  void _handleBack() {
-    // Stop audio preview when going back
-    _audioPlayer?.stop();
+  void _handleBack() async {
+    try {
+      await _audioPlayer?.stop();
+      await _videoController?.pause();
+    } catch (e) {
+      Log.error(
+        '📹 VideoEditorScreen: Failed to stop audio or pause video: $e',
+        category: LogCategory.video,
+      );
+    }
+
+    _videoController?.dispose();
+    _videoController = null;
+
+    _audioPlayer?.dispose();
+    _audioPlayer = null;
 
     if (widget.onBack != null) {
       widget.onBack!();

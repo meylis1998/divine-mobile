@@ -46,6 +46,8 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
   AudioPlayer? _audioPlayer;
   bool _externalAudioLoaded = false;
   VoidCallback? _videoEndListener;
+  String? _lastExternalSoundId;
+  bool _isPreviewInitializing = false;
 
   @override
   void initState() {
@@ -73,6 +75,20 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
 
   /// Initialize external audio player if a sound was selected for lip sync
   Future<void> _initExternalAudio() async {
+    // Always tear down any previous player before creating a new one
+    try {
+      await _audioPlayer?.stop();
+      await _audioPlayer?.dispose();
+    } catch (e, st) {
+      Log.error(
+        '📹 ClipManager: Failed to dispose audio player: $e',
+        category: LogCategory.video,
+        stackTrace: st,
+      );
+    }
+    _audioPlayer = null;
+    _externalAudioLoaded = false;
+
     final selectedSound = ref.read(selectedSoundProvider);
 
     Log.info(
@@ -87,6 +103,13 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
       );
       return;
     }
+
+    final selectedId = selectedSound.id;
+
+    if (_lastExternalSoundId == selectedId && _externalAudioLoaded)
+      return; // already initialized for this sound
+
+    _lastExternalSoundId = selectedId;
 
     try {
       _audioPlayer = AudioPlayer();
@@ -161,74 +184,79 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
   }
 
   Future<void> _loadPreview(RecordingClip clip) async {
+    if (_isPreviewInitializing) return;
     if (_currentPreviewClipId == clip.id) return;
-
-    // Remove old listener before disposing controller
-    _removeVideoEndListener();
-
-    // Dispose and null out old controller before creating new one
-    // This prevents "used after disposed" errors during async initialization
-    final oldController = _previewController;
-    _previewController = null;
-    _currentPreviewClipId = clip.id;
-
-    // Stop audio if playing
-    unawaited(_audioPlayer?.pause());
-
-    // Trigger rebuild to show loading state
-    if (mounted) setState(() {});
-
-    oldController?.dispose();
-
-    final controller = VideoPlayerController.file(File(clip.filePath));
-    await controller.initialize();
-    await controller.setLooping(false); // Don't loop - play once then stop
-
-    // If we have external audio loaded, mute the video and play audio separately
-    if (_externalAudioLoaded) {
-      await controller.setVolume(0.0);
-
-      // Add listener to pause audio when video ends
-      _videoEndListener = () {
-        if (controller.value.position >= controller.value.duration) {
-          _audioPlayer?.pause();
-        }
-      };
-      controller.addListener(_videoEndListener!);
-    } else {
-      // Respect mute setting for original audio
-      final state = ref.read(clipManagerProvider);
-      await controller.setVolume(state.muteOriginalAudio ? 0.0 : 1.0);
-    }
-
-    // IMPORTANT: Set state BEFORE calling play() - on macOS, play() can hang
-    // This ensures the video preview is displayed immediately
-    if (mounted) {
-      setState(() {
-        _previewController = controller;
-      });
-
-      // Don't await play() - let it run asynchronously to avoid blocking on macOS
-      unawaited(controller.play());
-
-      // Start external audio playback after video starts (don't block on it)
-      if (_externalAudioLoaded) {
-        final audioStartPosition = _getAudioStartPositionForClip(clip);
-        Log.info(
-          '📹 ClipManager: Playing audio from ${audioStartPosition.inMilliseconds}ms for clip ${clip.id}',
-          category: LogCategory.video,
-        );
-        unawaited(
-          _audioPlayer?.seek(audioStartPosition).then((_) {
-            _audioPlayer?.play();
-          }),
-        );
-      }
-    } else {
-      // Widget was unmounted during async initialization, dispose the new controller
+    _isPreviewInitializing = true;
+    try {
+      // Remove old listener before disposing controller
       _removeVideoEndListener();
-      controller.dispose();
+
+      // Dispose and null out old controller before creating new one
+      // This prevents "used after disposed" errors during async initialization
+      final oldController = _previewController;
+      _previewController = null;
+      _currentPreviewClipId = clip.id;
+
+      // Stop audio if playing
       unawaited(_audioPlayer?.pause());
+
+      // Trigger rebuild to show loading state
+      if (mounted) setState(() {});
+
+      oldController?.dispose();
+
+      final controller = VideoPlayerController.file(File(clip.filePath));
+      await controller.initialize();
+      await controller.setLooping(false); // Don't loop - play once then stop
+
+      // If we have external audio loaded, mute the video and play audio separately
+      if (_externalAudioLoaded) {
+        await controller.setVolume(0.0);
+
+        // Add listener to pause audio when video ends
+        _videoEndListener = () {
+          if (controller.value.position >= controller.value.duration) {
+            _audioPlayer?.pause();
+          }
+        };
+        controller.addListener(_videoEndListener!);
+      } else {
+        // Respect mute setting for original audio
+        final state = ref.read(clipManagerProvider);
+        await controller.setVolume(state.muteOriginalAudio ? 0.0 : 1.0);
+      }
+
+      // IMPORTANT: Set state BEFORE calling play() - on macOS, play() can hang
+      // This ensures the video preview is displayed immediately
+      if (mounted) {
+        setState(() {
+          _previewController = controller;
+        });
+
+        // Don't await play() - let it run asynchronously to avoid blocking on macOS
+        unawaited(controller.play());
+
+        // Start external audio playback after video starts (don't block on it)
+        if (_externalAudioLoaded) {
+          final audioStartPosition = _getAudioStartPositionForClip(clip);
+          Log.info(
+            '📹 ClipManager: Playing audio from ${audioStartPosition.inMilliseconds}ms for clip ${clip.id}',
+            category: LogCategory.video,
+          );
+          unawaited(
+            _audioPlayer?.seek(audioStartPosition).then((_) {
+              _audioPlayer?.play();
+            }),
+          );
+        }
+      } else {
+        // Widget was unmounted during async initialization, dispose the new controller
+        _removeVideoEndListener();
+        controller.dispose();
+        unawaited(_audioPlayer?.pause());
+      }
+    } finally {
+      _isPreviewInitializing = false;
     }
   }
 
@@ -256,19 +284,9 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
         category: LogCategory.video,
       );
 
-      final exportService = VideoExportService();
-      final videoPath = await exportService.concatenateSegments(
-        state.sortedClips,
-        aspectRatio: aspectRatio,
-        muteAudio: state.muteOriginalAudio,
-      );
-
-      Log.info(
-        '📹 Clips processed to: $videoPath',
-        category: LogCategory.video,
-      );
-
       if (mounted) {
+        _removeVideoEndListener();
+
         // Dispose video and audio preview to free memory
         _previewController?.dispose();
         _previewController = null;
@@ -277,12 +295,25 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
         _audioPlayer?.dispose();
         _audioPlayer = null;
 
-        // Mark that we're navigating away to prevent auto-play during push
-        _isNavigatingAway = true;
-
         // Release camera resources to free memory before navigating
         // The user is done recording, so we don't need the camera anymore
         ref.read(vineRecordingProvider.notifier).releaseCamera();
+
+        final clipsNeedCrop = state.sortedClips.any((c) => c.needsCrop);
+        final exportService = VideoExportService();
+        final videoPath = await exportService.concatenateSegments(
+          state.sortedClips,
+          aspectRatio: clipsNeedCrop ? aspectRatio : null,
+          muteAudio: state.muteOriginalAudio,
+        );
+
+        Log.info(
+          '📹 Clips processed to: $videoPath',
+          category: LogCategory.video,
+        );
+
+        // Mark that we're navigating away to prevent auto-play during push
+        _isNavigatingAway = true;
 
         // Get the selected sound from camera screen (if any) for lip sync flow
         final selectedSound = ref.read(selectedSoundProvider);
@@ -320,19 +351,15 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
               ),
             )
             .then((_) async {
-              // Clear navigation flag now that we've returned
               _isNavigatingAway = false;
               _isProcessing = false;
-
-              // Re-initialize audio and preview when returning from video editor
-              if (mounted) {
+              if (!mounted) return;
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                await Future.delayed(const Duration(milliseconds: 200));
+                if (!mounted) return;
                 _externalAudioLoaded = false;
                 await _initExternalAudio();
-                final currentState = ref.read(clipManagerProvider);
-                if (currentState.sortedClips.isNotEmpty) {
-                  _loadPreview(currentState.sortedClips.first);
-                }
-              }
+              });
             });
       }
     } catch (e) {
