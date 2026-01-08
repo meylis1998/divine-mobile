@@ -33,6 +33,7 @@ enum RouteType {
   profileView, // Other user's profile (fullscreen, no bottom nav)
   curatedList, // Curated video list screen (NIP-51 kind 30005)
   sound, // Sound detail screen for audio reuse
+  secureAccount,
 }
 
 /// Structured representation of a route
@@ -259,6 +260,9 @@ RouteContext parseRoute(String path) {
       final profileViewNpub = Uri.decodeComponent(segments[1]);
       return RouteContext(type: RouteType.profileView, npub: profileViewNpub);
 
+    case 'secure-account':
+      return const RouteContext(type: RouteType.secureAccount);
+
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
   }
@@ -406,5 +410,7 @@ String buildRoute(RouteContext context) {
 
     case RouteType.sound:
       return '/sound/${context.soundId ?? ''}';
+    case RouteType.secureAccount:
+      return '/secure-account';
   }
 }

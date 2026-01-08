@@ -222,7 +222,7 @@ class _IdentityNotRecoverableBanner extends StatelessWidget {
             ),
           ),
           ElevatedButton(
-            onPressed: () => context.push('/auth-native?mode=register'),
+            onPressed: () => context.push('/secure-account'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: VineTheme.vineGreen,

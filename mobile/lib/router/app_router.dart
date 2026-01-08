@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
+import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/home_screen_router.dart';
@@ -628,6 +629,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/import-key',
         name: 'import-key',
         builder: (_, __) => const KeyImportScreen(),
+      ),
+      GoRoute(
+        path: '/secure-account',
+        name: 'secure-account',
+        builder: (_, __) => const SecureAccountScreen(),
       ),
       // redirect deep link route to full reset password path
       GoRoute(

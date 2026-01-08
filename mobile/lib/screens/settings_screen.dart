@@ -251,7 +251,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: 'Secure Your Account',
                     subtitle:
                         'Add email & password to recover your account on any device',
-                    onTap: () => context.push('/auth-native?mode=register'),
+                    onTap: () => context.push('/secure-account'),
                     iconColor: VineTheme.vineGreen,
                   ),
                 _buildSettingsTile(
