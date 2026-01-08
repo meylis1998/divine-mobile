@@ -1777,11 +1777,22 @@ class UsernameReservedDialog extends StatelessWidget {
             TextSpan(text: 'The name $username is reserved. Please email '),
             WidgetSpan(
               child: GestureDetector(
-                onTap: () => launchUrl(
-                  Uri.parse(
-                    'mailto:names@divine.video?subject=Reserved username request: $username',
-                  ),
-                ),
+                onTap: () async {
+                  final launched = await launchUrl(
+                    Uri.parse(
+                      'mailto:names@divine.video?subject=Reserved username request: $username',
+                    ),
+                  );
+                  if (!launched && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Couldn't open email. Send to: names@divine.video",
+                        ),
+                      ),
+                    );
+                  }
+                },
                 child: Text(
                   'names@divine.video',
                   style: TextStyle(

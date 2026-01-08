@@ -259,6 +259,25 @@ void main() {
         () => mockUrlLauncher.launchUrl(expectedUri.toString(), any()),
       ).called(1);
     });
+
+    testWidgets('shows snackbar when email launch fails', (tester) async {
+      final mockUrlLauncher = MockUrlLauncher();
+      UrlLauncherPlatform.instance = mockUrlLauncher;
+
+      when(
+        () => mockUrlLauncher.launchUrl(any(), any()),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(buildDialog('reservedname'));
+
+      await tester.tap(find.text('names@divine.video'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Couldn't open email. Send to: names@divine.video"),
+        findsOneWidget,
+      );
+    });
   });
 }
 
