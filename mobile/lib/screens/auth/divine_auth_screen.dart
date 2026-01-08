@@ -110,6 +110,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     final (result, verifier) = await oauth.headlessLogin(
       email: email,
       password: password,
+      scope: 'policy:full',
     );
 
     if (!result.success || result.code == null) {
@@ -132,6 +133,7 @@ class _DivineAuthScreenState extends ConsumerState<DivineAuthScreen>
     final (result, verifier) = await oauth.headlessRegister(
       email: email,
       password: password,
+      scope: 'policy:full',
     );
 
     if (!result.success) {
