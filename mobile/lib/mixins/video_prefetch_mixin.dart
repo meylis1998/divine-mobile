@@ -8,7 +8,6 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
-import 'package:openvine/repositories/video_controller_repository.dart';
 import 'package:openvine/services/video_cache_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -158,14 +157,10 @@ mixin VideoPrefetchMixin {
   /// - [ref]: WidgetRef for reading the controller provider
   /// - [currentIndex]: Current video index in the feed
   /// - [videos]: Full list of videos in the feed
-  /// - [preInitBefore]: Number of videos to pre-init before current
-  /// - [preInitAfter]: Number of videos to pre-init after current
   void preInitializeControllers({
     required WidgetRef ref,
     required int currentIndex,
     required List<VideoEvent> videos,
-    int preInitBefore = AppConstants.controllerPreInitBefore,
-    int preInitAfter = AppConstants.controllerPreInitAfter,
   }) {
     if (videos.isEmpty) return;
 
@@ -173,74 +168,35 @@ mixin VideoPrefetchMixin {
     final repository = ref.read(videoControllerRepositoryProvider);
     final availableSlots = repository.availableSlots;
 
-    if (availableSlots <= 0) {
-      Log.debug(
-        '🎬 [PREFETCH] Repository at capacity (${repository.activeCount}/${VideoControllerRepository.maxConcurrentControllers}), skipping pre-initialization',
-        name: 'VideoPrefetchMixin',
-        category: LogCategory.video,
-      );
-      return;
-    }
+    if (availableSlots <= 0) return;
 
-    // Build prioritized list: current+1, current-1, current+2, current-2, etc.
-    final prioritizedIndices = <int>[];
-    for (
-      int offset = 1;
-      offset <= preInitAfter || offset <= preInitBefore;
-      offset++
-    ) {
-      if (offset <= preInitAfter) {
-        final afterIdx = currentIndex + offset;
-        if (afterIdx < videos.length) prioritizedIndices.add(afterIdx);
-      }
-      if (offset <= preInitBefore) {
-        final beforeIdx = currentIndex - offset;
-        if (beforeIdx >= 0) prioritizedIndices.add(beforeIdx);
-      }
-    }
+    final videoList = _getVideosToPreInitialize(
+      currentIndex: currentIndex,
+      videos: videos,
+    );
 
-    var initialized = 0;
-    for (final i in prioritizedIndices) {
-      // Stop if we've used all available slots
-      if (initialized >= availableSlots) {
-        Log.debug(
-          '🎬 [PREFETCH] Used all $availableSlots available slots, stopping pre-initialization',
-          name: 'VideoPrefetchMixin',
-          category: LogCategory.video,
-        );
-        break;
-      }
+    // If there are no videos to pre-initialize, return
+    if (videoList.isEmpty) return;
 
-      final video = videos[i];
-      if (video.videoUrl == null || video.videoUrl!.isEmpty) continue;
-
-      // Skip if already tracked (already initialized)
-      if (_preInitializedControllers.containsKey(video.id)) continue;
-
-      // Trigger controller creation by reading the provider
-      // This is fire-and-forget - we just want to start initialization
+    // Pre-initialize controllers for the videos in the list
+    for (final video in videoList) {
       final params = VideoControllerParams(
         videoId: video.id,
         videoUrl: video.videoUrl!,
         videoEvent: video,
       );
 
-      // Reading the provider triggers controller creation + initialize()
-      // The pool will handle capacity enforcement
+      // Read the controller provider for the video
+      // This is a fire-and-forget call to warm up the video controller
       ref.read(individualVideoControllerProvider(params));
-
-      // Track this controller for potential disposal later
       _preInitializedControllers[video.id] = video.videoUrl!;
-      initialized++;
     }
 
-    if (initialized > 0) {
-      Log.debug(
-        '🎬 [PREFETCH] Pre-initialized $initialized controllers around index $currentIndex',
-        name: 'VideoPrefetchMixin',
-        category: LogCategory.video,
-      );
-    }
+    Log.debug(
+      '🎬 Pre-initialized ${videoList.length} controllers for videos around index $currentIndex',
+      name: 'VideoPrefetchMixin',
+      category: LogCategory.video,
+    );
   }
 
   /// Dispose video controllers that are far outside the current viewing range.
@@ -333,5 +289,59 @@ mixin VideoPrefetchMixin {
       name: 'VideoPrefetchMixin',
       category: LogCategory.video,
     );
+  }
+
+  List<VideoEvent> _getVideosToPreInitialize({
+    required int currentIndex,
+    required List<VideoEvent> videos,
+  }) {
+    final videoList = <VideoEvent>[];
+
+    var offset = 1;
+    var beforeCount = 0;
+    var afterCount = 0;
+
+    bool canContinue() {
+      if (currentIndex + offset >= videos.length) return false;
+      if (currentIndex - offset < 0) return false;
+
+      return _canAddBefore(beforeCount) || _canAddAfter(afterCount);
+    }
+
+    while (canContinue()) {
+      final beforeIndex = currentIndex - offset;
+      final afterIndex = currentIndex + offset;
+
+      if (_canAddBefore(beforeCount) && beforeIndex >= 0) {
+        final before = videos[beforeIndex];
+
+        if (_canPreInitialize(before)) {
+          videoList.add(before);
+          beforeCount++;
+        }
+      }
+
+      if (_canAddAfter(afterCount) && afterIndex < videos.length) {
+        final after = videos[afterIndex];
+
+        if (_canPreInitialize(after)) {
+          videoList.add(after);
+          afterCount++;
+        }
+      }
+
+      offset++;
+    }
+
+    return videoList;
+  }
+
+  bool _canAddBefore(int count) => count < AppConstants.controllerPreInitBefore;
+  bool _canAddAfter(int count) => count < AppConstants.controllerPreInitAfter;
+  bool _canPreInitialize(VideoEvent video) {
+    final url = video.videoUrl ?? '';
+    final initialized = _preInitializedControllers.containsKey(video.id);
+
+    return url.isNotEmpty && !initialized;
   }
 }
