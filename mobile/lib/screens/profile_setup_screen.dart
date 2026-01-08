@@ -22,7 +22,6 @@ import 'package:openvine/state/username_state.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({required this.isNewUser, super.key});
@@ -922,7 +921,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               final username = usernameState.username;
               await showDialog(
                 context: context,
-                builder: (context) => _UsernameReservedDialog(username),
+                builder: (context) => UsernameReservedDialog(username),
               );
             }
             // Continue with profile creation without NIP-05
@@ -1756,8 +1755,9 @@ class _UsernameErrorIndicator extends StatelessWidget {
   }
 }
 
-class _UsernameReservedDialog extends StatelessWidget {
-  const _UsernameReservedDialog(this.username);
+@visibleForTesting
+class UsernameReservedDialog extends StatelessWidget {
+  const UsernameReservedDialog(this.username);
 
   final String username;
 
@@ -1777,32 +1777,6 @@ class _UsernameReservedDialog extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text('Close', style: TextStyle(color: VineTheme.lightText)),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final launched = await launchUrl(
-              Uri.parse(
-                'mailto:names@divine.video?subject=Reserved username request: $username',
-              ),
-            );
-            if (context.mounted) {
-              if (!launched) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                      'Couldn\'t open email. Send to: names@divine.video',
-                    ),
-                  ),
-                );
-              }
-              Navigator.of(context).pop();
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: VineTheme.vineGreen,
-            foregroundColor: VineTheme.whiteText,
-          ),
-          child: const Text('Email Us'),
         ),
       ],
     );
