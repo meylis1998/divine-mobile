@@ -1,6 +1,6 @@
 // ABOUTME: Individual video controller providers using proper Riverpod Family pattern
 // ABOUTME: Each video gets its own controller with automatic lifecycle management via autoDispose
-// ABOUTME: Integrates with VideoControllerPool to enforce max concurrent controller limit
+// ABOUTME: Integrates with VideoControllerRepository for controller lifecycle and pool management
 
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -27,19 +27,6 @@ const loopCheckInterval = Duration(milliseconds: 200);
 /// This allows synchronous header lookup during controller creation
 final authHeadersCacheProvider =
     StateProvider<Map<String, Map<String, String>>>((ref) => {});
-
-/// Track controllers that have been scheduled for disposal.
-/// This prevents race conditions where async callbacks try to use disposed controllers.
-/// Key: videoId, Value: true if disposal has been scheduled
-final _disposedControllersProvider = StateProvider<Set<String>>((ref) => {});
-
-/// Check if a video controller has been scheduled for disposal.
-/// Use this before any controller operation to prevent "No active player" crashes.
-/// Note: This function is available for widgets but the safe* helpers below
-/// are the preferred approach for most use cases.
-bool isControllerDisposed(Ref ref, String videoId) {
-  return ref.read(_disposedControllersProvider).contains(videoId);
-}
 
 /// Safe wrapper for async controller operations that may fail after disposal.
 /// Returns true if operation succeeded, false if controller was disposed or errored.
@@ -202,134 +189,59 @@ class VideoLoadingState {
 /// Provider for individual video controllers with autoDispose
 /// Each video gets its own controller instance
 ///
-/// Integrates with VideoControllerPool to enforce max concurrent controller limit.
-/// When pool is at capacity, oldest non-playing controller is evicted.
+/// Integrates with VideoControllerRepository to enforce max concurrent controller limit.
+/// When repository is at capacity, oldest non-playing controller is evicted.
 @riverpod
 VideoPlayerController individualVideoController(
   Ref ref,
   VideoControllerParams params,
 ) {
-  // Get the global controller pool
-  final pool = ref.read(videoControllerPoolProvider);
-
-  // Check pool capacity and evict if needed BEFORE creating new controller
-  if (pool.isAtLimit && !pool.hasSlot(params.videoId)) {
-    final evictCandidate = pool.getEvictionCandidate();
-    if (evictCandidate != null) {
-      Log.info(
-        '🎬 [POOL] At capacity - evicting $evictCandidate to make room for ${params.videoId}',
-        name: 'IndividualVideoController',
-        category: LogCategory.video,
-      );
-      // Mark as disposed to prevent race conditions
-      ref.read(_disposedControllersProvider.notifier).state = {
-        ...ref.read(_disposedControllersProvider),
-        evictCandidate,
-      };
-      // Evict by invalidating - this triggers disposal of that controller
-      // We need to find the params for the evicted video, but we only have the ID
-      // The pool will release the slot when that provider's onDispose fires
-      pool.releaseSlot(evictCandidate);
-    }
-  }
-
-  // Register this controller in the pool
-  pool.requestSlot(params.videoId);
+  // Get the global controller repository
+  final repository = ref.read(videoControllerRepositoryProvider);
 
   Timer? loopEnforcementTimer;
 
-  Log.info(
-    '🎬 Creating VideoPlayerController for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
-    name: 'IndividualVideoController',
-    category: LogCategory.system,
-  );
+  // Acquire controller from repository (handles pool limits, caching, creation)
+  final result = repository.acquireController(params);
+  final controller = result.controller;
 
-  // Normalize .bin URLs by replacing extension based on MIME type from event metadata
-  // CDN serves files based on hash, not extension, so we can safely rewrite for player compatibility
-  String videoUrl = params.videoUrl;
-  if (videoUrl.toLowerCase().endsWith('.bin') && params.videoEvent != null) {
-    final videoEvent = params.videoEvent as dynamic;
-    final mimeType = videoEvent.mimeType as String?;
-
-    if (mimeType != null) {
-      String? newExtension;
-      if (mimeType.contains('webm')) {
-        newExtension = '.webm';
-      } else if (mimeType.contains('mp4')) {
-        newExtension = '.mp4';
+  // If controller already existed and is initialized, return it directly
+  if (result.wasExisting && controller.value.isInitialized) {
+    ref.onDispose(() {
+      loopEnforcementTimer?.cancel();
+      repository.releaseController(params.videoId);
+      try {
+        controller.dispose();
+      } catch (e) {
+        Log.warning(
+          'Failed to dispose controller: $e',
+          name: 'IndividualVideoController',
+          category: LogCategory.system,
+        );
       }
+    });
+    return controller;
+  }
 
-      if (newExtension != null) {
-        videoUrl = videoUrl.substring(0, videoUrl.length - 4) + newExtension;
-        Log.debug(
-          '🔧 Normalized .bin URL based on MIME type $mimeType: $newExtension',
+  // Trigger background caching if needed (not from cache and not existing)
+  if (!result.isFromCache &&
+      !result.wasExisting &&
+      repository.shouldCacheVideo(params)) {
+    unawaited(
+      _cacheVideoWithAuth(ref, repository.cacheManager, params).catchError((
+        error,
+      ) {
+        Log.warning(
+          '⚠️ Background video caching failed: $error',
           name: 'IndividualVideoController',
           category: LogCategory.video,
         );
-      }
-    }
-  }
-
-  final VideoPlayerController controller;
-
-  // On web, skip file caching entirely and always use network URL
-  if (kIsWeb) {
-    Log.debug(
-      '🌐 Web platform - using NETWORK URL for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
-      name: 'IndividualVideoController',
-      category: LogCategory.video,
+        return null;
+      }),
     );
 
-    // Compute auth headers synchronously if possible
-    final authHeaders = _computeAuthHeadersSync(ref, params);
-
-    controller = VideoPlayerController.networkUrl(
-      Uri.parse(videoUrl),
-      httpHeaders: authHeaders ?? {},
-    );
-  } else {
-    // On native platforms, use file caching
-    final videoCache = openVineVideoCache;
-
-    // Synchronous cache check - use getCachedVideoSync() which checks file existence without async
-    final cachedFile = videoCache.getCachedVideoSync(params.videoId);
-
-    if (cachedFile != null && cachedFile.existsSync()) {
-      // Use cached file!
-      Log.info(
-        '✅ Using CACHED FILE for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...: ${cachedFile.path}',
-        name: 'IndividualVideoController',
-        category: LogCategory.video,
-      );
-      controller = VideoPlayerController.file(cachedFile);
-    } else {
-      // Use network URL and start caching
-      Log.debug(
-        '📡 Using NETWORK URL for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
-        name: 'IndividualVideoController',
-        category: LogCategory.video,
-      );
-
-      // Compute auth headers synchronously if possible
-      final authHeaders = _computeAuthHeadersSync(ref, params);
-
-      controller = VideoPlayerController.networkUrl(
-        Uri.parse(videoUrl),
-        httpHeaders: authHeaders ?? {},
-      );
-
-      // Start caching in background for future use
-      unawaited(
-        _cacheVideoWithAuth(ref, videoCache, params).catchError((error) {
-          Log.warning(
-            '⚠️ Background video caching failed: $error',
-            name: 'IndividualVideoController',
-            category: LogCategory.video,
-          );
-          return null;
-        }),
-      );
-    }
+    // Also trigger async auth header caching for future requests
+    unawaited(repository.cacheAuthHeaders(params));
   }
 
   // Initialize the controller (async in background)
@@ -464,8 +376,8 @@ VideoPlayerController individualVideoController(
         // Set looping for Vine-like behavior
         controller.setLooping(true);
 
-        // Mark controller as initialized in pool (no longer initializing)
-        pool.markInitialized(params.videoId);
+        // Mark controller as initialized in repository (no longer initializing)
+        repository.markInitialized(params.videoId);
 
         // Start loop enforcement timer for videos longer than 6.3s
         // Short videos use native looping; long videos get enforced loop at 6.3s
@@ -660,9 +572,9 @@ VideoPlayerController individualVideoController(
     // Cancel loop enforcement timer first
     loopEnforcementTimer?.cancel();
 
-    // Release slot from pool SYNCHRONOUSLY before disposal
-    // This ensures pool state is updated immediately
-    pool.releaseSlot(params.videoId);
+    // Release controller from repository SYNCHRONOUSLY before disposal
+    // This ensures repository state is updated immediately
+    repository.releaseController(params.videoId);
 
     Log.info(
       '🧹 Disposing VideoPlayerController for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
@@ -693,134 +605,8 @@ VideoPlayerController individualVideoController(
   return controller;
 }
 
-/// Compute auth headers synchronously if possible (for VideoPlayerController)
-/// Returns cached headers if available, null otherwise
-Map<String, String>? _computeAuthHeadersSync(
-  Ref ref,
-  VideoControllerParams params,
-) {
-  Log.debug(
-    '🔐 [AUTH-SYNC] Computing auth headers for video ${params.videoId}',
-    name: 'IndividualVideoController',
-    category: LogCategory.video,
-  );
-
-  final ageVerificationService = ref.read(ageVerificationServiceProvider);
-  final blossomAuthService = ref.read(blossomAuthServiceProvider);
-
-  Log.debug(
-    '🔐 [AUTH-SYNC] isAdultContentVerified=${ageVerificationService.isAdultContentVerified}, canCreateHeaders=${blossomAuthService.canCreateHeaders}, hasVideoEvent=${params.videoEvent != null}',
-    name: 'IndividualVideoController',
-    category: LogCategory.video,
-  );
-
-  // If user hasn't verified adult content, don't add auth headers
-  // This will cause 401 for NSFW videos, triggering the error overlay
-  if (!ageVerificationService.isAdultContentVerified) {
-    Log.debug(
-      '🔐 [AUTH-SYNC] User has NOT verified adult content - returning null',
-      name: 'IndividualVideoController',
-      category: LogCategory.video,
-    );
-    return null;
-  }
-
-  // If user has verified but we can't create headers, return null
-  if (!blossomAuthService.canCreateHeaders || params.videoEvent == null) {
-    Log.debug(
-      '🔐 [AUTH-SYNC] Cannot create headers or no video event - returning null',
-      name: 'IndividualVideoController',
-      category: LogCategory.video,
-    );
-    return null;
-  }
-
-  // Check if we have cached auth headers for this video
-  final cache = ref.read(authHeadersCacheProvider);
-  final cachedHeaders = cache[params.videoId];
-
-  Log.debug(
-    '🔐 [AUTH-SYNC] Cache check: cacheSize=${cache.length}, hasCachedHeaders=${cachedHeaders != null}',
-    name: 'IndividualVideoController',
-    category: LogCategory.video,
-  );
-
-  if (cachedHeaders != null) {
-    Log.info(
-      '🔐 [AUTH-SYNC] ✅ Using cached auth headers for video ${params.videoId}',
-      name: 'IndividualVideoController',
-      category: LogCategory.video,
-    );
-    return cachedHeaders;
-  }
-
-  // No cached headers - trigger async generation for next time
-  Log.warning(
-    '🔐 [AUTH-SYNC] No cached headers found - triggering async generation (this request will fail with 401)',
-    name: 'IndividualVideoController',
-    category: LogCategory.video,
-  );
-  unawaited(_generateAuthHeadersAsync(ref, params));
-
-  // Return null for now - first load after verification will fail with 401
-  // but the error overlay retry will have cached headers available
-  return null;
-}
-
-/// Generate auth headers asynchronously and cache them for future use
-Future<void> _generateAuthHeadersAsync(
-  Ref ref,
-  VideoControllerParams params,
-) async {
-  try {
-    final blossomAuthService = ref.read(blossomAuthServiceProvider);
-    final videoEvent = params.videoEvent as dynamic;
-    final sha256 = videoEvent.sha256 as String?;
-
-    if (sha256 == null || sha256.isEmpty) {
-      return;
-    }
-
-    // Extract server URL from video URL
-    String? serverUrl;
-    try {
-      final uri = Uri.parse(params.videoUrl);
-      serverUrl = '${uri.scheme}://${uri.host}';
-    } catch (e) {
-      Log.warning(
-        'Failed to parse video URL for server: $e',
-        name: 'IndividualVideoController',
-        category: LogCategory.video,
-      );
-      return;
-    }
-
-    // Generate auth header
-    final authHeader = await blossomAuthService.createGetAuthHeader(
-      sha256Hash: sha256,
-      serverUrl: serverUrl,
-    );
-
-    if (authHeader != null) {
-      // Cache the header for future use
-      final cache = {...ref.read(authHeadersCacheProvider)};
-      cache[params.videoId] = {'Authorization': authHeader};
-      ref.read(authHeadersCacheProvider.notifier).state = cache;
-
-      Log.info(
-        '✅ Cached auth header for video ${params.videoId}',
-        name: 'IndividualVideoController',
-        category: LogCategory.video,
-      );
-    }
-  } catch (error) {
-    Log.debug(
-      'Failed to generate auth headers: $error',
-      name: 'IndividualVideoController',
-      category: LogCategory.video,
-    );
-  }
-}
+// NOTE: Auth header computation moved to VideoControllerRepository
+// The repository handles URL normalization, cache lookup, and auth header generation
 
 /// Cache video with authentication if needed for NSFW content
 Future<dynamic> _cacheVideoWithAuth(

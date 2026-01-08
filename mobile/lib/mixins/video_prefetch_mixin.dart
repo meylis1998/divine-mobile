@@ -1,6 +1,6 @@
 // ABOUTME: Reusable video prefetch mixin for PageView-based video feeds
 // ABOUTME: Handles both file caching and controller pre-initialization for instant playback
-// ABOUTME: Pool-aware to respect max concurrent controller limits
+// ABOUTME: Repository-aware to respect max concurrent controller limits
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,8 +8,8 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
+import 'package:openvine/repositories/video_controller_repository.dart';
 import 'package:openvine/services/video_cache_manager.dart';
-import 'package:openvine/services/video_controller_pool.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Mixin that provides video prefetching logic for PageView-based feeds
@@ -169,13 +169,13 @@ mixin VideoPrefetchMixin {
   }) {
     if (videos.isEmpty) return;
 
-    // Check pool capacity before pre-initializing
-    final pool = ref.read(videoControllerPoolProvider);
-    final availableSlots = pool.availableSlots;
+    // Check repository capacity before pre-initializing
+    final repository = ref.read(videoControllerRepositoryProvider);
+    final availableSlots = repository.availableSlots;
 
     if (availableSlots <= 0) {
       Log.debug(
-        '🎬 [PREFETCH] Pool at capacity (${pool.activeCount}/${VideoControllerPool.maxConcurrentControllers}), skipping pre-initialization',
+        '🎬 [PREFETCH] Repository at capacity (${repository.activeCount}/${VideoControllerRepository.maxConcurrentControllers}), skipping pre-initialization',
         name: 'VideoPrefetchMixin',
         category: LogCategory.video,
       );
@@ -249,7 +249,7 @@ mixin VideoPrefetchMixin {
   /// Controllers within the keep range are preserved for smooth scrolling.
   /// Controllers outside this range are invalidated to free memory.
   ///
-  /// Note: With the VideoControllerPool in place, this method is less critical
+  /// Note: With the VideoControllerRepository in place, this method is less critical
   /// as the pool enforces hard limits. However, it still helps with proactive
   /// cleanup and tracking state management.
   ///

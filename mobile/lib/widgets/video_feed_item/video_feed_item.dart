@@ -287,8 +287,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
     final stackTrace = StackTrace.current;
     final stackLines = stackTrace.toString().split('\n').take(5).join('\n');
 
-    // Get the pool to track playing state for eviction protection
-    final pool = ref.read(videoControllerPoolProvider);
+    // Get the repository to track playing state for eviction protection
+    final repository = ref.read(videoControllerRepositoryProvider);
 
     try {
       final controller = ref.read(
@@ -296,9 +296,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       );
 
       if (shouldPlay) {
-        // Mark as playing in pool (protects from eviction)
-        pool.markPlaying(widget.video.id);
-        pool.recordAccess(widget.video.id);
+        // Mark as playing in repository (protects from eviction)
+        repository.markPlaying(widget.video.id);
         Log.info(
           '▶️ PLAY REQUEST for video ${widget.video.id} | gen=$gen | initialized=${controller.value.isInitialized} | isPlaying=${controller.value.isPlaying}\nCalled from:\n$stackLines',
           name: 'VideoFeedItem',
@@ -438,8 +437,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
           );
         }
       } else if (!shouldPlay && controller.value.isPlaying) {
-        // Mark as not playing in pool (allows eviction if needed)
-        pool.markNotPlaying(widget.video.id);
+        // Mark as not playing in repository (allows eviction if needed)
+        repository.markNotPlaying(widget.video.id);
 
         Log.info(
           '⏸️ PAUSE REQUEST for video ${widget.video.id} | gen=$gen | initialized=${controller.value.isInitialized} | isPlaying=${controller.value.isPlaying}\nCalled from:\n$stackLines',
