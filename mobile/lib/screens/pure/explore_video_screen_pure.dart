@@ -45,6 +45,7 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
     with PaginationMixin, VideoPrefetchMixin {
   late int _initialIndex;
   late int _currentPage; // Track current page for local active state management
+  late PageController _pageController;
 
   @override
   void initState() {
@@ -62,6 +63,7 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
     }
 
     _currentPage = _initialIndex;
+    _pageController = PageController(initialPage: _initialIndex);
 
     Log.info(
       '🎯 ExploreVideoScreenPure: Initialized with ${widget.videoList.length} videos, starting at index $_initialIndex, useLocalActiveState=${widget.useLocalActiveState}',
@@ -71,9 +73,9 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
 
   @override
   void dispose() {
-    // Router-driven state - no manual cleanup needed, URL navigation handles it
+    _pageController.dispose();
     Log.info(
-      '🛑 ExploreVideoScreenPure disposing - router handles state cleanup',
+      '🛑 ExploreVideoScreenPure disposing',
       name: 'ExploreVideoScreen',
       category: LogCategory.video,
     );
@@ -102,7 +104,7 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
       color: Colors.black,
       child: PageView.builder(
         itemCount: videos.length,
-        controller: PageController(initialPage: _initialIndex),
+        controller: _pageController,
         scrollDirection: Axis.vertical,
         onPageChanged: (index) {
           Log.debug(
@@ -111,12 +113,10 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
             category: LogCategory.video,
           );
 
-          // Update current page for local state management
-          if (widget.useLocalActiveState) {
-            setState(() {
-              _currentPage = index;
-            });
-          }
+          // Update current page for synchronous active state tracking
+          setState(() {
+            _currentPage = index;
+          });
 
           // Update URL to trigger reactive video playback via router
           // Use custom navigation callback if provided, otherwise default to explore
@@ -154,16 +154,19 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
           );
         },
         itemBuilder: (context, index) {
+          // Use PageController as source of truth for active video (synchronous)
+          // This prevents overlay flicker during rapid scrolling by avoiding
+          // the async provider chain (pageContextProvider → activeVideoIdProvider)
+          final currentPage = _pageController.page?.round() ?? _currentPage;
+          final isActive = index == currentPage;
+
           return VideoFeedItem(
             key: ValueKey('video-${videos[index].id}'),
             video: videos[index],
             index: index,
             hasBottomNavigation: false,
             contextTitle: widget.contextTitle,
-            // When using local active state, override provider-based activation
-            isActiveOverride: widget.useLocalActiveState
-                ? (_currentPage == index)
-                : null,
+            isActiveOverride: isActive,
             disableTapNavigation: widget.useLocalActiveState,
           );
         },
