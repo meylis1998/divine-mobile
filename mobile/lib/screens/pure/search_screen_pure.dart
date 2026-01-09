@@ -441,9 +441,13 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       backgroundColor: VineTheme.backgroundColor,
       appBar: AppBar(
         backgroundColor: VineTheme.cardBackground,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: VineTheme.whiteText),
-          onPressed: context.pop,
+        leading: Semantics(
+          identifier: 'search_back_button',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: VineTheme.whiteText),
+            onPressed: context.pop,
+          ),
         ),
         title: searchBar,
         bottom: PreferredSize(
