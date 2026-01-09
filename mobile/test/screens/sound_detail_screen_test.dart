@@ -659,49 +659,53 @@ void main() {
             .thenAnswer((_) {});
       });
 
-      testWidgets('tapping Use Sound selects sound and calls context.pop(true)',
-          (tester) async {
-        final testSound = createTestAudioEvent(id: 'sound1');
-        AudioEvent? selectedSound;
+      testWidgets(
+        'tapping Use Sound selects sound and calls context.pop(true)',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
+          AudioEvent? selectedSound;
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              soundUsageCountProvider(
-                testSound.id,
-              ).overrideWith((ref) => Future.value(0)),
-              videosUsingSoundProvider(
-                testSound.id,
-              ).overrideWith((ref) => Future.value(<String>[])),
-              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
-            ],
-            child: MockGoRouterProvider(
-              goRouter: mockGoRouter,
-              child: MaterialApp(
-                theme: VineTheme.theme,
-                home: Consumer(
-                  builder: (context, ref, _) {
-                    // Watch the selected sound provider
-                    ref.listen<AudioEvent?>(selectedSoundProvider, (_, next) {
-                      selectedSound = next;
-                    });
-                    return SoundDetailScreen(sound: testSound);
-                  },
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+              child: MockGoRouterProvider(
+                goRouter: mockGoRouter,
+                child: MaterialApp(
+                  theme: VineTheme.theme,
+                  home: Consumer(
+                    builder: (context, ref, _) {
+                      // Watch the selected sound provider
+                      ref.listen<AudioEvent?>(selectedSoundProvider, (_, next) {
+                        selectedSound = next;
+                      });
+                      return SoundDetailScreen(sound: testSound);
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
+          );
+          await tester.pumpAndSettle();
 
-        // Tap Use Sound
-        await tester.tap(find.text('Use Sound'));
-        await tester.pumpAndSettle();
+          // Tap Use Sound
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
 
-        // Verify GoRouter.pop(true) was called
-        mocktail.verify(() => mockGoRouter.pop<bool>(true)).called(1);
-        expect(selectedSound?.id, equals(testSound.id));
-      });
+          // Verify GoRouter.pop(true) was called
+          mocktail.verify(() => mockGoRouter.pop<bool>(true)).called(1);
+          expect(selectedSound?.id, equals(testSound.id));
+        },
+      );
 
       testWidgets('Use Sound stops preview if playing', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');
@@ -980,41 +984,45 @@ void main() {
             .thenAnswer((_) {});
       });
 
-      testWidgets('back button calls context.pop() which calls GoRouter.pop()',
-          (tester) async {
-        final testSound = createTestAudioEvent(id: 'sound1');
+      testWidgets(
+        'back button calls context.pop() which calls GoRouter.pop()',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              soundUsageCountProvider(
-                testSound.id,
-              ).overrideWith((ref) => Future.value(0)),
-              videosUsingSoundProvider(
-                testSound.id,
-              ).overrideWith((ref) => Future.value(<String>[])),
-              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
-            ],
-            child: MockGoRouterProvider(
-              goRouter: mockGoRouter,
-              child: MaterialApp(
-                theme: VineTheme.theme,
-                home: SoundDetailScreen(sound: testSound),
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+              child: MockGoRouterProvider(
+                goRouter: mockGoRouter,
+                child: MaterialApp(
+                  theme: VineTheme.theme,
+                  home: SoundDetailScreen(sound: testSound),
+                ),
               ),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
+          );
+          await tester.pumpAndSettle();
 
-        expect(find.byType(SoundDetailScreen), findsOneWidget);
+          expect(find.byType(SoundDetailScreen), findsOneWidget);
 
-        // Tap back button (which now uses context.pop() from go_router)
-        await tester.tap(find.byIcon(Icons.arrow_back));
-        await tester.pumpAndSettle();
+          // Tap back button (which now uses context.pop() from go_router)
+          await tester.tap(find.byIcon(Icons.arrow_back));
+          await tester.pumpAndSettle();
 
-        // Verify GoRouter.pop() was called
-        mocktail.verify(() => mockGoRouter.pop<Object?>(null)).called(1);
-      });
+          // Verify GoRouter.pop() was called
+          mocktail.verify(() => mockGoRouter.pop<Object?>(null)).called(1);
+        },
+      );
 
       testWidgets('use sound button calls context.pop(true)', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');
