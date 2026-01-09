@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/profile_liked_videos/profile_liked_videos_bloc.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/screens/fullscreen_video_feed_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -65,7 +66,11 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid> {
                   }
 
                   final videoEvent = likedVideos[index];
-                  return _LikedGridTile(videoEvent: videoEvent, index: index);
+                  return _LikedGridTile(
+                    videoEvent: videoEvent,
+                    index: index,
+                    allVideos: likedVideos,
+                  );
                 }, childCount: likedVideos.length),
               ),
             ),
@@ -115,20 +120,34 @@ class _LikedEmptyState extends StatelessWidget {
 
 /// Individual liked video tile in the grid with heart badge
 class _LikedGridTile extends StatelessWidget {
-  const _LikedGridTile({required this.videoEvent, required this.index});
+  const _LikedGridTile({
+    required this.videoEvent,
+    required this.index,
+    required this.allVideos,
+  });
 
   final VideoEvent videoEvent;
   final int index;
+  final List<VideoEvent> allVideos;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: () {
       Log.info(
-        'ProfileLikedGrid TAP: gridIndex=$index, videoId=${videoEvent.id}',
+        '🎯 ProfileLikedGrid TAP: gridIndex=$index, '
+        'videoId=${videoEvent.id}',
         category: LogCategory.video,
       );
-      // Navigate to liked videos feed at this index
-      context.goLikedVideos(index);
+      // Use LikedVideosFeedSource for fullscreen playback
+      context.pushVideoFeed(
+        source: LikedVideosFeedSource(allVideos),
+        initialIndex: index,
+      );
+      Log.info(
+        '✅ ProfileLikedGrid: Called pushVideoFeed with '
+        'LikedVideosFeedSource at index $index',
+        category: LogCategory.video,
+      );
     },
     child: DecoratedBox(
       decoration: BoxDecoration(
