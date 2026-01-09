@@ -122,7 +122,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                 'Update your display name, bio, and avatar',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
-              onTap: () => Navigator.pop(context, 'edit'),
+              onTap: () => context.pop('edit'),
             ),
             const Divider(color: VineTheme.secondaryText, height: 1),
             ListTile(
@@ -135,7 +135,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                 'PERMANENTLY delete your account and all content',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
-              onTap: () => Navigator.pop(context, 'delete'),
+              onTap: () => context.pop('delete'),
             ),
           ],
         ),
@@ -193,7 +193,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
 
         // Close loading indicator
         if (!context.mounted) return;
-        Navigator.of(context).pop();
+        context.pop();
 
         if (result.success) {
           // Sign out and delete keys
@@ -301,11 +301,11 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => context.pop(false),
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => context.pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Block'),
           ),
@@ -381,7 +381,7 @@ class _ProfileContentView extends ConsumerWidget {
     // Check if this user has muted us (mutual mute blocking)
     final blocklistService = ref.watch(contentBlocklistServiceProvider);
     if (blocklistService.shouldFilterFromFeeds(userIdHex)) {
-      return BlockedUserScreen(onBack: () => Navigator.of(context).pop());
+      return BlockedUserScreen(onBack: context.pop);
     }
 
     // Fetch profile data if needed (post-frame to avoid build mutations)

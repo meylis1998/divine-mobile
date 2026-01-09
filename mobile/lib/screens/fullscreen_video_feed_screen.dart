@@ -217,7 +217,7 @@ class _FullscreenVideoFeedScreenState
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => context.pop(),
+            onPressed: context.pop,
           ),
         ),
         body: const Center(
@@ -238,7 +238,7 @@ class _FullscreenVideoFeedScreenState
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: context.pop,
         ),
       ),
       body: PageView.builder(

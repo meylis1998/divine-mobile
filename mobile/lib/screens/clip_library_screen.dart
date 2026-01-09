@@ -259,7 +259,7 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
     if (widget.selectionMode) {
       // Single selection mode from ClipManager - select and close
       widget.onClipSelected?.call(clip);
-      Navigator.of(context).pop();
+      context.pop();
     } else {
       // Default behavior: toggle selection for multi-select
       _toggleClipSelection(clip.id);
@@ -274,7 +274,7 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
       builder: (context) => ClipPreviewSheet(
         clip: clip,
         onDelete: () {
-          Navigator.of(context).pop();
+          context.pop();
           _confirmDeleteClip(clip);
         },
       ),
@@ -295,13 +295,10 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
           style: const TextStyle(color: VineTheme.whiteText),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: context.pop, child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              context.pop();
               _deleteClip(clip);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -369,13 +366,10 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
           style: const TextStyle(color: VineTheme.whiteText),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: context.pop, child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              context.pop();
               _clearAllClips();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

@@ -158,7 +158,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Settings',
                     onTap: () {
                       // Close drawer first, then navigate
-                      Navigator.of(context).pop(); // Close drawer
+                      context.pop(); // Close drawer
                       Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(
                           builder: (context) => const SettingsScreen(),

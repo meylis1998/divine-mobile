@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
@@ -344,7 +345,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
         backgroundColor: VineTheme.cardBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: VineTheme.whiteText),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: context.pop,
         ),
         title: const Text(
           'Discover Lists',

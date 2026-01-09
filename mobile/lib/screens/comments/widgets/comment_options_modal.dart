@@ -2,6 +2,7 @@
 // ABOUTME: Shows as bottom sheet with confirmation dialog for destructive actions
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Modal bottom sheet displaying options for a comment.
 ///
@@ -82,7 +83,7 @@ class CommentOptionsModal extends StatelessWidget {
                   'Cancel',
                   style: TextStyle(color: Colors.white70),
                 ),
-                onTap: () => Navigator.of(context).pop(),
+                onTap: context.pop,
               ),
             ),
             const SizedBox(height: 8),
@@ -111,7 +112,7 @@ class CommentOptionsModal extends StatelessWidget {
             button: true,
             label: 'Cancel delete',
             child: TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
+              onPressed: () => dialogContext.pop(false),
               child: const Text(
                 'Cancel',
                 style: TextStyle(color: Colors.white70),
@@ -123,7 +124,7 @@ class CommentOptionsModal extends StatelessWidget {
             button: true,
             label: 'Confirm delete comment',
             child: TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
+              onPressed: () => dialogContext.pop(true),
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ),
@@ -132,7 +133,7 @@ class CommentOptionsModal extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      Navigator.of(context).pop(true);
+      context.pop(true);
     }
   }
 }

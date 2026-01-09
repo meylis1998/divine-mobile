@@ -427,7 +427,7 @@ class _ClipManagerScreenState extends ConsumerState<ClipManagerScreen> {
         backgroundColor: Colors.black,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: widget.onDiscard ?? () => Navigator.of(context).pop(),
+          onPressed: widget.onDiscard ?? context.pop,
         ),
         title: Text(
           '${(state.totalDuration.inMilliseconds / 1000).toStringAsFixed(1)}s / 6.3s',

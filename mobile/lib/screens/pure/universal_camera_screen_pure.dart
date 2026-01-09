@@ -753,7 +753,7 @@ class _UniversalCameraScreenPureState
         backgroundColor: VineTheme.vineGreen,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: context.pop,
         ),
         title: const Text(
           'Camera Permission',
@@ -805,7 +805,7 @@ class _UniversalCameraScreenPureState
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: context.pop,
                 child: const Text(
                   'Cancel',
                   style: TextStyle(color: Colors.grey),
@@ -827,7 +827,7 @@ class _UniversalCameraScreenPureState
         backgroundColor: VineTheme.vineGreen,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: context.pop,
         ),
         title: const Text(
           'Camera Error',
@@ -1346,7 +1346,7 @@ class _UniversalCameraScreenPureState
         builder: (context) => SoundsScreen(
           onSoundSelected: (sound) {
             selectedSound = sound;
-            Navigator.of(context).pop();
+            context.pop();
           },
         ),
       ),
@@ -2204,12 +2204,12 @@ class _UniversalCameraScreenPureState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: context.pop,
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              context.pop();
               _clearAllRecordings();
             },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
